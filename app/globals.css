@@ -2136,3 +2136,395 @@ footer{
 .quickRail{background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--brand-soft) 45%,var(--surface)))}
 .staffRail{background:var(--surface)}
 .healthRail{background:linear-gradient(180deg,var(--surface),var(--surface-2))}
+
+
+/* =========================================================
+   v0.7.1 — Sparse-data redesign
+   Removes giant empty Kanban surfaces. Shows only real work.
+   ========================================================= */
+
+.opsWorkspace{
+  grid-template-columns:minmax(0,1fr) 344px;
+  gap:14px;
+  align-items:start;
+}
+
+.queuePanel{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:var(--surface);
+  box-shadow:var(--shadow-1);
+}
+
+.queueHeader{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+  padding:20px 20px 16px;
+  border-bottom:1px solid var(--line);
+  background:
+    radial-gradient(circle at 92% -25%,color-mix(in srgb,var(--brand-2) 8%,transparent),transparent 18rem),
+    var(--surface);
+}
+.queueHeader>div:first-child{min-width:0}
+.queueHeader h3{
+  margin:5px 0 4px;
+  font-size:22px;
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+.queueHeader p{
+  max-width:760px;
+  margin:0;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.6;
+}
+
+.statusStrip{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--line);
+  background:var(--surface-2);
+}
+.statusPill{
+  min-width:0;
+  min-height:58px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:9px;
+  padding:8px 10px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+}
+.statusPill>span{
+  width:34px;height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+}
+.statusPill>span svg{width:17px}
+.statusPill.wait>span{color:var(--amber);background:var(--amber-soft)}
+.statusPill.route>span{color:var(--blue);background:var(--blue-soft)}
+.statusPill.done>span{color:var(--green);background:var(--green-soft)}
+.statusPill.problem>span{color:var(--red);background:var(--red-soft)}
+.statusPill p{min-width:0;margin:0}
+.statusPill p b,.statusPill p small{display:block}
+.statusPill p b{font-size:9px}
+.statusPill p small{margin-top:2px;color:var(--muted);font-size:7px}
+.statusPill>strong{
+  min-width:28px;height:28px;
+  display:grid;
+  place-items:center;
+  color:var(--text-2);
+  border-radius:999px;
+  background:var(--surface-3);
+  font-size:9px;
+}
+
+.queueContent{
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.queueGroup{
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--surface-2);
+}
+.queueGroup.wait{border-color:color-mix(in srgb,var(--amber) 22%,var(--line))}
+.queueGroup.route{border-color:color-mix(in srgb,var(--blue) 20%,var(--line))}
+.queueGroup.done{border-color:color-mix(in srgb,var(--green) 20%,var(--line))}
+.queueGroup.problem{border-color:color-mix(in srgb,var(--red) 20%,var(--line))}
+.queueGroupHead{
+  min-height:58px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 12px;
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+}
+.queueGroupHead>span{
+  width:36px;height:36px;
+  flex:0 0 36px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+}
+.queueGroup.wait .queueGroupHead>span{color:var(--amber);background:var(--amber-soft)}
+.queueGroup.route .queueGroupHead>span{color:var(--blue);background:var(--blue-soft)}
+.queueGroup.done .queueGroupHead>span{color:var(--green);background:var(--green-soft)}
+.queueGroup.problem .queueGroupHead>span{color:var(--red);background:var(--red-soft)}
+.queueGroupHead>span svg{width:18px}
+.queueGroupHead>div{min-width:0;flex:1}
+.queueGroupHead h4{margin:0;font-size:12px}
+.queueGroupHead small{display:block;margin-top:2px;color:var(--muted);font-size:8px}
+.queueGroupHead>b{
+  min-width:30px;height:30px;
+  display:grid;
+  place-items:center;
+  color:var(--text-2);
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface-2);
+  font-size:9px;
+}
+
+.queueCards{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  padding:10px;
+}
+
+.queueEmpty{
+  min-height:260px;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  padding:30px;
+  color:var(--muted);
+  text-align:center;
+}
+.queueEmpty>svg{
+  width:58px;height:58px;
+  padding:15px;
+  color:var(--brand);
+  border:1px solid var(--brand-border);
+  border-radius:18px;
+  background:var(--brand-soft);
+}
+.queueEmpty b,.queueEmpty span{display:block}
+.queueEmpty b{margin-top:10px;color:var(--text-2);font-size:12px}
+.queueEmpty span{margin-top:3px;font-size:9px}
+
+/* Larger, more readable delivery tiles */
+.deliveryTile{
+  padding:14px;
+  border-radius:15px;
+}
+.deliveryTile>h5{
+  margin:11px 0 7px;
+  font-size:15px;
+  letter-spacing:-.02em;
+}
+.tileTop{
+  font-size:8px;
+}
+.tileTop time{
+  font-size:8px;
+  font-weight:850;
+}
+.tileFlags span{
+  min-height:22px;
+  padding-inline:8px;
+  font-size:8px;
+}
+.tileMeta{
+  gap:6px 12px;
+  font-size:9px;
+}
+.tileMeta svg{width:13px;flex-basis:13px}
+.tileProduct{
+  gap:10px;
+  padding:10px 0;
+  margin-top:10px;
+}
+.tileProduct>span{
+  width:42px;height:42px;
+  flex-basis:42px;
+  border:1px solid var(--line);
+}
+.tileProduct small{font-size:7px}
+.tileProduct b{font-size:10px}
+.tileProduct em{font-size:8px}
+.tileAssign{
+  padding-top:10px;
+}
+.tileAssign>span{
+  width:34px;height:34px;
+  font-size:8px;
+}
+.tileAssign small{font-size:6px}
+.tileAssign b{font-size:9px}
+.tileAssign select{
+  max-width:130px;
+  min-height:34px;
+  padding-inline:8px;
+  font-size:8px;
+}
+.tileProgress{margin-top:10px}
+.tileProgress p{font-size:8px}
+.tileProgress>i{height:6px}
+.tileMissing{
+  margin-top:8px;
+  padding:7px 8px;
+  font-size:8px;
+}
+
+/* Keep the utility rail compact, but not tiny */
+.controlRail{
+  top:92px;
+  gap:12px;
+}
+.railCard{
+  padding:15px;
+  border-radius:18px;
+}
+.railHead b{font-size:11px}
+.railHead small{font-size:8px}
+.railPrimary,.railAction{
+  min-height:58px;
+  padding:10px 11px;
+}
+.railPrimary b,.railAction b{font-size:10px}
+.railPrimary small,.railAction small{font-size:8px}
+.staffTarget{
+  min-height:60px;
+  padding:9px;
+}
+.staffTarget>span{
+  width:38px;height:38px;
+}
+.staffTarget b{font-size:9px}
+.staffTarget small{font-size:8px}
+.healthList>div{
+  min-height:68px;
+  padding:9px;
+}
+.healthList b{font-size:17px}
+.healthList small{font-size:8px}
+
+/* Metrics: denser top row, larger numbers */
+.metricRibbon{
+  grid-template-columns:minmax(300px,1.25fr) repeat(3,minmax(180px,.75fr));
+  gap:10px;
+}
+.metricLead,.metricCard{
+  min-height:132px;
+}
+.metricLead{
+  padding:14px 16px;
+}
+.progressRing{
+  width:66px;height:66px;
+  flex-basis:66px;
+}
+.progressRing b{font-size:15px}
+.metricLeadBody h2{font-size:27px}
+.metricCard>span{
+  width:44px;height:44px;
+}
+.metricCard>div b{font-size:28px}
+.metricCard>div strong{font-size:11px}
+.metricCard>div small{font-size:8px}
+
+/* Sidebar + topbar: slightly larger, cleaner */
+.side nav button{
+  min-height:46px;
+  font-size:12px;
+}
+.appTopbar{
+  min-height:66px;
+}
+.globalSearch{
+  min-height:46px;
+}
+.globalSearch input{
+  font-size:12px;
+}
+.themeToggle{
+  height:42px;
+}
+.userChip{
+  min-height:44px;
+}
+
+/* Dark mode surfaces get a little more depth */
+html[data-theme="dark"] .queuePanel,
+html[data-theme="dark"] .queueGroup,
+html[data-theme="dark"] .railCard,
+html[data-theme="dark"] .metricLead,
+html[data-theme="dark"] .metricCard{
+  box-shadow:0 14px 36px rgba(0,0,0,.18);
+}
+
+/* Responsive tuning */
+@media(max-width:1500px){
+  .opsWorkspace{grid-template-columns:minmax(0,1fr) 320px}
+  .queueCards{grid-template-columns:1fr}
+  .metricRibbon{grid-template-columns:minmax(280px,1.1fr) repeat(3,minmax(160px,.7fr))}
+}
+
+@media(max-width:1180px){
+  .opsWorkspace{grid-template-columns:1fr}
+  .controlRail{
+    position:static;
+    display:grid;
+    grid-template-columns:1fr 1.2fr 1fr;
+  }
+  .queueCards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .metricRibbon{grid-template-columns:1.2fr 1fr 1fr}
+  .metricLead{grid-row:span 2}
+  .metricCard.violet{grid-column:2/4}
+}
+
+@media(max-width:860px){
+  .queueHeader{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .focusTabs{justify-content:flex-start}
+  .statusStrip{
+    grid-template-columns:1fr 1fr;
+  }
+  .queueCards{
+    grid-template-columns:1fr;
+  }
+  .controlRail{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .healthRail{grid-column:1/-1}
+  .metricRibbon{grid-template-columns:1fr 1fr}
+  .metricLead{
+    grid-column:1/-1;
+    grid-row:auto;
+  }
+  .metricCard.violet{grid-column:auto}
+}
+
+@media(max-width:620px){
+  .queuePanel{border-radius:16px}
+  .queueHeader{padding:16px 14px 13px}
+  .queueHeader h3{font-size:19px}
+  .queueContent{padding:10px}
+  .statusStrip{padding:10px;gap:6px}
+  .statusPill{min-height:54px;padding:7px}
+  .statusPill p small{display:none}
+  .controlRail{
+    display:flex;
+    flex-direction:column;
+  }
+  .metricRibbon{grid-template-columns:1fr}
+  .metricLead,.metricCard{min-height:auto}
+  .tileAssign{
+    grid-template-columns:auto 1fr;
+  }
+  .tileAssign select{
+    grid-column:1/-1;
+    width:100%;
+    max-width:none;
+  }
+}
