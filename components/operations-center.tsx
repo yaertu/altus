@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle, BellRing, CheckCircle2, Clock3, GripVertical, MapPin,
   PackageCheck, Phone, Plus, Route, ShieldAlert, Truck, UserCheck,
@@ -185,7 +185,7 @@ export default function OperationsCenter({
 function KanbanColumn({
   title,subtitle,icon,tone,list,now,staff,onOpen,onAssign,onDragStart
 }:{
-  title:string;subtitle:string;icon:React.ReactNode;tone:string;list:Delivery[];now:Date;staff:StaffLite[];
+  title:string;subtitle:string;icon:ReactNode;tone:string;list:Delivery[];now:Date;staff:StaffLite[];
   onOpen:(delivery:Delivery)=>void;
   onAssign:(delivery:Delivery,staff:StaffLite|null)=>void;
   onDragStart:(id:string)=>void;
