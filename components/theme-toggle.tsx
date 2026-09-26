@@ -11,8 +11,14 @@ function applyTheme(theme: Theme){
   root.dataset.theme=theme;
   root.classList.toggle("dark",theme==="dark");
   root.style.colorScheme=theme;
-  const meta=document.querySelector('meta[name="theme-color"]');
-  meta?.setAttribute("content",theme==="dark"?"#07111f":"#f6f8fb");
+  let meta=document.querySelector('meta[name="theme-color"][data-yaa-theme]') as HTMLMetaElement|null;
+  if(!meta){
+    meta=document.createElement("meta");
+    meta.name="theme-color";
+    meta.dataset.yaaTheme="true";
+    document.head.appendChild(meta);
+  }
+  meta.content=theme==="dark"?"#07111f":"#f6f8fb";
 }
 
 export default function ThemeToggle(){
@@ -27,6 +33,15 @@ export default function ThemeToggle(){
         : "light";
     setTheme(initial);
     applyTheme(initial);
+
+    const sync=(event:StorageEvent)=>{
+      if(event.key!==KEY)return;
+      const next:Theme=event.newValue==="dark"?"dark":"light";
+      setTheme(next);
+      applyTheme(next);
+    };
+    window.addEventListener("storage",sync);
+    return()=>window.removeEventListener("storage",sync);
   },[]);
 
   function change(next:Theme){
