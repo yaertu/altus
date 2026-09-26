@@ -187,3 +187,67 @@ header h1{font-size:1.5rem;margin-top:4px}
 @media(max-width:620px){
   html{font-size:14px}.actions{gap:5px}.actions .primary{display:grid}.intro h2{font-size:1.45rem}.flow{padding:10px;overflow-x:auto}.stat{min-height:66px}.row{grid-template-columns:1fr;padding:11px 5px}.staffGrid{grid-template-columns:1fr}.authCard{padding:20px;border-radius:20px}
 }
+
+
+/* ===== yaaTeslimat v0.4 — daha basit, daha dolu, her ekrana uyumlu ===== */
+.heroV4{
+  position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(460px,.92fr);gap:18px;
+  padding:20px;border:1px solid #d9e7e9;border-radius:20px;background:
+  radial-gradient(circle at 16% 120%,rgba(16,185,165,.14),transparent 20rem),
+  radial-gradient(circle at 88% 20%,rgba(79,124,255,.11),transparent 22rem),
+  linear-gradient(135deg,rgba(255,255,255,.98),rgba(246,252,252,.96));
+  box-shadow:0 18px 42px rgba(31,58,76,.07)
+}
+.heroV4:before{content:"";position:absolute;inset:auto -90px -150px auto;width:330px;height:330px;border:1px solid rgba(13,185,165,.10);border-radius:50%;box-shadow:0 0 0 38px rgba(79,124,255,.025),0 0 0 76px rgba(13,185,165,.02)}
+.heroCopy{position:relative;z-index:1;align-self:center}.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:.58rem;font-weight:900;letter-spacing:.14em;color:#0d8479}.eyebrow i{width:7px;height:7px;border-radius:50%;background:#16bca7;box-shadow:0 0 0 5px rgba(22,188,167,.10);animation:statusPulse 2s infinite}
+.heroCopy h2{max-width:760px;font-size:clamp(1.55rem,2.2vw,2.15rem);line-height:1.08;letter-spacing:-.045em;margin:10px 0 9px}.heroCopy>p{max-width:760px;font-size:.78rem;line-height:1.6;color:#708294;margin:0}
+.heroActions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}.heroPrimary,.heroSecondary{min-height:52px;padding:7px 15px}.heroPrimary span,.heroSecondary span{display:block;text-align:left}.heroPrimary b,.heroPrimary small,.heroSecondary b,.heroSecondary small{display:block}.heroPrimary b,.heroSecondary b{font-size:.76rem}.heroPrimary small{color:rgba(255,255,255,.72)}.heroSecondary small{color:#8998a7}.heroPrimary small,.heroSecondary small{font-size:.55rem;margin-top:2px;font-weight:650}
+.simpleFlow{
+  position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:9px;padding:15px;border:1px solid rgba(216,229,234,.92);
+  border-radius:17px;background:rgba(255,255,255,.74);backdrop-filter:blur(12px);box-shadow:inset 0 1px 0 #fff
+}
+.simpleFlow>div{position:relative;min-width:120px;flex:1;text-align:center}.simpleFlow>div>strong{position:absolute;left:calc(50% - 31px);top:-3px;width:20px;height:20px;border-radius:7px;display:grid;place-items:center;background:#102b3f;color:#fff;font-size:.55rem;box-shadow:0 5px 12px rgba(24,48,64,.14)}
+.webIconShell{width:56px;height:56px;border-radius:17px;display:grid;place-items:center;margin:0 auto 9px;background:linear-gradient(145deg,#fff,#f0faf8);border:1px solid #dcebe8;box-shadow:0 10px 24px rgba(24,65,76,.075);transition:.22s ease}
+.simpleFlow>div:hover .webIconShell{transform:translateY(-4px) rotate(-2deg);box-shadow:0 15px 28px rgba(24,65,76,.11)}
+.simpleFlow p{margin:0}.simpleFlow b,.simpleFlow small{display:block}.simpleFlow b{font-size:.69rem}.simpleFlow small{font-size:.53rem;color:#8796a4;margin-top:3px}.simpleFlow>i{height:1px;flex:0 0 28px;background:linear-gradient(90deg,#c9e7e2,#cad8f3);position:relative}.simpleFlow>i:after{content:"›";position:absolute;right:-2px;top:-9px;color:#8db4ba;font-size:13px}
+
+.easyActions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.easyActions>button,.easyActions>div{position:relative;min-height:82px;border:1px solid #dde7eb;background:rgba(255,255,255,.93);border-radius:15px;padding:12px 12px 12px 14px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-align:left;box-shadow:0 7px 20px rgba(26,52,68,.035);transition:.18s ease;overflow:hidden}
+.easyActions>button{cursor:pointer;color:inherit}.easyActions>button:after,.easyActions>div:after{content:"";position:absolute;left:0;bottom:0;width:36%;height:2px;background:linear-gradient(90deg,var(--brand),var(--brand2));opacity:.45;transition:.22s}
+.easyActions>button:hover{transform:translateY(-2px);border-color:#cfe2e5;box-shadow:0 12px 28px rgba(26,52,68,.07)}.easyActions>button:hover:after{width:100%}
+.easyActions>img{width:30px;height:30px}.easyActions p{margin:0}.easyActions p b,.easyActions p small{display:block}.easyActions p b{font-size:.72rem}.easyActions p small{font-size:.56rem;color:#8292a1;margin-top:2px}.easyActions>button>svg,.easyActions>div>svg{width:16px;color:#8b99a6}.easyNo{position:absolute;right:7px;top:6px;font-size:2.3rem;line-height:1;color:#0c3a51;opacity:.035;font-weight:950}
+.deliveryBoard{padding-top:14px}
+
+.rowV4{grid-template-columns:minmax(330px,1.15fr) minmax(260px,.78fr) 175px 18px;gap:14px;padding:12px 8px}
+.customerCell p{display:flex;align-items:center;gap:5px 12px!important}.customerCell p>span{display:inline-flex;align-items:center;gap:4px}
+.productV4{display:flex;align-items:center;gap:9px}.productV4 p{margin:0}.productIcon{width:44px;height:44px;flex:0 0 44px;border:1px solid #dce9e8;border-radius:13px;background:linear-gradient(145deg,#f7fffd,#eef7ff);display:grid;place-items:center;box-shadow:0 7px 16px rgba(28,70,80,.05)}.productIcon img{display:block}
+.progressV4 small{display:block;font-size:.51rem;color:#90a0ad;margin-top:4px}.rowArrow{font-size:1.45rem;color:#a2b0bb;transition:.18s}.rowV4:hover .rowArrow{transform:translateX(3px);color:#0b9588}
+.courierHeroV4{background:radial-gradient(circle at 85% 20%,rgba(79,124,255,.12),transparent 16rem),linear-gradient(135deg,#fff,#f4fdfb)}
+
+.installCard{
+  grid-column:1/-1;display:flex;align-items:center;gap:14px;min-height:112px;border:1px solid #d9e8e8;border-radius:18px;padding:15px 17px;
+  background:radial-gradient(circle at 8% 0,rgba(13,185,165,.12),transparent 15rem),linear-gradient(135deg,#fff,#f7fbff);box-shadow:0 10px 28px rgba(29,55,72,.05)
+}
+.installArt{position:relative;width:72px;height:72px;flex:0 0 72px;border:1px solid #d9e9e7;border-radius:21px;background:#fff;display:grid;place-items:center;box-shadow:0 10px 25px rgba(23,68,78,.07)}.installArt>svg{position:absolute;right:-5px;bottom:-5px;width:27px;height:27px;padding:6px;background:#102f44;color:#fff;border-radius:9px;border:2px solid #fff}
+.installCopy{flex:1}.installCopy>small{display:block;font-size:.53rem;letter-spacing:.15em;color:#0e8b7e;font-weight:900}.installCopy>b{display:block;font-size:.9rem;margin-top:5px}.installCopy p{display:flex;align-items:center;gap:6px;font-size:.64rem;color:#748596;margin:5px 0 0}.installCopy p svg{width:15px;flex:0 0 auto}.installCard.installed{min-height:auto;padding:12px 14px}.installCard.installed>span{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#ebfaf4;color:#1a9b6e}.installCard.installed b,.installCard.installed small{display:block}.installCard.installed b{font-size:.72rem}.installCard.installed small{font-size:.58rem;color:#8493a0;margin-top:2px}
+.settingsV4{grid-template-columns:1fr 1fr}.settingsV4 .installCard{grid-column:1/-1}.settingsV4 .danger{grid-column:1/-1}.settingsAction{margin-top:12px}
+
+.mobileBottom{display:none}
+@media(max-width:1180px){
+  .heroV4{grid-template-columns:1fr}.simpleFlow{min-height:120px}.easyActions{grid-template-columns:repeat(2,1fr)}.rowV4{grid-template-columns:minmax(280px,1fr) minmax(210px,.75fr) 150px 16px}
+}
+@media(max-width:860px){
+  body{padding-bottom:72px}.heroV4{padding:16px}.heroCopy h2{font-size:1.65rem}.simpleFlow{overflow-x:auto;justify-content:flex-start}.simpleFlow>div{min-width:125px}.easyActions{grid-template-columns:1fr 1fr}.rowV4{grid-template-columns:1fr auto}.productV4{grid-column:1}.progressV4{grid-column:1}.rowArrow{grid-column:2;grid-row:1/4;align-self:center}.mobileBottom{
+    position:fixed;z-index:70;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));height:62px;display:grid;grid-template-columns:1fr 1fr 66px 1fr 1fr;
+    align-items:center;padding:5px 8px;border:1px solid rgba(214,226,232,.94);border-radius:19px;background:rgba(255,255,255,.92);backdrop-filter:blur(18px);
+    box-shadow:0 18px 50px rgba(25,48,63,.16)
+  }
+  .mobileBottom button{border:0;background:transparent;color:#7b8d9d;height:50px;border-radius:13px;display:grid;place-items:center;align-content:center;gap:3px;font-size:.51rem;font-weight:800}.mobileBottom button svg{width:19px;height:19px}.mobileBottom button.on{color:#098779;background:#effaf7}.mobileBottom .mobileCreate{width:54px;height:54px;border-radius:17px;margin:-20px auto 0;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 10px 25px rgba(13,185,165,.28);border:4px solid rgba(255,255,255,.95)}.mobileBottom .mobileCreate svg{width:22px;height:22px}
+  footer{padding-bottom:60px}
+}
+@media(max-width:620px){
+  main{padding-left:9px;padding-right:9px}.heroV4{border-radius:17px;padding:14px}.heroCopy h2{font-size:1.48rem}.heroCopy>p{font-size:.71rem}.heroActions{display:grid;grid-template-columns:1fr}.heroPrimary,.heroSecondary{width:100%;justify-content:flex-start}.simpleFlow{padding:11px 9px;border-radius:14px}.simpleFlow>div{min-width:112px}.simpleFlow>i{flex-basis:16px}.easyActions{grid-template-columns:1fr}.easyActions>button,.easyActions>div{min-height:72px}.stats{grid-template-columns:1fr 1fr}.rowV4{grid-template-columns:1fr auto;gap:7px}.customerCell p{gap:5px 8px!important}.productIcon{width:40px;height:40px;flex-basis:40px}.settingsV4{grid-template-columns:1fr}.installCard{flex-wrap:wrap}.installArt{width:60px;height:60px;flex-basis:60px}.installCard .primary{width:100%}
+}
+@media(max-width:390px){
+  .stats{grid-template-columns:1fr}.easyActions p small{font-size:.53rem}.mobileBottom{left:6px;right:6px;grid-template-columns:1fr 1fr 58px 1fr 1fr}.mobileBottom button span{font-size:.48rem}.mobileBottom .mobileCreate{width:50px;height:50px}
+}
