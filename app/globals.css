@@ -1941,3 +1941,18 @@ footer{
     linear-gradient(115deg,#fff,#f4fbf9);
 }
 .progress{min-width:0}
+
+
+.sideBackdrop{display:none}
+@media(max-width:960px){
+  .sideBackdrop{
+    position:fixed;
+    inset:0;
+    z-index:45;
+    display:block;
+    border:0;
+    background:rgba(15,30,42,.28);
+    backdrop-filter:blur(2px);
+    animation:fadeIn .16s ease both;
+  }
+}
