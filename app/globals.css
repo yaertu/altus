@@ -2130,3 +2130,9 @@ footer{
 @keyframes modalUp{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:none}}
 @keyframes drawerIn{from{transform:translateX(24px);opacity:.65}to{transform:none;opacity:1}}
 @keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none;transform:scale(1.01)}}
+
+
+/* Rail variants */
+.quickRail{background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--brand-soft) 45%,var(--surface)))}
+.staffRail{background:var(--surface)}
+.healthRail{background:linear-gradient(180deg,var(--surface),var(--surface-2))}
