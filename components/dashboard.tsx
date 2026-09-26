@@ -208,43 +208,6 @@ export default function Dashboard(){
   </div>;
 }
 
-function DashboardHome(p:{total:number;active:number;completed:number;problems:number;list:Delivery[];staff:Staff[];onNew:()=>void;onStaff:()=>void;onOpen:(d:Delivery)=>void}){
-  return <div className="stack">
-    <section className="opsHero">
-      <div className="opsHeroCopy">
-        <span className="eyebrow"><i/>CANLI SEVKİYAT OPERASYONU</span>
-        <h2>Bugünün tüm teslimatını tek ekrandan yönet.</h2>
-        <p>Dükkanda görevi oluştur, personele ata, telefondan ilerleyişi takip et. Adres, ürün, notlar ve zorunlu kontroller aynı kayıtta kalır.</p>
-        <div className="heroActions">
-          <button className="primary heroPrimary" onClick={p.onNew}><Plus size={18}/><span><b>Yeni teslimat</b><small>Görev oluştur ve ata</small></span></button>
-          <button className="soft heroSecondary" onClick={p.onStaff}><UserPlus size={18}/><span><b>Personel ekle</b><small>Sevkiyat ekibini yönet</small></span></button>
-        </div>
-      </div>
-      <div className="opsFlow" aria-label="Teslimat akışı">
-        <div><span><WebIcon name="storefront-outline" size={30}/></span><p><b>1. Dükkan</b><small>Kaydı oluşturur</small></p></div>
-        <i/>
-        <div><span><WebIcon name="truck-fast-outline" size={30}/></span><p><b>2. Sevkiyatçı</b><small>Görevi telefondan alır</small></p></div>
-        <i/>
-        <div><span><WebIcon name="clipboard-check-outline" size={30}/></span><p><b>3. Kontrol</b><small>6 adımı tamamlar</small></p></div>
-        <i/>
-        <div><span><WebIcon name="package-check" size={30}/></span><p><b>4. Teslim</b><small>İşi kapatır</small></p></div>
-      </div>
-    </section>
-
-    <div className="stats">
-      <Stat n={p.total} t="Bugünkü toplam"/>
-      <Stat n={p.active} t="Devam eden"/>
-      <Stat n={p.completed} t="Teslim edildi"/>
-      <Stat n={p.problems} t="Sorun bekliyor" warn/>
-    </div>
-
-    <section className="card deliveryBoard">
-      <PageHead tag="BUGÜN" title="Sevkiyat akışı" text="Bir kayda dokun; müşteri, adres, ürün, personel ve kontroller açılsın." action={<button className="soft compactAction" onClick={p.onNew}><Plus size={15}/>Yeni kayıt</button>}/>
-      {p.list.length?<DeliveryList list={p.list} onOpen={p.onOpen}/>:<Empty title="Bugün için teslimat yok" text="İlk görevi oluşturmak için “Yeni teslimat” düğmesine bas."/>}
-    </section>
-  </div>;
-}
-function Stat({n,t,warn}:{n:number;t:string;warn?:boolean}){return <div className={"stat "+(warn?"warn":"")}><span>{warn?<AlertTriangle/>:<Box/>}</span><p><b>{n}</b><small>{t}</small></p></div>}
 function PageHead({tag,title,text,action}:{tag:string;title:string;text:string;action?:React.ReactNode}){return <div className="pageHead"><div><small>{tag}</small><h2>{title}</h2><p>{text}</p></div>{action}</div>}
 function Empty({title,text}:{title:string;text:string}){return <div className="empty"><PackageCheck size={28}/><b>{title}</b><span>{text}</span></div>}
 function DeliveryList({list,onOpen}:{list:Delivery[];onOpen:(d:Delivery)=>void}){return <div className="list">{list.length?list.map(d=>{const done=Object.values(d.checklist).filter(Boolean).length;const item=d.items[0];return <button className="row deliveryRow" key={d.id} onClick={()=>onOpen(d)}><div className="customerCell"><div className="badges"><span className={"status s-"+d.status}>{labels[d.status]}</span>{d.priority!=="normal"?<span className={"prio p-"+d.priority}>{d.priority==="critical"?"Acil":"Öncelikli"}</span>:null}<small>{d.orderNo}</small></div><h3>{d.customerName}</h3><p><span><MapPin size={14}/>{d.district||"İlçe yok"}</span><span><Clock3 size={14}/>{d.timeWindow}</span><span><UserRound size={14}/>{d.assignee}</span></p></div><div className="product deliveryProduct"><span className="productIcon"><WebIcon product={item?.product||""} size={30}/></span><p><small>ÜRÜN</small><b>{item?.brand+" • "+item?.product}</b><span>{item?.model||"Model yok"}</span></p></div><div className="progress deliveryProgress"><p><span>Hazırlık</span><b>{done}/6</b></p><i><em style={{width:(done/6*100)+"%"}}/></i><small>{done===6?"Hazır":"Kontroller sürüyor"}</small></div><span className="rowArrow">›</span></button>}):<Empty title="Kayıt yok" text="Henüz teslimat oluşturulmadı."/>}</div>}
