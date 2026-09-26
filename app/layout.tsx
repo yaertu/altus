@@ -8,6 +8,22 @@ const manrope = Manrope({
   variable: "--font-manrope"
 });
 
+const themeBoot = `
+(function(){
+  try{
+    var key="yaateslimat:theme";
+    var saved=localStorage.getItem(key);
+    var theme=(saved==="dark"||saved==="light")
+      ? saved
+      : (window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+    var root=document.documentElement;
+    root.dataset.theme=theme;
+    root.classList.toggle("dark",theme==="dark");
+    root.style.colorScheme=theme;
+  }catch(e){}
+})();
+`;
+
 export const metadata: Metadata = {
   title: "yaaTeslimat | Sevkiyat Yönetimi",
   description: "Dükkan ve saha ekibi için canlı teslimat, sevkiyat ve kontrol yönetimi.",
@@ -25,7 +41,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f7fbfc",
+  themeColor: [
+    { media:"(prefers-color-scheme: light)", color:"#f6f8fb" },
+    { media:"(prefers-color-scheme: dark)", color:"#07111f" }
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"
@@ -33,7 +52,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="tr">
+    <html lang="tr" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
+      </head>
       <body className={manrope.variable}>{children}</body>
     </html>
   );
