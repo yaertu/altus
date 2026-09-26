@@ -75,7 +75,14 @@ export async function signOut() {
 
 export async function getMyProfile(): Promise<Profile | null> {
   if (!supabase) return null;
-  const { data, error } = await supabase.from("profiles").select("id,full_name,role,phone,active").maybeSingle();
+  const { data:{ user }, error:userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,full_name,role,phone,active")
+    .eq("id", user.id)
+    .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   return { id:data.id, fullName:data.full_name, role:data.role, phone:data.phone, active:data.active };
