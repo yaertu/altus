@@ -115,12 +115,12 @@ export default function Dashboard(){
     return Array.from(merged.values());
   },[cloud,staff,deliveries]);
   useEffect(()=>{ if(!courier&&names[0])setCourier(names[0]); },[courier,names]);
-  const day=today(), todayList=deliveries.filter(x=>x.date===day), active=todayList.filter(x=>!["completed","issue"].includes(x.status)).length;
+  const day=today(), active=deliveries.filter(x=>x.date<=day&&!["completed","issue"].includes(x.status)).length;
   const filtered=deliveries.filter(d=>{
     const q=query.toLocaleLowerCase("tr-TR"), h=(d.customerName+" "+d.phone+" "+d.orderNo+" "+d.address+" "+d.assignee+" "+d.items.map(i=>i.brand+" "+i.product+" "+(i.model||"")).join(" ")).toLocaleLowerCase("tr-TR");
     return (!q||h.includes(q))&&(filter==="all"||d.status===filter);
   });
-  const my=deliveries.filter(d=>d.assignee===courier&&d.date===day&&!["completed","issue"].includes(d.status));
+  const my=deliveries.filter(d=>d.assignee===courier&&d.date<=day&&!["completed","issue"].includes(d.status));
   function log(title:string,d?:Delivery,detail?:string,type:ActivityEvent["type"]="status"){
     const event:ActivityEvent={id:id("e"),deliveryId:d?.id,orderNo:d?.orderNo,actor:mode==="courier"?(courier||profile?.fullName||"Sevkiyatçı"):(profile?.fullName||"Dükkan"),type,title,detail,createdAt:new Date().toISOString()};
     setEvents(p=>[event,...p]);
@@ -256,7 +256,7 @@ function CourierList({list,courier,onOpen,onStatus,onToggle,requireChecks}:{list
 function NewDelivery({staff,onClose,onSave}:{staff:string[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){
   const [f,setF]=useState({
     name:"",phone:"",address:"",district:"",city:"İstanbul",brand:"ALTUS",product:"",model:"",
-    assignee:staff[0]||"Atanmamış",date:today(),time:"09:00 - 12:00",priority:"normal" as Priority,
+    assignee:"Atanmamış",date:today(),time:"09:00 - 12:00",priority:"normal" as Priority,
     notes:"",service:false,install:false,old:false
   });
   const [err,setErr]=useState("");
