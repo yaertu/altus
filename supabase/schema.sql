@@ -1,5 +1,6 @@
--- yaaTeslimat v0.2 - Supabase temel şeması
--- Bu dosya gerçek müşteri verisi içermez.
+-- yaaTeslimat v0.6 - güvenli temel şema
+-- Gerçek müşteri verisi içermez.
+-- RLS açık gelir; erişim politikaları migration dosyasında rol bazlı olarak tanımlanır.
 
 create extension if not exists pgcrypto;
 
@@ -24,12 +25,14 @@ create table if not exists public.deliveries (
   time_window text,
   assignee_id uuid references public.staff(id) on delete set null,
   assignee_name text,
-  status text not null default 'new' check (status in ('new','assigned','seen','on_route','completed','issue')),
-  priority text not null default 'normal' check (priority in ('normal','high','critical')),
+  status text not null default 'new'
+    check (status in ('new','assigned','seen','on_route','completed','issue')),
+  priority text not null default 'normal'
+    check (priority in ('normal','high','critical')),
   notes text,
   items jsonb not null default '[]'::jsonb,
   checklist jsonb not null default '{"addressVerified":false,"customerCalled":false,"productLoaded":false,"modelChecked":false,"accessoriesChecked":false,"returnChecked":false}'::jsonb,
-  created_by uuid references auth.users(id) on delete set null,
+  created_by uuid references auth.users(id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -37,9 +40,10 @@ create table if not exists public.deliveries (
 create table if not exists public.delivery_events (
   id uuid primary key default gen_random_uuid(),
   delivery_id uuid references public.deliveries(id) on delete cascade,
-  actor_id uuid references auth.users(id) on delete set null,
+  actor_id uuid references auth.users(id) on delete set null default auth.uid(),
   actor_name text,
-  event_type text not null,
+  event_type text not null
+    check (event_type in ('created','status','checklist','issue','system')),
   title text not null,
   detail text,
   created_at timestamptz not null default now()
@@ -48,45 +52,31 @@ create table if not exists public.delivery_events (
 create index if not exists deliveries_delivery_date_idx on public.deliveries(delivery_date);
 create index if not exists deliveries_assignee_id_idx on public.deliveries(assignee_id);
 create index if not exists deliveries_status_idx on public.deliveries(status);
+create index if not exists deliveries_priority_idx on public.deliveries(priority);
+create index if not exists deliveries_updated_at_idx on public.deliveries(updated_at desc);
 create index if not exists delivery_events_delivery_id_idx on public.delivery_events(delivery_id);
+create index if not exists delivery_events_created_at_idx on public.delivery_events(created_at desc);
 
 alter table public.staff enable row level security;
 alter table public.deliveries enable row level security;
 alter table public.delivery_events enable row level security;
 
--- İlk kurulum politikaları: yalnız oturum açmış kullanıcılar.
--- Canlıya geçerken dükkan/sevkiyatçı rollerine göre daha daraltılmalıdır.
-create policy "authenticated_read_staff"
-on public.staff for select
-to authenticated
-using (true);
+-- Güvenli varsayılan: burada geniş "authenticated can do everything" politikası yoktur.
+-- Rol politikaları supabase/migrations/20260926_realtime_auth_push.sql içinde oluşturulur.
 
-create policy "authenticated_manage_staff"
-on public.staff for all
-to authenticated
-using (true)
-with check (true);
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public' and tablename='deliveries'
+  ) then
+    alter publication supabase_realtime add table public.deliveries;
+  end if;
 
-create policy "authenticated_read_deliveries"
-on public.deliveries for select
-to authenticated
-using (true);
-
-create policy "authenticated_manage_deliveries"
-on public.deliveries for all
-to authenticated
-using (true)
-with check (true);
-
-create policy "authenticated_read_events"
-on public.delivery_events for select
-to authenticated
-using (true);
-
-create policy "authenticated_insert_events"
-on public.delivery_events for insert
-to authenticated
-with check (true);
-
-alter publication supabase_realtime add table public.deliveries;
-alter publication supabase_realtime add table public.delivery_events;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public' and tablename='delivery_events'
+  ) then
+    alter publication supabase_realtime add table public.delivery_events;
+  end if;
+end $$;
