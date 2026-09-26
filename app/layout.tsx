@@ -1,11 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ["latin","latin-ext"],
   display: "swap",
-  variable: "--font-manrope"
+  variable: "--font-inter"
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-space"
 });
 
 const themeBoot = `
@@ -13,9 +19,7 @@ const themeBoot = `
   try{
     var key="yaateslimat:theme";
     var saved=localStorage.getItem(key);
-    var theme=(saved==="dark"||saved==="light")
-      ? saved
-      : (window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+    var theme=(saved==="dark"||saved==="light") ? saved : "dark";
     var root=document.documentElement;
     root.dataset.theme=theme;
     root.classList.toggle("dark",theme==="dark");
@@ -30,7 +34,7 @@ export const metadata: Metadata = {
   applicationName: "yaaTeslimat",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "yaaTeslimat"
   },
   formatDetection: { telephone:false },
@@ -41,10 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media:"(prefers-color-scheme: light)", color:"#f6f8fb" },
-    { media:"(prefers-color-scheme: dark)", color:"#07111f" }
-  ],
+  themeColor: "#050506",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"
@@ -56,7 +57,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
-      <body className={manrope.variable}>{children}</body>
+      <body className={`${inter.variable} ${spaceGrotesk.variable}`}>{children}</body>
     </html>
   );
 }
