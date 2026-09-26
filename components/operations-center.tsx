@@ -216,8 +216,17 @@ function OperationCard({
   return <article
     className={"operationCard "+(overdue?"isOverdue ":"")+(unseen?"isUnseen ":"")+(missing.length?"hasMissing":"")}
     draggable
+    role="button"
+    tabIndex={0}
+    aria-label={delivery.customerName+" teslimat detayını aç"}
     onDragStart={e=>{e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",delivery.id);onDragStart(delivery.id)}}
     onClick={()=>onOpen(delivery)}
+    onKeyDown={e=>{
+      if(e.key==="Enter"||e.key===" "){
+        e.preventDefault();
+        onOpen(delivery);
+      }
+    }}
   >
     <div className="dragLine"><GripVertical/><span>{delivery.orderNo}</span><em>{delivery.timeWindow}</em></div>
     <div className="operationFlags">
