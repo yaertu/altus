@@ -37,6 +37,14 @@ grant execute on function public.current_role() to authenticated;
 alter table public.profiles enable row level security;
 alter table public.push_subscriptions enable row level security;
 
+-- v0.2'deki geniş politikaları kaldır; aksi halde daha dar v0.3 kuralları etkisiz kalır.
+drop policy if exists "authenticated_read_staff" on public.staff;
+drop policy if exists "authenticated_manage_staff" on public.staff;
+drop policy if exists "authenticated_read_deliveries" on public.deliveries;
+drop policy if exists "authenticated_manage_deliveries" on public.deliveries;
+drop policy if exists "authenticated_read_events" on public.delivery_events;
+drop policy if exists "authenticated_insert_events" on public.delivery_events;
+
 drop policy if exists "profiles_read" on public.profiles;
 create policy "profiles_read" on public.profiles for select to authenticated
 using (id = auth.uid() or public.current_role() in ('admin','office'));
