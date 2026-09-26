@@ -2183,3 +2183,105 @@ footer .dev-copy strong{color:#718397}
 @keyframes modalUp{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:none}}
 @keyframes drawerIn{from{transform:translateX(24px);opacity:.65}to{transform:none;opacity:1}}
 @keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none;transform:scale(1.01)}}
+
+
+/* Readability + card action polish */
+.operationOpen{
+  width:28px;height:28px;
+  flex:0 0 28px;
+  display:grid;
+  place-items:center;
+  color:#6c7f91;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  transition:.16s var(--ease);
+}
+.operationOpen:hover{color:#087f72;border-color:#b8ddd7;background:#eef9f6}
+.operationOpen svg{width:14px;height:14px}
+
+.brand p span{font-size:8px}
+.side nav button{font-size:12px}
+.online b{font-size:10px}
+.online span{font-size:8px}
+.dev-label{font-size:7px}
+.dev-copy strong{font-size:10px}
+
+main>header small,.pageHead small{font-size:9px}
+.date{font-size:10px}
+.primary,.soft,.issue{font-size:11px}
+.syncState{font-size:10px}
+.select select{font-size:11px}
+
+.pageHead p{font-size:11px}
+.commandTopline>span{font-size:9px}
+.commandTopline>b{font-size:10px}
+.commandCopy>p{font-size:12px}
+.commandPrimary b,.commandSecondary b{font-size:11px}
+.commandPrimary small,.commandSecondary small{font-size:8px}
+.pulseOverview small{font-size:9px}
+
+.attentionIntro b{font-size:11px}
+.attentionIntro small{font-size:9px}
+.attentionBar>button{font-size:10px}
+
+.assignmentHead b{font-size:11px}
+.assignmentHead small{font-size:9px}
+.assignmentHead>em{font-size:9px}
+.staffDrop b{font-size:10px}
+.staffDrop small{font-size:8px}
+.staffDrop>i{font-size:7px}
+
+.kanbanHeader small{font-size:9px}
+.kanbanLegend span{font-size:9px}
+.kanbanColumn h4{font-size:11px}
+.kanbanColumn>header small{font-size:8px}
+
+.dragLine{font-size:8px}
+.flag{font-size:8px}
+.operationCard>h4{font-size:13px}
+.operationMeta{font-size:9px}
+.operationProduct small{font-size:8px}
+.operationProduct b{font-size:10px}
+.operationProduct em{font-size:8px}
+.operationAssignee small{font-size:7px}
+.operationAssignee b{font-size:9px}
+.operationAssignee select{font-size:8px}
+.operationCheck p{font-size:8px}
+.missingHint{font-size:8px}
+.dailyHealth small{font-size:9px}
+
+.badges>small{font-size:8px}
+.status,.prio{font-size:8px}
+.deliveryRow h3,.row h3{font-size:13px}
+.customerCell>p{font-size:9px}
+.product small{font-size:8px}
+.product b{font-size:10px}
+.product span{font-size:9px}
+.deliveryProgress p,.progress>p{font-size:9px}
+.deliveryProgress small{font-size:8px}
+
+.form label>span{font-size:9px}
+.form input,.form select{font-size:11px}
+.options button{font-size:9px}
+.error{font-size:9px}
+
+.wizardSteps>span p{font-size:9px}
+.wizardSteps>span p small{font-size:7px}
+.wizardTitle p b{font-size:10px}
+.wizardTitle p small{font-size:8px}
+.quickProducts button{font-size:9px}
+.wizardSummary small{font-size:7px}
+.wizardSummary b{font-size:10px}
+.wizardSummary span{font-size:8px}
+
+.authTitle p{font-size:11px}
+.authCard form label>span{font-size:9px}
+.authCard form input{font-size:11px}
+
+@media(max-width:720px){
+  .commandCopy>p{font-size:11px}
+  .attentionBar>button{font-size:9px}
+  .operationMeta{font-size:9px}
+  .operationAssignee select{font-size:9px}
+}
