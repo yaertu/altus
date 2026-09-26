@@ -121,8 +121,8 @@ export default function Dashboard(){
     return (!q||h.includes(q))&&(filter==="all"||d.status===filter);
   });
   const my=deliveries.filter(d=>d.assignee===courier&&d.date===day&&!["completed","issue"].includes(d.status));
-  function log(title:string,d?:Delivery,detail?:string){
-    const event:ActivityEvent={id:id("e"),deliveryId:d?.id,orderNo:d?.orderNo,actor:mode==="courier"?(courier||profile?.fullName||"Sevkiyatçı"):(profile?.fullName||"Dükkan"),type:"status",title,detail,createdAt:new Date().toISOString()};
+  function log(title:string,d?:Delivery,detail?:string,type:ActivityEvent["type"]="status"){
+    const event:ActivityEvent={id:id("e"),deliveryId:d?.id,orderNo:d?.orderNo,actor:mode==="courier"?(courier||profile?.fullName||"Sevkiyatçı"):(profile?.fullName||"Dükkan"),type,title,detail,createdAt:new Date().toISOString()};
     setEvents(p=>[event,...p]);
     if(cloud) insertEvent({deliveryId:event.deliveryId,orderNo:event.orderNo,actor:event.actor,type:event.type,title:event.title,detail:event.detail}).catch(()=>undefined);
   }
@@ -133,7 +133,7 @@ export default function Dashboard(){
     setSelected(s=>s?.id===d.id?updated:s);
     try{
       if(cloud)await patchDelivery(d.id,{status});
-      log("Durum: "+labels[status],updated,d.customerName);
+      log("Durum: "+labels[status],updated,d.customerName,status==="issue"?"issue":"status");
     }catch(err:any){
       setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
       setSelected(s=>s?.id===d.id?d:s);
@@ -146,7 +146,7 @@ export default function Dashboard(){
     setSelected(s=>s?.id===d.id?updated:s);
     try{
       if(cloud)await patchDelivery(d.id,{checklist});
-      log(value?"Kontrol tamamlandı":"Kontrol geri alındı",updated,checks.find(x=>x[0]===k)?.[1]);
+      log(value?"Kontrol tamamlandı":"Kontrol geri alındı",updated,checks.find(x=>x[0]===k)?.[1],"checklist");
     }catch(err:any){
       setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
       setSelected(s=>s?.id===d.id?d:s);
@@ -163,7 +163,7 @@ export default function Dashboard(){
     const now=new Date().toISOString();
     try{
       const rec=cloud ? await insertDelivery(d,staff) : {...d,id:id("d"),createdAt:now,updatedAt:now,status:(d.assignee==="Atanmamış"?"new":"assigned") as DeliveryStatus,checklist:{addressVerified:false,customerCalled:false,productLoaded:false,modelChecked:false,accessoriesChecked:false,returnChecked:false}};
-      setDeliveries(p=>[rec,...p.filter(x=>x.id!==rec.id)]); setNewOpen(false); log("Yeni teslimat oluşturuldu",rec,rec.assignee);
+      setDeliveries(p=>[rec,...p.filter(x=>x.id!==rec.id)]); setNewOpen(false); log("Yeni teslimat oluşturuldu",rec,rec.assignee,"created");
       if(cloud&&rec.assignee!=="Atanmamış") sendAssignmentPush(rec.id).catch(()=>undefined);
     }catch(err:any){ setCloudError(err?.message||"Teslimat kaydedilemedi."); }
   }
@@ -202,7 +202,7 @@ export default function Dashboard(){
       if(cloud)await removeCloudDelivery(d.id);
       setDeliveries(p=>p.filter(x=>x.id!==d.id));
       setSelected(null);
-      log("Teslimat silindi",undefined,d.orderNo+" • "+d.customerName);
+      log("Teslimat silindi",undefined,d.orderNo+" • "+d.customerName,"system");
     }catch(err:any){
       setCloudError(err?.message||"Teslimat silinemedi.");
     }
