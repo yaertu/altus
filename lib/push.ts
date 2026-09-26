@@ -41,9 +41,15 @@ export async function enablePushNotifications() {
 }
 
 export async function sendAssignmentPush(deliveryId: string) {
+  if (!supabase) return false;
+  const { data:{ session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return false;
   const res = await fetch("/api/push/send", {
     method:"POST",
-    headers:{"Content-Type":"application/json"},
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+session.access_token
+    },
     body:JSON.stringify({deliveryId})
   });
   if (!res.ok) return false;
