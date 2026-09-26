@@ -12,6 +12,7 @@ import LoginScreen from "./login-screen";
 import WebIcon from "./web-icon";
 import InstallPwaCard from "./install-pwa-card";
 import MobileBottomNav from "./mobile-bottom-nav";
+import OperationsCenter from "./operations-center";
 import { ActivityEvent, Delivery, DeliveryStatus, Priority } from "@/lib/types";
 import {
   cloudAvailable, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
@@ -147,6 +148,30 @@ export default function Dashboard(){
       setStaff(p=>[...p.filter(x=>x.id!==rec.id),rec]); setStaffOpen(false);
     }catch(err:any){ setCloudError(err?.message||"Personel kaydedilemedi."); }
   }
+  async function assignDelivery(d:Delivery,person:Staff|null){
+    const assignee=person?.name||"Atanmamış";
+    const nextStatus:DeliveryStatus = person
+      ? (d.status==="new" ? "assigned" : d.status)
+      : (["new","assigned","seen"].includes(d.status) ? "new" : d.status);
+    const updated:Delivery={
+      ...d,
+      assignee,
+      assigneeInitials:person?initials(person.name):"--",
+      status:nextStatus,
+      updatedAt:new Date().toISOString()
+    };
+    setDeliveries(p=>p.map(x=>x.id===d.id?updated:x));
+    setSelected(s=>s?.id===d.id?updated:s);
+    log(person?"Personel atandı":"Personel ataması kaldırıldı",updated,assignee);
+    if(cloud){
+      try{
+        await patchDelivery(d.id,{assigneeId:person?.id||null,assigneeName:person?.name||null,status:nextStatus});
+        if(person)sendAssignmentPush(d.id).catch(()=>undefined);
+      }catch(err:any){
+        setCloudError(err?.message||"Personel ataması buluta yazılamadı.");
+      }
+    }
+  }
   function remove(d:Delivery){ setDeliveries(p=>p.filter(x=>x.id!==d.id)); setSelected(null); log("Teslimat silindi",d,d.customerName); if(cloud)removeCloudDelivery(d.id).catch((err:any)=>setCloudError(err?.message||"Silme işlemi buluta yazılamadı.")); }
 
   const authRequired=process.env.NEXT_PUBLIC_REQUIRE_AUTH==="true";
@@ -165,7 +190,7 @@ export default function Dashboard(){
       <header><button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button><div><small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small><h1>{mode==="office"?nav.find(x=>x[0]===view)?.[1]:"Bugünkü Görevler"}</h1></div><div className="actions"><span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"İnternet yok":cloud?"Canlı senkron":"Yerel mod"}</span>{mode==="courier"&&profile?.role!=="courier"?<label className="select"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}<button className="soft" onClick={notifications}><Bell size={16}/><span>{notify?"Bildirim açık":"Bildirimleri aç"}</span></button>{mode==="office"?<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}</div></header>
       <div className="date"><CalendarDays size={15}/><span>{new Intl.DateTimeFormat("tr-TR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date())}</span>{cloudError?<button className="cloudError" onClick={()=>setCloudError("")}><AlertTriangle size={13}/>{cloudError}<X size={12}/></button>:null}</div>
       {mode==="courier"?<CourierList list={my} courier={courier} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} requireChecks={requireChecks}/>:<>
-        {view==="dashboard"&&<DashboardHome total={todayList.length} active={active} completed={completed} problems={problems} list={todayList.slice(0,5)} staff={staff} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected}/>}
+        {view==="dashboard"&&<OperationsCenter deliveries={deliveries} staff={staff} cloud={cloud} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected} onAssign={assignDelivery}/>}
         {view==="deliveries"&&<section className="card page"><PageHead tag="DÜKKAN KAYITLARI" title="Tüm teslimatlar" text="Müşteri, adres, ürün ve personel bilgilerini tek yerden takip et." action={<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={16}/>Yeni teslimat</button>}/><div className="filters"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="İsim, telefon, ürün, sipariş no..."/></label><label className="select"><select value={filter} onChange={e=>setFilter(e.target.value as "all"|DeliveryStatus)}><option value="all">Tüm durumlar</option>{Object.keys(labels).map(k=><option key={k} value={k}>{labels[k as DeliveryStatus]}</option>)}</select><ChevronDown size={13}/></label></div><DeliveryList list={filtered} onOpen={setSelected}/></section>}
         {view==="staff"&&<StaffPage staff={staff} deliveries={deliveries} onAdd={()=>setStaffOpen(true)}/>}
         {view==="customers"&&<CustomersPage deliveries={deliveries} onOpen={setSelected}/>}
