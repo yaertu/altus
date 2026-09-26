@@ -13,6 +13,7 @@ import WebIcon from "./web-icon";
 import InstallPwaCard from "./install-pwa-card";
 import MobileBottomNav from "./mobile-bottom-nav";
 import OperationsCenter from "./operations-center";
+import ThemeToggle from "./theme-toggle";
 import { ActivityEvent, Delivery, DeliveryStatus, Priority } from "@/lib/types";
 import {
   cloudAvailable, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
@@ -211,6 +212,25 @@ export default function Dashboard(){
   const authRequired=process.env.NEXT_PUBLIC_REQUIRE_AUTH==="true";
   if(authRequired&&cloudAvailable()&&authReady&&!signedIn) return <LoginScreen onSuccess={()=>window.location.reload()}/>;
 
+  const pageTitle=mode==="office" ? (nav.find(x=>x[0]===view)?.[1]||"Kontrol Merkezi") : "Bugünkü Görevler";
+  const pageDescription=mode==="courier"
+    ? "Atanan işleri sırayla gör, müşteriyi ara, yol tarifini aç ve teslimatı kontrollerle kapat."
+    : view==="dashboard"
+      ? "Bugünün teslimatlarını, riskleri ve saha ekibini tek bakışta yönet."
+      : view==="deliveries"
+        ? "Tüm teslimat kayıtlarını ara, filtrele ve detaylarını düzenle."
+        : view==="staff"
+          ? "Saha ekibini ve aktif görev yükünü takip et."
+          : view==="customers"
+            ? "Müşteri ve teslimat geçmişine hızlı eriş."
+            : view==="checklists"
+              ? "Teslimat kapanmadan tamamlanması gereken zorunlu adımları izle."
+              : view==="planning"
+                ? "Günlük teslimat planını tarih ve saat aralıklarına göre yönet."
+                : view==="logs"
+                  ? "Operasyondaki durum ve kontrol değişikliklerini incele."
+                  : "Uygulama, bildirim ve cihaz ayarlarını yönet.";
+
   return <div className="app">
     {splash&&<div className="splash"><div className="splashLogo"><Truck/></div><b>yaaTeslimat</b><span>Teslimat Operasyon Sistemi</span><DeveloperBadge compact/></div>}
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
@@ -221,8 +241,38 @@ export default function Dashboard(){
       <div className="grow"/><div className="online"><i/><p><b>Sistem hazır</b><span>Mobil • Tablet • PC</span></p></div><DeveloperBadge/>
     </aside>
     <main>
-      <header><button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button><div><small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small><h1>{mode==="office"?nav.find(x=>x[0]===view)?.[1]:"Bugünkü Görevler"}</h1></div><div className="actions"><span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"İnternet yok":cloud?"Canlı senkron":"Yerel mod"}</span>{mode==="courier"&&profile?.role!=="courier"?<label className="select"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}<button className="soft" onClick={notifications}><Bell size={16}/><span>{notify?"Bildirim açık":"Bildirimleri aç"}</span></button>{mode==="office"?<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}</div></header>
-      <div className="date"><CalendarDays size={15}/><span>{new Intl.DateTimeFormat("tr-TR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date())}</span>{cloudError?<button className="cloudError" onClick={()=>setCloudError("")}><AlertTriangle size={13}/>{cloudError}<X size={12}/></button>:null}</div>
+      <header className="appTopbar">
+        <button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button>
+        <label className="globalSearch">
+          <Search size={18}/>
+          <input
+            value={mode==="office"?query:""}
+            readOnly={mode!=="office"}
+            onChange={e=>{setQuery(e.target.value);if(e.target.value)setView("deliveries")}}
+            placeholder={mode==="office"?"Müşteri, telefon, adres, ürün veya sipariş no ara...":"Sevkiyatçı modunda görevlerin aşağıda"}
+          />
+          <kbd>⌘ K</kbd>
+        </label>
+        <div className="topbarRight">
+          <ThemeToggle/>
+          <span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"İnternet yok":cloud?"Canlı":"Yerel"}</span>
+          {mode==="courier"&&profile?.role!=="courier"?<label className="select courierSelect"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}
+          <button className="iconButton notifyButton" aria-label={notify?"Bildirimler açık":"Bildirimleri aç"} onClick={notifications}><Bell size={18}/>{notify?<i/>:null}</button>
+          <div className="userChip"><span>{initials(profile?.fullName||courier||"Dükkan")}</span><p><b>{profile?.fullName||courier||"Dükkan"}</b><small>{profile?.role==="courier"?"Sevkiyatçı":"Operasyon"}</small></p></div>
+          {mode==="office"?<button className="primary topNew" onClick={()=>setNewOpen(true)}><Plus size={18}/><span>Yeni teslimat</span></button>:null}
+        </div>
+      </header>
+      <section className="pageIntro">
+        <div>
+          <small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small>
+          <h1>{pageTitle}</h1>
+          <p>{pageDescription}</p>
+        </div>
+        <div className="pageIntroMeta">
+          <span><CalendarDays size={16}/>{new Intl.DateTimeFormat("tr-TR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date())}</span>
+          {cloudError?<button className="cloudError" onClick={()=>setCloudError("")}><AlertTriangle size={13}/>{cloudError}<X size={12}/></button>:null}
+        </div>
+      </section>
       {mode==="courier"?<CourierList list={my} courier={courier} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} requireChecks={requireChecks}/>:<>
         {view==="dashboard"&&<OperationsCenter deliveries={deliveries} staff={staff} cloud={cloud} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected} onAssign={assignDelivery}/>}
         {view==="deliveries"&&<section className="card page"><PageHead tag="DÜKKAN KAYITLARI" title="Tüm teslimatlar" text="Müşteri, adres, ürün ve personel bilgilerini tek yerden takip et." action={<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={16}/>Yeni teslimat</button>}/><div className="filters"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="İsim, telefon, ürün, sipariş no..."/></label><label className="select"><select value={filter} onChange={e=>setFilter(e.target.value as "all"|DeliveryStatus)}><option value="all">Tüm durumlar</option>{Object.keys(labels).map(k=><option key={k} value={k}>{labels[k as DeliveryStatus]}</option>)}</select><ChevronDown size={13}/></label></div><DeliveryList list={filtered} onOpen={setSelected}/></section>}
@@ -233,7 +283,7 @@ export default function Dashboard(){
         {view==="logs"&&<LogsPage events={events}/>}
         {view==="settings"&&<SettingsPage requireChecks={requireChecks} setRequireChecks={setRequireChecks} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([])}}}/>} 
       </>}
-      <footer><span>yaaTeslimat • v0.6</span><DeveloperBadge compact/></footer>
+      <footer><span>yaaTeslimat • v0.7</span><DeveloperBadge compact/></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
     {newOpen&&<NewDelivery staff={names} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>}
