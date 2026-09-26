@@ -2045,7 +2045,7 @@ footer{
   .flowGrid{grid-template-columns:1fr}
   .flowLaneBody{grid-template-columns:1fr}
   .flowLane{min-height:0}
-  .controlRail{display:flex}
+  .controlRail{display:flex;flex-direction:column}
   .healthList{grid-template-columns:1fr 1fr}
 
   .pageHead{flex-direction:column}
