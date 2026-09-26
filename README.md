@@ -2,14 +2,20 @@
 
 Dükkan ve sevkiyat personeli için responsive teslimat operasyon uygulaması.
 
-## v0.6 — Operasyon Merkezi
+## v0.7 — Mission Control + Gündüz/Gece
 
-- Baştan yazılmış premium responsive tema
-- Koyu operasyon sidebar + açık veri alanı
+- Sıfırdan yazılmış semantic token tabanlı responsive tema
+- Gerçek Gündüz / Gece tema anahtarı
+- Tema tercihi localStorage + cross-tab senkron
+- İlk paint öncesi theme bootstrap ile düşük flash
+- Floating sidebar + global arama + Cmd/Ctrl+K
+- Mission-control tipi yeni Kontrol Merkezi
 - Geciken teslimat uyarıları
 - 15 dakikadan uzun süredir görülmeyen görev uyarıları
 - Eksik adres / telefon / ilçe / ürün / personel kontrolü
-- Bekliyor / Yolda / Tamamlandı / Sorun operasyon panosu
+- Bekliyor / Yolda / Tamamlandı / Sorun akış panosu
+- Completion ring + geciken/görülmedi/eksik bilgi metrikleri
+- Ayrı hızlı işlem / personel atama / operasyon sağlık rail'i
 - Masaüstünde sürükle-bırak personel atama
 - Mobilde kart içinden personel seçimi
 - Yerel modda eski teslimat kayıtlarındaki personelleri otomatik toparlama
@@ -99,3 +105,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 ## Geliştirici
 
 **yaaertu codeR**
+
+
+## Tasarım / UX audit
+
+Güncel redesign notları: `docs/AUDIT-v0.7.md`
