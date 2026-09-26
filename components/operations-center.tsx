@@ -114,7 +114,7 @@ export default function OperationsCenter({
           <span className="clockLabel">{new Intl.DateTimeFormat("tr-TR",{hour:"2-digit",minute:"2-digit"}).format(now)}</span>
         </div>
         <div className="metricLeadBody">
-          <div className="progressRing" style={{"--p":completionRate} as CSSProperties}><b>%{completionRate}</b></div>
+          <div className="progressRing" style={{"--progress":`${completionRate}%`} as CSSProperties}><b>%{completionRate}</b></div>
           <div><small>BUGÜNÜN İLERLEMESİ</small><h2>{completed.length}<span> / {operational.length}</span></h2><p>Tamamlanan teslimat</p></div>
         </div>
         <div className="metricLeadFoot"><span><Truck/>{active.length} aktif iş</span><span><UserCheck/>{operational.filter(d=>["seen","on_route","completed"].includes(d.status)).length} görüldü</span></div>
