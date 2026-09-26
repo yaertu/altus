@@ -264,10 +264,16 @@ function NewDelivery({staff,onClose,onSave}:{staff:string[];onClose:()=>void;onS
   function set(k:string,v:string|boolean){setF(x=>({...x,[k]:v}))}
   function submit(e:FormEvent){
     e.preventDefault();
-    if(!f.name||!f.phone||!f.address||!f.product){setErr("Şu 4 bilgi gerekli: müşteri adı, telefon, adres ve ürün.");return}
+    const phoneDigits=f.phone.replace(/\D/g,"");
+    if(!f.name.trim()){setErr("Müşteri adı ve soyadı gerekli.");return}
+    if(phoneDigits.length<10){setErr("Telefon numarası eksik veya hatalı. En az 10 rakam gir.");return}
+    if(f.address.trim().length<8){setErr("Açık adresi daha detaylı yaz. Mahalle/sokak/bina bilgisi olmalı.");return}
+    if(!f.district.trim()){setErr("İlçe bilgisi gerekli.");return}
+    if(!f.product.trim()){setErr("Teslim edilecek ürünü seç veya yaz.");return}
+    const suffix=(Date.now().toString(36).slice(-3)+Math.random().toString(36).slice(2,4)).toUpperCase();
     onSave({
-      orderNo:"YD-"+f.date.replaceAll("-","").slice(2)+"-"+(Math.floor(Math.random()*900)+100),
-      customerName:f.name,phone:f.phone,address:f.address,district:f.district,city:f.city,date:f.date,timeWindow:f.time,
+      orderNo:"YD-"+f.date.replaceAll("-","").slice(2)+"-"+suffix,
+      customerName:f.name.trim(),phone:f.phone.trim(),address:f.address.trim(),district:f.district.trim(),city:f.city.trim(),date:f.date,timeWindow:f.time,
       assignee:f.assignee,assigneeInitials:f.assignee==="Atanmamış"?"--":initials(f.assignee),status:"new",priority:f.priority,notes:f.notes,
       items:[{id:id("i"),brand:f.brand,product:f.product,model:f.model,quantity:1,serviceRequired:f.service,installationRequired:f.install,takeBackOldProduct:f.old}]
     })
@@ -290,7 +296,7 @@ function NewDelivery({staff,onClose,onSave}:{staff:string[];onClose:()=>void;onS
         <Field label="Müşteri adı ve soyadı *" v={f.name} set={v=>set("name",v)} placeholder="Örn. Ahmet Yılmaz"/>
         <Field label="Telefon *" v={f.phone} set={v=>set("phone",v)} placeholder="05xx xxx xx xx" inputMode="tel"/>
         <Field label="Açık adres *" v={f.address} set={v=>set("address",v)} placeholder="Mahalle, cadde, sokak, bina no..." wide/>
-        <Field label="İlçe" v={f.district} set={v=>set("district",v)} placeholder="Örn. Kadıköy"/>
+        <Field label="İlçe *" v={f.district} set={v=>set("district",v)} placeholder="Örn. Kadıköy"/>
         <Field label="Şehir" v={f.city} set={v=>set("city",v)} placeholder="İstanbul"/>
       </div>
     </section>
