@@ -106,7 +106,17 @@ Yeni:
 `lib/demo-data.ts` silindi.
 Gerçek müşteri verisinin kaynak koda girmemesi ilkesi korunuyor.
 
-### 10. Web response hardening eksikti
+### 10. Courier doğrudan API ile ofis alanlarını değiştirebilirdi
+
+RLS satır erişimini sınırlar fakat aynı satır içindeki kolonları tek başına kısıtlamaz.
+
+Düzeltme:
+- DB trigger ile courier rolüne yalnız `status`, `checklist`, `updated_at` akışı bırakıldı
+- customer/adres/ürün/personel/öncelik/not gibi ofis alanları courier için immutable
+- courier status transition zinciri veritabanında doğrulanıyor
+- event insert policy yalnız kendisine atanmış teslimatlara log yazmasına izin veriyor
+
+### 11. Web response hardening eksikti
 
 Yeni `next.config.ts`:
 - X-Content-Type-Options: nosniff
