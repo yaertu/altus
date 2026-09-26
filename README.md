@@ -47,6 +47,7 @@ SQL dosyalarını sırasıyla uygula:
 1. `supabase/schema.sql`
 2. `supabase/migrations/20260926_realtime_auth_push.sql`
 3. `supabase/migrations/20260927_v06_hardening.sql`
+4. `supabase/migrations/20260927_v06_courier_guard.sql`
 
 Sonra:
 
