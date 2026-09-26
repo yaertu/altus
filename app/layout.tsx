@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
+  subsets: ["latin","latin-ext"],
   display: "swap",
   variable: "--font-space"
 });
@@ -17,7 +17,7 @@ const spaceGrotesk = Space_Grotesk({
 const themeBoot = `
 (function(){
   try{
-    var key="yaateslimat:theme";
+    var key="yaateslimat:theme:v2";
     var saved=localStorage.getItem(key);
     var theme=(saved==="dark"||saved==="light") ? saved : "dark";
     var root=document.documentElement;
