@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  AlertTriangle, BellRing, CheckCircle2, Clock3, GripVertical, MapPin,
+  AlertTriangle, BellRing, CheckCircle2, ChevronRight, Clock3, GripVertical, MapPin,
   PackageCheck, Phone, Plus, Route, ShieldAlert, Truck, UserCheck,
   UserPlus, UsersRound
 } from "lucide-react";
@@ -216,19 +216,10 @@ function OperationCard({
   return <article
     className={"operationCard "+(overdue?"isOverdue ":"")+(unseen?"isUnseen ":"")+(missing.length?"hasMissing":"")}
     draggable
-    role="button"
-    tabIndex={0}
-    aria-label={delivery.customerName+" teslimat detayını aç"}
     onDragStart={e=>{e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",delivery.id);onDragStart(delivery.id)}}
     onClick={()=>onOpen(delivery)}
-    onKeyDown={e=>{
-      if(e.key==="Enter"||e.key===" "){
-        e.preventDefault();
-        onOpen(delivery);
-      }
-    }}
   >
-    <div className="dragLine"><GripVertical/><span>{delivery.orderNo}</span><em>{delivery.timeWindow}</em></div>
+    <div className="dragLine"><GripVertical/><span>{delivery.orderNo}</span><em>{delivery.timeWindow}</em><button className="operationOpen" aria-label={delivery.customerName+" teslimat detayını aç"} onClick={e=>{e.stopPropagation();onOpen(delivery)}}><ChevronRight/></button></div>
     <div className="operationFlags">
       {overdue?<span className="flag danger"><Clock3/>Gecikti</span>:null}
       {unseen?<span className="flag warning"><BellRing/>Görülmedi</span>:null}
