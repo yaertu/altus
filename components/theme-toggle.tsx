@@ -18,11 +18,11 @@ function applyTheme(theme: Theme){
     meta.dataset.yaaTheme="true";
     document.head.appendChild(meta);
   }
-  meta.content=theme==="dark"?"#07111f":"#f6f8fb";
+  meta.content=theme==="dark"?"#050506":"#f4f5f7";
 }
 
 export default function ThemeToggle(){
-  const [theme,setTheme]=useState<Theme>("light");
+  const [theme,setTheme]=useState<Theme>("dark");
 
   useEffect(()=>{
     const stored=localStorage.getItem(KEY) as Theme|null;
@@ -30,7 +30,7 @@ export default function ThemeToggle(){
       ? stored
       : document.documentElement.dataset.theme==="dark"
         ? "dark"
-        : "light";
+        : "dark";
     setTheme(initial);
     applyTheme(initial);
 
