@@ -8,10 +8,17 @@ import {
   UserRound, Users, X
 } from "lucide-react";
 import DeveloperBadge from "./developer-badge";
+import LoginScreen from "./login-screen";
 import { ActivityEvent, Delivery, DeliveryStatus, Priority } from "@/lib/types";
+import {
+  cloudAvailable, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
+  loadCloudData, patchDelivery, removeCloudDelivery, signOut, subscribeCloud, unsubscribeCloud,
+  type Profile
+} from "@/lib/cloud";
+import { enablePushNotifications, sendAssignmentPush } from "@/lib/push";
 
 type View = "dashboard" | "deliveries" | "staff" | "customers" | "checklists" | "planning" | "logs" | "settings";
-type Staff = { id: string; name: string; phone: string };
+type Staff = { id: string; name: string; phone: string; userId?: string | null };
 const DKEY = "yaateslimat:v2:deliveries", SKEY = "yaateslimat:v2:staff", EKEY = "yaateslimat:v2:events";
 const labels: Record<DeliveryStatus,string> = { new:"Yeni", assigned:"Atandı", seen:"Görüldü", on_route:"Yolda", completed:"Tamamlandı", issue:"Sorun" };
 const checks: Array<[keyof Delivery["checklist"],string]> = [
@@ -36,6 +43,7 @@ export default function Dashboard(){
   const [selected,setSelected]=useState<Delivery|null>(null), [newOpen,setNewOpen]=useState(false), [staffOpen,setStaffOpen]=useState(false);
   const [courier,setCourier]=useState(""), [notify,setNotify]=useState(false), [splash,setSplash]=useState(true), [ready,setReady]=useState(false);
   const [requireChecks,setRequireChecks]=useState(true), [query,setQuery]=useState(""), [filter,setFilter]=useState<"all"|DeliveryStatus>("all");
+  const [cloud,setCloud]=useState(false), [cloudError,setCloudError]=useState(""), [profile,setProfile]=useState<Profile|null>(null), [signedIn,setSignedIn]=useState(false), [authReady,setAuthReady]=useState(!cloudAvailable());
 
   useEffect(()=>{ try{
     const old=localStorage.getItem(DKEY)||localStorage.getItem("yaateslimat:deliveries");
@@ -48,6 +56,40 @@ export default function Dashboard(){
   useEffect(()=>{ if(ready)localStorage.setItem(DKEY,JSON.stringify(deliveries)); },[deliveries,ready]);
   useEffect(()=>{ if(ready)localStorage.setItem(SKEY,JSON.stringify(staff)); },[staff,ready]);
   useEffect(()=>{ if(ready)localStorage.setItem(EKEY,JSON.stringify(events.slice(0,200))); },[events,ready]);
+
+  useEffect(()=>{
+    let alive=true;
+    let channel:any=null;
+    async function refresh(){
+      const data=await loadCloudData();
+      if(!alive)return;
+      setDeliveries(data.deliveries);
+      setStaff(data.staff);
+      setEvents(data.events);
+    }
+    async function connect(){
+      if(!cloudAvailable()){ setAuthReady(true); return; }
+      try{
+        const user=await getCurrentUser();
+        if(!alive)return;
+        setSignedIn(Boolean(user));
+        setAuthReady(true);
+        if(!user)return;
+        const p=await getMyProfile();
+        if(!alive)return;
+        setProfile(p);
+        if(p?.role==="courier"){ setMode("courier"); setCourier(p.fullName); }
+        await refresh();
+        setCloud(true);
+        channel=subscribeCloud(()=>{ refresh().catch(()=>undefined); });
+      }catch(err:any){
+        if(alive){ setCloud(false); setCloudError(err?.message||"Bulut bağlantısı kurulamadı."); }
+      }
+    }
+    connect();
+    return()=>{alive=false;unsubscribeCloud(channel)};
+  },[]);
+
   const names=useMemo(()=>Array.from(new Set(staff.map(x=>x.name).concat(deliveries.map(x=>x.assignee).filter(x=>x&&x!=="Atanmamış")))),[staff,deliveries]);
   useEffect(()=>{ if(!courier&&names[0])setCourier(names[0]); },[courier,names]);
   const day=today(), todayList=deliveries.filter(x=>x.date===day), active=todayList.filter(x=>!["completed","issue"].includes(x.status)).length;
@@ -57,24 +99,58 @@ export default function Dashboard(){
     return (!q||h.includes(q))&&(filter==="all"||d.status===filter);
   });
   const my=deliveries.filter(d=>d.assignee===courier&&d.date===day&&!["completed","issue"].includes(d.status));
-  function log(title:string,d?:Delivery,detail?:string){ setEvents(p=>[{id:id("e"),deliveryId:d?.id,orderNo:d?.orderNo,actor:mode==="courier"?(courier||"Sevkiyatçı"):"Dükkan",type:"status",title,detail,createdAt:new Date().toISOString()},...p]); }
-  function setStatus(d:Delivery,status:DeliveryStatus){ if(status==="completed"&&requireChecks&&Object.values(d.checklist).some(v=>!v))return; setDeliveries(p=>p.map(x=>x.id===d.id?{...x,status,updatedAt:new Date().toISOString()}:x)); setSelected(s=>s?.id===d.id?{...s,status}:s); log("Durum: "+labels[status],d,d.customerName); }
-  function toggle(d:Delivery,k:keyof Delivery["checklist"]){ const value=!d.checklist[k]; setDeliveries(p=>p.map(x=>x.id===d.id?{...x,checklist:{...x.checklist,[k]:value},updatedAt:new Date().toISOString()}:x)); setSelected(s=>s?.id===d.id?{...s,checklist:{...s.checklist,[k]:value}}:s); log(value?"Kontrol tamamlandı":"Kontrol geri alındı",d,checks.find(x=>x[0]===k)?.[1]); }
-  async function notifications(){ if("Notification" in window){ const p=await Notification.requestPermission(); setNotify(p==="granted"); } }
-  function addDelivery(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">){ const now=new Date().toISOString(), rec:Delivery={...d,id:id("d"),createdAt:now,updatedAt:now,status:d.assignee==="Atanmamış"?"new":"assigned",checklist:{addressVerified:false,customerCalled:false,productLoaded:false,modelChecked:false,accessoriesChecked:false,returnChecked:false}}; setDeliveries(p=>[rec,...p]); setNewOpen(false); log("Yeni teslimat oluşturuldu",rec,rec.assignee); }
-  function remove(d:Delivery){ setDeliveries(p=>p.filter(x=>x.id!==d.id)); setSelected(null); log("Teslimat silindi",d,d.customerName); }
+  function log(title:string,d?:Delivery,detail?:string){
+    const event:ActivityEvent={id:id("e"),deliveryId:d?.id,orderNo:d?.orderNo,actor:mode==="courier"?(courier||profile?.fullName||"Sevkiyatçı"):(profile?.fullName||"Dükkan"),type:"status",title,detail,createdAt:new Date().toISOString()};
+    setEvents(p=>[event,...p]);
+    if(cloud) insertEvent({deliveryId:event.deliveryId,orderNo:event.orderNo,actor:event.actor,type:event.type,title:event.title,detail:event.detail}).catch(()=>undefined);
+  }
+  function setStatus(d:Delivery,status:DeliveryStatus){
+    if(status==="completed"&&requireChecks&&Object.values(d.checklist).some(v=>!v))return;
+    const updated={...d,status,updatedAt:new Date().toISOString()};
+    setDeliveries(p=>p.map(x=>x.id===d.id?updated:x)); setSelected(s=>s?.id===d.id?updated:s); log("Durum: "+labels[status],d,d.customerName);
+    if(cloud) patchDelivery(d.id,{status}).catch((err:any)=>setCloudError(err?.message||"Durum buluta yazılamadı."));
+  }
+  function toggle(d:Delivery,k:keyof Delivery["checklist"]){
+    const value=!d.checklist[k], checklist={...d.checklist,[k]:value}, updated={...d,checklist,updatedAt:new Date().toISOString()};
+    setDeliveries(p=>p.map(x=>x.id===d.id?updated:x)); setSelected(s=>s?.id===d.id?updated:s); log(value?"Kontrol tamamlandı":"Kontrol geri alındı",d,checks.find(x=>x[0]===k)?.[1]);
+    if(cloud) patchDelivery(d.id,{checklist}).catch((err:any)=>setCloudError(err?.message||"Kontrol buluta yazılamadı."));
+  }
+  async function notifications(){
+    try{
+      if(cloud){ await enablePushNotifications(); setNotify(true); }
+      else if("Notification" in window){ const p=await Notification.requestPermission(); setNotify(p==="granted"); }
+    }catch(err:any){ setCloudError(err?.message||"Bildirim açılamadı."); }
+  }
+  async function addDelivery(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">){
+    const now=new Date().toISOString();
+    try{
+      const rec=cloud ? await insertDelivery(d,staff) : {...d,id:id("d"),createdAt:now,updatedAt:now,status:(d.assignee==="Atanmamış"?"new":"assigned") as DeliveryStatus,checklist:{addressVerified:false,customerCalled:false,productLoaded:false,modelChecked:false,accessoriesChecked:false,returnChecked:false}};
+      setDeliveries(p=>[rec,...p.filter(x=>x.id!==rec.id)]); setNewOpen(false); log("Yeni teslimat oluşturuldu",rec,rec.assignee);
+      if(cloud&&rec.assignee!=="Atanmamış") sendAssignmentPush(rec.id).catch(()=>undefined);
+    }catch(err:any){ setCloudError(err?.message||"Teslimat kaydedilemedi."); }
+  }
+  async function addStaff(s:{name:string;phone:string}){
+    try{
+      const rec=cloud ? await insertStaff(s.name,s.phone) : {...s,id:id("s")};
+      setStaff(p=>[...p.filter(x=>x.id!==rec.id),rec]); setStaffOpen(false);
+    }catch(err:any){ setCloudError(err?.message||"Personel kaydedilemedi."); }
+  }
+  function remove(d:Delivery){ setDeliveries(p=>p.filter(x=>x.id!==d.id)); setSelected(null); log("Teslimat silindi",d,d.customerName); if(cloud)removeCloudDelivery(d.id).catch((err:any)=>setCloudError(err?.message||"Silme işlemi buluta yazılamadı.")); }
+
+  const authRequired=process.env.NEXT_PUBLIC_REQUIRE_AUTH==="true";
+  if(authRequired&&cloudAvailable()&&authReady&&!signedIn) return <LoginScreen onSuccess={()=>window.location.reload()}/>;
 
   return <div className="app">
     {splash&&<div className="splash"><div className="splashLogo"><Truck/></div><b>yaaTeslimat</b><span>Teslimat Operasyon Sistemi</span><DeveloperBadge compact/></div>}
     <aside className={"side "+(side?"open":"")}>
       <div className="brand"><div><Truck size={21}/></div><p><b>yaaTeslimat</b><span>Sevkiyat Yönetimi</span></p><button onClick={()=>setSide(false)}><X size={18}/></button></div>
-      <div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Dükkan</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Sevkiyatçı</button></div>
+      {profile?.role==="courier"?<div className="roleChip"><Truck size={15}/><span>Sevkiyatçı modu</span><i>CANLI</i></div>:<div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Dükkan</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Sevkiyatçı</button></div>}
       {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button><button onClick={()=>setMode("office")}><Store size={18}/><span>Dükkana dön</span></button></nav>}
       <div className="grow"/><div className="online"><i/><p><b>Sistem hazır</b><span>Mobil • Tablet • PC</span></p></div><DeveloperBadge/>
     </aside>
     <main>
-      <header><button className="hamb" onClick={()=>setSide(true)}><Menu size={20}/></button><div><small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small><h1>{mode==="office"?nav.find(x=>x[0]===view)?.[1]:"Bugünkü Görevler"}</h1></div><div className="actions">{mode==="courier"?<label className="select"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}<button className="soft" onClick={notifications}><Bell size={16}/><span>{notify?"Bildirim açık":"Bildirimleri aç"}</span></button>{mode==="office"?<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}</div></header>
-      <div className="date"><CalendarDays size={15}/><span>{new Intl.DateTimeFormat("tr-TR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date())}</span></div>
+      <header><button className="hamb" onClick={()=>setSide(true)}><Menu size={20}/></button><div><small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small><h1>{mode==="office"?nav.find(x=>x[0]===view)?.[1]:"Bugünkü Görevler"}</h1></div><div className="actions"><span className={"syncState "+(cloud?"live":"local")}><i/>{cloud?"Canlı senkron":"Yerel mod"}</span>{mode==="courier"&&profile?.role!=="courier"?<label className="select"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}<button className="soft" onClick={notifications}><Bell size={16}/><span>{notify?"Bildirim açık":"Bildirimleri aç"}</span></button>{mode==="office"?<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}</div></header>
+      <div className="date"><CalendarDays size={15}/><span>{new Intl.DateTimeFormat("tr-TR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date())}</span>{cloudError?<button className="cloudError" onClick={()=>setCloudError("")}><AlertTriangle size={13}/>{cloudError}<X size={12}/></button>:null}</div>
       {mode==="courier"?<CourierList list={my} courier={courier} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} requireChecks={requireChecks}/>:<>
         {view==="dashboard"&&<DashboardHome total={todayList.length} active={active} completed={completed} problems={problems} list={todayList.slice(0,5)} staff={staff} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected}/>}
         {view==="deliveries"&&<section className="card page"><PageHead tag="DÜKKAN KAYITLARI" title="Tüm teslimatlar" text="Müşteri, adres, ürün ve personel bilgilerini tek yerden takip et." action={<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={16}/>Yeni teslimat</button>}/><div className="filters"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="İsim, telefon, ürün, sipariş no..."/></label><label className="select"><select value={filter} onChange={e=>setFilter(e.target.value as "all"|DeliveryStatus)}><option value="all">Tüm durumlar</option>{Object.keys(labels).map(k=><option key={k} value={k}>{labels[k as DeliveryStatus]}</option>)}</select><ChevronDown size={13}/></label></div><DeliveryList list={filtered} onOpen={setSelected}/></section>}
@@ -83,12 +159,12 @@ export default function Dashboard(){
         {view==="checklists"&&<ChecklistPage deliveries={deliveries}/>}
         {view==="planning"&&<PlanningPage deliveries={deliveries} onOpen={setSelected}/>}
         {view==="logs"&&<LogsPage events={events}/>}
-        {view==="settings"&&<SettingsPage requireChecks={requireChecks} setRequireChecks={setRequireChecks} notify={notify} onNotify={notifications} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([])}}}/>}
+        {view==="settings"&&<SettingsPage requireChecks={requireChecks} setRequireChecks={setRequireChecks} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([])}}}/>} 
       </>}
       <footer><span>yaaTeslimat • v0.2</span><DeveloperBadge compact/></footer>
     </main>
     {newOpen&&<NewDelivery staff={names} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>}
-    {staffOpen&&<NewStaff onClose={()=>setStaffOpen(false)} onSave={s=>{setStaff(p=>[...p,{...s,id:id("s")}]);setStaffOpen(false)}}/>}
+    {staffOpen&&<NewStaff onClose={()=>setStaffOpen(false)} onSave={addStaff}/>} 
     {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(selected,s)} onToggle={k=>toggle(selected,k)} onDelete={()=>remove(selected)}/>}
   </div>;
 }
@@ -105,7 +181,7 @@ function CustomersPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Deli
 function ChecklistPage({deliveries}:{deliveries:Delivery[]}){return <section className="card page"><PageHead tag="ZORUNLU KONTROLLER" title="Kontrol listeleri" text="Personel teslimatı kapatmadan önce bu adımları işaretler."/><div className="checkDefs">{checks.map(([k,l])=>{const n=deliveries.filter(d=>d.checklist[k]).length;return <div key={k}><span><Check/></span><p><b>{l}</b><small>{n+" / "+deliveries.length+" kayıtta tamamlandı"}</small></p></div>})}</div></section>}
 function PlanningPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Delivery)=>void}){const [date,setDate]=useState(today());const list=deliveries.filter(d=>d.date===date).sort((a,b)=>a.timeWindow.localeCompare(b.timeWindow));return <section className="card page"><PageHead tag="GÜNLÜK PLAN" title="Planlama" text="Tarih seçip günün sevkiyat sırasını gör." action={<input className="dateInput" type="date" value={date} onChange={e=>setDate(e.target.value)}/>} /><DeliveryList list={list} onOpen={onOpen}/></section>}
 function LogsPage({events}:{events:ActivityEvent[]}){return <section className="card page"><PageHead tag="DENETİM İZİ" title="İşlem kayıtları" text="Oluşturma, durum ve kontrol hareketleri."/>{events.length?<div className="logs">{events.map(e=><div key={e.id}><span><History size={15}/></span><p><b>{e.title}</b><small>{(e.detail||"")+" • "+(e.orderNo||"Sistem")}</small></p><time>{new Intl.DateTimeFormat("tr-TR",{hour:"2-digit",minute:"2-digit"}).format(new Date(e.createdAt))}</time></div>)}</div>:<Empty title="İşlem kaydı yok" text="İşlem yaptıkça burada görünür."/>}</section>}
-function SettingsPage({requireChecks,setRequireChecks,notify,onNotify,onClear}:{requireChecks:boolean;setRequireChecks:(v:boolean)=>void;notify:boolean;onNotify:()=>void;onClear:()=>void}){return <div className="settings"><section className="card"><PageHead tag="OPERASYON" title="Teslimat ayarları" text="Saha akışını kontrol et."/><div className="setting"><p><b>Zorunlu checklist</b><small>Tüm kontroller bitmeden teslimatı kapatma.</small></p><button className={requireChecks?"on":""} onClick={()=>setRequireChecks(!requireChecks)}><i/></button></div></section><section className="card"><PageHead tag="CİHAZ" title="Bildirimler" text="Bu cihazdaki bildirim izni."/><button className="soft" onClick={onNotify}><Bell size={16}/>{notify?"Bildirim izni açık":"Bildirimleri aç"}</button></section><section className="card danger"><PageHead tag="YEREL VERİ" title="Bu cihazı temizle" text="Tarayıcıda tutulan yerel kayıtları siler."/><button onClick={onClear}><Trash2 size={16}/>Yerel kayıtları temizle</button></section></div>}
+function SettingsPage({requireChecks,setRequireChecks,notify,onNotify,cloud,profile,onSignOut,onClear}:{requireChecks:boolean;setRequireChecks:(v:boolean)=>void;notify:boolean;onNotify:()=>void;cloud:boolean;profile:Profile|null;onSignOut:()=>void;onClear:()=>void}){return <div className="settings"><section className="card"><PageHead tag="OPERASYON" title="Teslimat ayarları" text="Saha akışını kontrol et."/><div className="setting"><p><b>Zorunlu checklist</b><small>Tüm kontroller bitmeden teslimatı kapatma.</small></p><button className={requireChecks?"on":""} onClick={()=>setRequireChecks(!requireChecks)}><i/></button></div></section><section className="card"><PageHead tag="BAĞLANTI" title={cloud?"Canlı senkron aktif":"Yerel çalışma modu"} text={cloud?"Dükkan ve saha Supabase üzerinden eşzamanlı.":"Veriler yalnız bu cihazın tarayıcısında tutuluyor."}/><div className="connectionInfo"><i className={cloud?"on":""}/><p><b>{profile?.fullName||"Bu cihaz"}</b><small>{profile?.role||"yerel kullanıcı"}</small></p>{profile?<button className="soft" onClick={onSignOut}>Çıkış yap</button>:null}</div></section><section className="card"><PageHead tag="CİHAZ" title="Bildirimler" text="Görev ataması için Web Push izni."/><button className="soft" onClick={onNotify}><Bell size={16}/>{notify?"Bildirim izni açık":"Bildirimleri aç"}</button></section><section className="card danger"><PageHead tag="YEREL VERİ" title="Bu cihazı temizle" text="Tarayıcıda tutulan yerel önbelleği siler."/><button onClick={onClear}><Trash2 size={16}/>Yerel kayıtları temizle</button></section></div>}
 function CourierList({list,courier,onOpen,onStatus,onToggle,requireChecks}:{list:Delivery[];courier:string;onOpen:(d:Delivery)=>void;onStatus:(d:Delivery,s:DeliveryStatus)=>void;onToggle:(d:Delivery,k:keyof Delivery["checklist"])=>void;requireChecks:boolean}){if(!courier)return <div className="courierEmpty"><Truck size={32}/><h2>Personel seç</h2><p>Üstteki listeden hangi sevkiyatçının ekranını görmek istediğini seç.</p></div>;return <div className="courier"><div className="courierHero"><div><small>SAHA EKRANI</small><h2>Merhaba, {courier.split(" ")[0]}</h2><p>Adres, telefon, ürün ve kontroller tek kartta.</p></div><b>{list.length}<span>bugünkü görev</span></b></div>{list.length?list.map(d=>{const done=Object.values(d.checklist).filter(Boolean).length;return <article className="task" key={d.id}><div className="taskTop"><span className={"status s-"+d.status}>{labels[d.status]}</span><small>{d.orderNo}</small></div><h2>{d.customerName}</h2><div className="addr"><MapPin/><p><b>{d.address}</b><span>{d.district+", "+d.city}</span></p></div><div className="quick"><a href={tel(d.phone)}><Phone/>Ara</a><a href={map(d)} target="_blank" rel="noreferrer"><Navigation/>Yol tarifi</a><button onClick={()=>onOpen(d)}><PackageCheck/>Detay</button></div><div className="taskProduct"><Box/><p><small>ÜRÜN</small><b>{d.items[0]?.brand+" "+d.items[0]?.product+(d.items[0]?.model?" • "+d.items[0]?.model:"")}</b></p></div>{d.notes?<div className="note"><AlertTriangle/><p><b>Dükkan notu</b><span>{d.notes}</span></p></div>:null}<div className="taskChecks"><p><b>Kontroller</b><span>{done}/6</span></p>{checks.map(([k,l])=><button className={d.checklist[k]?"on":""} onClick={()=>onToggle(d,k)} key={k}><i>{d.checklist[k]?<Check size={13}/>:null}</i>{l}</button>)}</div><div className="taskActions">{d.status==="assigned"?<button className="primary" onClick={()=>onStatus(d,"seen")}>Görevi gördüm</button>:null}{d.status==="seen"?<button className="primary" onClick={()=>onStatus(d,"on_route")}><Truck size={17}/>Yola çıktım</button>:null}{d.status==="on_route"?<button className="primary" disabled={requireChecks&&done<6} onClick={()=>onStatus(d,"completed")}><CheckCircle2 size={17}/>Teslim edildi</button>:null}<button className="issue" onClick={()=>onStatus(d,"issue")}><AlertTriangle size={16}/>Sorun bildir</button></div></article>}):<div className="card"><Empty title="Bugün görev yok" text="Dükkan bu personele teslimat atadığında burada görünür."/></div>}</div>}
 
 function NewDelivery({staff,onClose,onSave}:{staff:string[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){const [f,setF]=useState({name:"",phone:"",address:"",district:"",city:"İstanbul",brand:"ALTUS",product:"",model:"",assignee:staff[0]||"Atanmamış",date:today(),time:"09:00 - 12:00",priority:"normal" as Priority,notes:"",service:false,install:false,old:false});const [err,setErr]=useState("");function submit(e:FormEvent){e.preventDefault();if(!f.name||!f.phone||!f.address||!f.product){setErr("Müşteri, telefon, adres ve ürün zorunlu.");return}onSave({orderNo:"YD-"+f.date.replaceAll("-","").slice(2)+"-"+(Math.floor(Math.random()*900)+100),customerName:f.name,phone:f.phone,address:f.address,district:f.district,city:f.city,date:f.date,timeWindow:f.time,assignee:f.assignee,assigneeInitials:f.assignee==="Atanmamış"?"--":initials(f.assignee),status:"new",priority:f.priority,notes:f.notes,items:[{id:id("i"),brand:f.brand,product:f.product,model:f.model,quantity:1,serviceRequired:f.service,installationRequired:f.install,takeBackOldProduct:f.old}]})}function set(k:string,v:string|boolean){setF(x=>({...x,[k]:v}))}return <Modal onClose={onClose}><form onSubmit={submit}><PageHead tag="DÜKKANDAN YENİ KAYIT" title="Teslimat oluştur" text="Sevkiyatçının telefonda göreceği bilgileri doldur."/><div className="form"><Field label="Müşteri adı" v={f.name} set={v=>set("name",v)}/><Field label="Telefon" v={f.phone} set={v=>set("phone",v)}/><Field label="Açık adres" v={f.address} set={v=>set("address",v)} wide/><Field label="İlçe" v={f.district} set={v=>set("district",v)}/><Field label="Şehir" v={f.city} set={v=>set("city",v)}/><Select label="Marka" v={f.brand} set={v=>set("brand",v)} opts={["ALTUS","BEKO","GRUNDIG","REGAL","HOOVER","DİĞER"]}/><Field label="Ürün" v={f.product} set={v=>set("product",v)}/><Field label="Model / stok kodu" v={f.model} set={v=>set("model",v)}/><Select label="Personel" v={f.assignee} set={v=>set("assignee",v)} opts={["Atanmamış"].concat(staff)}/><Field label="Teslim tarihi" v={f.date} set={v=>set("date",v)} type="date"/><Select label="Saat aralığı" v={f.time} set={v=>set("time",v)} opts={["09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"]}/><Select label="Öncelik" v={f.priority} set={v=>set("priority",v)} opts={["normal","high","critical"]}/><Field label="Dükkan / teslimat notu" v={f.notes} set={v=>set("notes",v)} wide/></div><div className="options"><Opt t="Servis gerekli" on={f.service} set={v=>set("service",v)}/><Opt t="Kurulum gerekli" on={f.install} set={v=>set("install",v)}/><Opt t="Eski ürün alınacak" on={f.old} set={v=>set("old",v)}/></div>{err?<div className="error">{err}</div>:null}<div className="modalActions"><button type="button" className="soft" onClick={onClose}>Vazgeç</button><button className="primary"><Plus size={16}/>Teslimatı oluştur</button></div></form></Modal>}
