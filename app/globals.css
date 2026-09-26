@@ -251,3 +251,7 @@ header h1{font-size:1.5rem;margin-top:4px}
 @media(max-width:390px){
   .stats{grid-template-columns:1fr}.easyActions p small{font-size:.53rem}.mobileBottom{left:6px;right:6px;grid-template-columns:1fr 1fr 58px 1fr 1fr}.mobileBottom button span{font-size:.48rem}.mobileBottom .mobileCreate{width:50px;height:50px}
 }
+
+body{font-family:var(--font-manrope),Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.syncState.offline{background:#fff2f2;color:#aa414a;border-color:#efcbd0}
+.syncState.offline i{background:#d75661;box-shadow:0 0 0 4px rgba(215,86,97,.10)}
