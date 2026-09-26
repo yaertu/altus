@@ -47,6 +47,7 @@ export default function Dashboard(){
   const [courier,setCourier]=useState(""), [notify,setNotify]=useState(false), [splash,setSplash]=useState(true), [ready,setReady]=useState(false);
   const [requireChecks,setRequireChecks]=useState(true), [query,setQuery]=useState(""), [filter,setFilter]=useState<"all"|DeliveryStatus>("all");
   const [cloud,setCloud]=useState(false), [cloudError,setCloudError]=useState(""), [profile,setProfile]=useState<Profile|null>(null), [signedIn,setSignedIn]=useState(false), [authReady,setAuthReady]=useState(!cloudAvailable());
+  const [online,setOnline]=useState(true);
 
   useEffect(()=>{ try{
     const old=localStorage.getItem(DKEY)||localStorage.getItem("yaateslimat:deliveries");
@@ -54,7 +55,15 @@ export default function Dashboard(){
     if(s) setStaff(JSON.parse(s)); if(e) setEvents(JSON.parse(e));
   }catch{} setReady(true); setNotify(typeof Notification!=="undefined"&&Notification.permission==="granted");
     if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>undefined);
-    const t=window.setTimeout(()=>setSplash(false),900); return()=>window.clearTimeout(t);
+    setOnline(navigator.onLine);
+    const goOnline=()=>setOnline(true), goOffline=()=>setOnline(false);
+    window.addEventListener("online",goOnline); window.addEventListener("offline",goOffline);
+    const params=new URLSearchParams(window.location.search);
+    if(params.get("action")==="new-delivery") setNewOpen(true);
+    if(params.get("view")==="deliveries") setView("deliveries");
+    if(params.has("action")||params.has("view")) window.history.replaceState({},"",window.location.pathname);
+    const t=window.setTimeout(()=>setSplash(false),900);
+    return()=>{window.clearTimeout(t);window.removeEventListener("online",goOnline);window.removeEventListener("offline",goOffline)};
   },[]);
   useEffect(()=>{ if(ready)localStorage.setItem(DKEY,JSON.stringify(deliveries)); },[deliveries,ready]);
   useEffect(()=>{ if(ready)localStorage.setItem(SKEY,JSON.stringify(staff)); },[staff,ready]);
@@ -152,7 +161,7 @@ export default function Dashboard(){
       <div className="grow"/><div className="online"><i/><p><b>Sistem hazır</b><span>Mobil • Tablet • PC</span></p></div><DeveloperBadge/>
     </aside>
     <main>
-      <header><button className="hamb" onClick={()=>setSide(true)}><Menu size={20}/></button><div><small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small><h1>{mode==="office"?nav.find(x=>x[0]===view)?.[1]:"Bugünkü Görevler"}</h1></div><div className="actions"><span className={"syncState "+(cloud?"live":"local")}><i/>{cloud?"Canlı senkron":"Yerel mod"}</span>{mode==="courier"&&profile?.role!=="courier"?<label className="select"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}<button className="soft" onClick={notifications}><Bell size={16}/><span>{notify?"Bildirim açık":"Bildirimleri aç"}</span></button>{mode==="office"?<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}</div></header>
+      <header><button className="hamb" onClick={()=>setSide(true)}><Menu size={20}/></button><div><small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small><h1>{mode==="office"?nav.find(x=>x[0]===view)?.[1]:"Bugünkü Görevler"}</h1></div><div className="actions"><span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"İnternet yok":cloud?"Canlı senkron":"Yerel mod"}</span>{mode==="courier"&&profile?.role!=="courier"?<label className="select"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}<button className="soft" onClick={notifications}><Bell size={16}/><span>{notify?"Bildirim açık":"Bildirimleri aç"}</span></button>{mode==="office"?<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}</div></header>
       <div className="date"><CalendarDays size={15}/><span>{new Intl.DateTimeFormat("tr-TR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date())}</span>{cloudError?<button className="cloudError" onClick={()=>setCloudError("")}><AlertTriangle size={13}/>{cloudError}<X size={12}/></button>:null}</div>
       {mode==="courier"?<CourierList list={my} courier={courier} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} requireChecks={requireChecks}/>:<>
         {view==="dashboard"&&<DashboardHome total={todayList.length} active={active} completed={completed} problems={problems} list={todayList.slice(0,5)} staff={staff} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected}/>}
