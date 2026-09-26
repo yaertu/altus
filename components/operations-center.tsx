@@ -42,7 +42,8 @@ function isUnseen(delivery:Delivery, now:Date){
 function missingFields(delivery:Delivery){
   const missing:string[]=[];
   if(!delivery.customerName?.trim())missing.push("müşteri");
-  if(!delivery.phone?.replace(/\D/g,"") || delivery.phone.replace(/\D/g,"").length<10)missing.push("telefon");
+  const digits=delivery.phone?.replace(/\D/g,"")||"";
+  if(digits.length<10)missing.push("telefon");
   if(!delivery.address?.trim())missing.push("adres");
   if(!delivery.district?.trim())missing.push("ilçe");
   if(!delivery.items?.length || !delivery.items[0]?.product?.trim())missing.push("ürün");
@@ -99,6 +100,13 @@ export default function OperationsCenter({
   const done=visible.filter(d=>d.status==="completed");
   const issues=visible.filter(d=>d.status==="issue");
 
+  const groups=[
+    {key:"waiting",title:"Bekliyor",subtitle:"Yeni, atandı veya görüldü",tone:"wait",icon:<Clock3/>,list:waiting},
+    {key:"route",title:"Yolda",subtitle:"Sahaya çıkan teslimatlar",tone:"route",icon:<Route/>,list:onRoute},
+    {key:"done",title:"Tamamlandı",subtitle:"Bugün kapanan işler",tone:"done",icon:<CheckCircle2/>,list:done},
+    {key:"problem",title:"Sorun",subtitle:"Müdahale bekleyen işler",tone:"problem",icon:<AlertTriangle/>,list:issues}
+  ];
+
   function dropTo(staffMember:StaffLite|null){
     if(!dragId)return;
     const delivery=deliveries.find(d=>d.id===dragId);
@@ -117,7 +125,10 @@ export default function OperationsCenter({
           <div className="progressRing" style={{"--progress":`${completionRate}%`} as CSSProperties}><b>%{completionRate}</b></div>
           <div><small>BUGÜNÜN İLERLEMESİ</small><h2>{completed.length}<span> / {operational.length}</span></h2><p>Tamamlanan teslimat</p></div>
         </div>
-        <div className="metricLeadFoot"><span><Truck/>{active.length} aktif iş</span><span><UserCheck/>{operational.filter(d=>["seen","on_route","completed"].includes(d.status)).length} görüldü</span></div>
+        <div className="metricLeadFoot">
+          <span><Truck/>{active.length} aktif iş</span>
+          <span><UserCheck/>{operational.filter(d=>["seen","on_route","completed"].includes(d.status)).length} görüldü</span>
+        </div>
       </article>
 
       <MetricCard tone="danger" icon={<Clock3/>} value={overdue.length} title="Geciken" text="Planlanan süre aşıldı" onClick={()=>setFocus("overdue")} active={focus==="overdue"}/>
@@ -126,12 +137,12 @@ export default function OperationsCenter({
     </section>
 
     <div className="opsWorkspace">
-      <section className="flowBoard">
-        <div className="flowBoardHead">
+      <section className="queuePanel">
+        <div className="queueHeader">
           <div>
-            <span className="sectionEyebrow"><Sparkles/>OPERASYON AKIŞI</span>
-            <h3>{focus==="all"?"Bugünün teslimat panosu":focus==="overdue"?"Geciken işlere odaklan":focus==="unseen"?"Henüz görülmeyen görevler":"Eksik bilgili kayıtlar"}</h3>
-            <p>Kartlara dokunarak ayrıntıyı aç. Masaüstünde sürükleyip sağdaki personele bırakabilirsin.</p>
+            <span className="sectionEyebrow"><Sparkles/>BUGÜNÜN OPERASYONU</span>
+            <h3>{focus==="all"?"Teslimat kuyruğu":focus==="overdue"?"Geciken teslimatlar":focus==="unseen"?"Henüz görülmeyen görevler":"Eksik bilgili kayıtlar"}</h3>
+            <p>Boş kolonlar yerine yalnız gerçek işleri gösterir. Kartı aç, personeli değiştir veya masaüstünde sağdaki atama alanına sürükle.</p>
           </div>
           <div className="focusTabs" role="tablist" aria-label="Operasyon filtresi">
             <button className={focus==="all"?"on":""} onClick={()=>setFocus("all")}>Tümü <b>{operational.length}</b></button>
@@ -141,11 +152,29 @@ export default function OperationsCenter({
           </div>
         </div>
 
-        <div className="flowGrid">
-          <FlowLane title="Bekliyor" subtitle="Yeni, atandı veya görüldü" icon={<Clock3/>} tone="wait" list={waiting} now={now} staff={staff} onOpen={onOpen} onAssign={onAssign} onDragStart={setDragId}/>
-          <FlowLane title="Yolda" subtitle="Sahaya çıkan teslimatlar" icon={<Route/>} tone="route" list={onRoute} now={now} staff={staff} onOpen={onOpen} onAssign={onAssign} onDragStart={setDragId}/>
-          <FlowLane title="Tamamlandı" subtitle="Bugün kapanan işler" icon={<CheckCircle2/>} tone="done" list={done} now={now} staff={staff} onOpen={onOpen} onAssign={onAssign} onDragStart={setDragId}/>
-          <FlowLane title="Sorun" subtitle="Müdahale bekleyen işler" icon={<AlertTriangle/>} tone="problem" list={issues} now={now} staff={staff} onOpen={onOpen} onAssign={onAssign} onDragStart={setDragId}/>
+        <div className="statusStrip" aria-label="Teslimat durum özeti">
+          <StatusPill tone="wait" icon={<Clock3/>} label="Bekliyor" value={waiting.length}/>
+          <StatusPill tone="route" icon={<Route/>} label="Yolda" value={onRoute.length}/>
+          <StatusPill tone="done" icon={<CheckCircle2/>} label="Tamamlandı" value={done.length}/>
+          <StatusPill tone="problem" icon={<AlertTriangle/>} label="Sorun" value={issues.length}/>
+        </div>
+
+        <div className="queueContent">
+          {visible.length ? groups.filter(group=>group.list.length>0).map(group=>
+            <QueueGroup
+              key={group.key}
+              title={group.title}
+              subtitle={group.subtitle}
+              tone={group.tone}
+              icon={group.icon}
+              list={group.list}
+              now={now}
+              staff={staff}
+              onOpen={onOpen}
+              onAssign={onAssign}
+              onDragStart={setDragId}
+            />
+          ) : <div className="queueEmpty"><PackageCheck/><b>Gösterilecek teslimat yok</b><span>Seçili filtre için operasyon kuyruğu temiz.</span></div>}
         </div>
       </section>
 
@@ -193,7 +222,11 @@ function MetricCard({tone,icon,value,title,text,onClick,active}:{tone:string;ico
   </button>;
 }
 
-function FlowLane({
+function StatusPill({tone,icon,label,value}:{tone:string;icon:ReactNode;label:string;value:number}){
+  return <div className={"statusPill "+tone}><span>{icon}</span><p><b>{label}</b><small>{value} kayıt</small></p><strong>{value}</strong></div>;
+}
+
+function QueueGroup({
   title,subtitle,icon,tone,list,now,staff,onOpen,onAssign,onDragStart
 }:{
   title:string;subtitle:string;icon:ReactNode;tone:string;list:Delivery[];now:Date;staff:StaffLite[];
@@ -201,11 +234,14 @@ function FlowLane({
   onAssign:(delivery:Delivery,staff:StaffLite|null)=>void;
   onDragStart:(id:string)=>void;
 }){
-  return <section className={"flowLane "+tone}>
-    <div className="flowLaneHead"><span>{icon}</span><div><h4>{title}</h4><small>{subtitle}</small></div><b>{list.length}</b></div>
-    <div className="flowLaneBody">
+  return <section className={"queueGroup "+tone}>
+    <div className="queueGroupHead">
+      <span>{icon}</span>
+      <div><h4>{title}</h4><small>{subtitle}</small></div>
+      <b>{list.length}</b>
+    </div>
+    <div className="queueCards">
       {list.map(delivery=><OperationCard key={delivery.id} delivery={delivery} now={now} staff={staff} onOpen={onOpen} onAssign={onAssign} onDragStart={onDragStart}/>)}
-      {!list.length?<div className="laneEmpty"><PackageCheck/><b>Burada iş yok</b><span>Bu alan şu an temiz.</span></div>:null}
     </div>
   </section>;
 }
@@ -230,16 +266,31 @@ function OperationCard({
     onDragStart={e=>{e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",delivery.id);onDragStart(delivery.id)}}
     onClick={()=>onOpen(delivery)}
   >
-    <div className="tileTop"><GripVertical/><span>{delivery.orderNo}</span><time>{delivery.timeWindow}</time><button aria-label={delivery.customerName+" detayını aç"} onClick={e=>{e.stopPropagation();onOpen(delivery)}}><ChevronRight/></button></div>
+    <div className="tileTop">
+      <GripVertical/>
+      <span>{delivery.orderNo}</span>
+      <time>{delivery.timeWindow}</time>
+      <button aria-label={delivery.customerName+" detayını aç"} onClick={e=>{e.stopPropagation();onOpen(delivery)}}><ChevronRight/></button>
+    </div>
+
     <div className="tileFlags">
       {overdue?<span className="danger"><Clock3/>Gecikti</span>:null}
       {unseen?<span className="warning"><BellRing/>Görülmedi</span>:null}
       {missing.length?<span className="warning"><ShieldAlert/>{missing.length} eksik</span>:null}
       {delivery.priority==="critical"?<span className="danger">Acil</span>:delivery.priority==="high"?<span className="priority">Öncelikli</span>:null}
     </div>
+
     <h5>{delivery.customerName||"İsimsiz müşteri"}</h5>
-    <div className="tileMeta"><span><MapPin/>{delivery.district||"İlçe yok"}</span><span><Phone/>{delivery.phone||"Telefon yok"}</span></div>
-    <div className="tileProduct"><span><WebIcon product={item?.product||""} size={28}/></span><p><small>{item?.brand||"ÜRÜN"}</small><b>{item?.product||"Ürün bilgisi eksik"}</b><em>{item?.model||"Model belirtilmedi"}</em></p></div>
+    <div className="tileMeta">
+      <span><MapPin/>{delivery.district||"İlçe yok"}</span>
+      <span><Phone/>{delivery.phone||"Telefon yok"}</span>
+    </div>
+
+    <div className="tileProduct">
+      <span><WebIcon product={item?.product||""} size={30}/></span>
+      <p><small>{item?.brand||"ÜRÜN"}</small><b>{item?.product||"Ürün bilgisi eksik"}</b><em>{item?.model||"Model belirtilmedi"}</em></p>
+    </div>
+
     <div className="tileAssign">
       <span>{delivery.assignee==="Atanmamış"?"?":initials(delivery.assignee)}</span>
       <p><small>PERSONEL</small><b>{delivery.assignee||"Atanmamış"}</b></p>
@@ -248,7 +299,11 @@ function OperationCard({
         {staff.map(person=><option key={person.id}>{person.name}</option>)}
       </select>
     </div>
-    <div className="tileProgress"><p><span>Kontrol</span><b>{done}/6</b></p><i><em style={{width:(done/6*100)+"%"}}/></i></div>
+
+    <div className="tileProgress">
+      <p><span>Kontrol listesi</span><b>{done}/6</b></p>
+      <i><em style={{width:(done/6*100)+"%"}}/></i>
+    </div>
     {missing.length?<div className="tileMissing">Eksik: {missing.join(", ")}</div>:null}
   </article>;
 }
