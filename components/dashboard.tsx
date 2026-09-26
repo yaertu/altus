@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Bell, CalendarDays, Check, CheckCircle2, ChevronDown,
   ClipboardCheck, Clock3, History, LayoutDashboard, MapPin, Menu, Navigation,
@@ -50,6 +50,7 @@ export default function Dashboard(){
   const [requireChecks,setRequireChecks]=useState(true), [query,setQuery]=useState(""), [filter,setFilter]=useState<"all"|DeliveryStatus>("all");
   const [cloud,setCloud]=useState(false), [cloudError,setCloudError]=useState(""), [profile,setProfile]=useState<Profile|null>(null), [signedIn,setSignedIn]=useState(false), [authReady,setAuthReady]=useState(!cloudAvailable());
   const [online,setOnline]=useState(true);
+  const searchRef=useRef<HTMLInputElement|null>(null);
 
   useEffect(()=>{ try{
     const old=localStorage.getItem(DKEY)||localStorage.getItem("yaateslimat:deliveries");
@@ -70,6 +71,16 @@ export default function Dashboard(){
   useEffect(()=>{ if(ready)localStorage.setItem(DKEY,JSON.stringify(deliveries)); },[deliveries,ready]);
   useEffect(()=>{ if(ready)localStorage.setItem(SKEY,JSON.stringify(staff)); },[staff,ready]);
   useEffect(()=>{ if(ready)localStorage.setItem(EKEY,JSON.stringify(events.slice(0,200))); },[events,ready]);
+  useEffect(()=>{
+    const shortcut=(event:KeyboardEvent)=>{
+      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="k"){
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown",shortcut);
+    return()=>window.removeEventListener("keydown",shortcut);
+  },[]);
 
   useEffect(()=>{
     let alive=true;
@@ -246,6 +257,7 @@ export default function Dashboard(){
         <label className="globalSearch">
           <Search size={18}/>
           <input
+            ref={searchRef}
             value={mode==="office"?query:""}
             readOnly={mode!=="office"}
             onChange={e=>{setQuery(e.target.value);if(e.target.value)setView("deliveries")}}
