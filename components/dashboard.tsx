@@ -104,9 +104,18 @@ export default function Dashboard(){
   },[]);
 
   const names=useMemo(()=>Array.from(new Set(staff.map(x=>x.name).concat(deliveries.map(x=>x.assignee).filter(x=>x&&x!=="Atanmamış")))),[staff,deliveries]);
+  const operationalStaff=useMemo(()=>{
+    if(cloud)return staff;
+    const merged=new Map<string,Staff>(staff.map(s=>[s.name,s]));
+    deliveries.forEach(d=>{
+      if(d.assignee&&d.assignee!=="Atanmamış"&&!merged.has(d.assignee)){
+        merged.set(d.assignee,{id:"local-"+d.assignee.toLocaleLowerCase("tr-TR").replace(/\s+/g,"-"),name:d.assignee,phone:""});
+      }
+    });
+    return Array.from(merged.values());
+  },[cloud,staff,deliveries]);
   useEffect(()=>{ if(!courier&&names[0])setCourier(names[0]); },[courier,names]);
   const day=today(), todayList=deliveries.filter(x=>x.date===day), active=todayList.filter(x=>!["completed","issue"].includes(x.status)).length;
-  const completed=todayList.filter(x=>x.status==="completed").length, problems=deliveries.filter(x=>x.status==="issue").length;
   const filtered=deliveries.filter(d=>{
     const q=query.toLocaleLowerCase("tr-TR"), h=(d.customerName+" "+d.phone+" "+d.orderNo+" "+d.address+" "+d.assignee+" "+d.items.map(i=>i.brand+" "+i.product+" "+(i.model||"")).join(" ")).toLocaleLowerCase("tr-TR");
     return (!q||h.includes(q))&&(filter==="all"||d.status===filter);
@@ -117,16 +126,32 @@ export default function Dashboard(){
     setEvents(p=>[event,...p]);
     if(cloud) insertEvent({deliveryId:event.deliveryId,orderNo:event.orderNo,actor:event.actor,type:event.type,title:event.title,detail:event.detail}).catch(()=>undefined);
   }
-  function setStatus(d:Delivery,status:DeliveryStatus){
+  async function setStatus(d:Delivery,status:DeliveryStatus){
     if(status==="completed"&&requireChecks&&Object.values(d.checklist).some(v=>!v))return;
     const updated={...d,status,updatedAt:new Date().toISOString()};
-    setDeliveries(p=>p.map(x=>x.id===d.id?updated:x)); setSelected(s=>s?.id===d.id?updated:s); log("Durum: "+labels[status],d,d.customerName);
-    if(cloud) patchDelivery(d.id,{status}).catch((err:any)=>setCloudError(err?.message||"Durum buluta yazılamadı."));
+    setDeliveries(p=>p.map(x=>x.id===d.id?updated:x));
+    setSelected(s=>s?.id===d.id?updated:s);
+    try{
+      if(cloud)await patchDelivery(d.id,{status});
+      log("Durum: "+labels[status],updated,d.customerName);
+    }catch(err:any){
+      setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
+      setSelected(s=>s?.id===d.id?d:s);
+      setCloudError(err?.message||"Durum buluta yazılamadı; değişiklik geri alındı.");
+    }
   }
-  function toggle(d:Delivery,k:keyof Delivery["checklist"]){
+  async function toggle(d:Delivery,k:keyof Delivery["checklist"]){
     const value=!d.checklist[k], checklist={...d.checklist,[k]:value}, updated={...d,checklist,updatedAt:new Date().toISOString()};
-    setDeliveries(p=>p.map(x=>x.id===d.id?updated:x)); setSelected(s=>s?.id===d.id?updated:s); log(value?"Kontrol tamamlandı":"Kontrol geri alındı",d,checks.find(x=>x[0]===k)?.[1]);
-    if(cloud) patchDelivery(d.id,{checklist}).catch((err:any)=>setCloudError(err?.message||"Kontrol buluta yazılamadı."));
+    setDeliveries(p=>p.map(x=>x.id===d.id?updated:x));
+    setSelected(s=>s?.id===d.id?updated:s);
+    try{
+      if(cloud)await patchDelivery(d.id,{checklist});
+      log(value?"Kontrol tamamlandı":"Kontrol geri alındı",updated,checks.find(x=>x[0]===k)?.[1]);
+    }catch(err:any){
+      setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
+      setSelected(s=>s?.id===d.id?d:s);
+      setCloudError(err?.message||"Kontrol buluta yazılamadı; değişiklik geri alındı.");
+    }
   }
   async function notifications(){
     try{
@@ -162,19 +187,26 @@ export default function Dashboard(){
     };
     setDeliveries(p=>p.map(x=>x.id===d.id?updated:x));
     setSelected(s=>s?.id===d.id?updated:s);
-    log(person?"Personel atandı":"Personel ataması kaldırıldı",updated,assignee);
-    if(cloud){
-      try{
-        await patchDelivery(d.id,{assigneeId:person?.id||null,assigneeName:person?.name||null,status:nextStatus});
-        if(person)sendAssignmentPush(d.id).catch(()=>undefined);
-      }catch(err:any){
-        setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
-        setSelected(s=>s?.id===d.id?d:s);
-        setCloudError(err?.message||"Personel ataması buluta yazılamadı; değişiklik geri alındı.");
-      }
+    try{
+      if(cloud)await patchDelivery(d.id,{assigneeId:person?.id||null,assigneeName:person?.name||null,status:nextStatus});
+      log(person?"Personel atandı":"Personel ataması kaldırıldı",updated,assignee);
+      if(cloud&&person)sendAssignmentPush(d.id).catch(()=>undefined);
+    }catch(err:any){
+      setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
+      setSelected(s=>s?.id===d.id?d:s);
+      setCloudError(err?.message||"Personel ataması buluta yazılamadı; değişiklik geri alındı.");
     }
   }
-  function remove(d:Delivery){ setDeliveries(p=>p.filter(x=>x.id!==d.id)); setSelected(null); log("Teslimat silindi",d,d.customerName); if(cloud)removeCloudDelivery(d.id).catch((err:any)=>setCloudError(err?.message||"Silme işlemi buluta yazılamadı.")); }
+  async function remove(d:Delivery){
+    try{
+      if(cloud)await removeCloudDelivery(d.id);
+      setDeliveries(p=>p.filter(x=>x.id!==d.id));
+      setSelected(null);
+      log("Teslimat silindi",undefined,d.orderNo+" • "+d.customerName);
+    }catch(err:any){
+      setCloudError(err?.message||"Teslimat silinemedi.");
+    }
+  }
 
   const authRequired=process.env.NEXT_PUBLIC_REQUIRE_AUTH==="true";
   if(authRequired&&cloudAvailable()&&authReady&&!signedIn) return <LoginScreen onSuccess={()=>window.location.reload()}/>;
