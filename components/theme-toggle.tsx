@@ -4,7 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
-const KEY = "yaateslimat:theme";
+const KEY = "yaateslimat:theme:v2";
 
 function applyTheme(theme: Theme){
   const root=document.documentElement;
