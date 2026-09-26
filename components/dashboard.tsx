@@ -168,7 +168,9 @@ export default function Dashboard(){
         await patchDelivery(d.id,{assigneeId:person?.id||null,assigneeName:person?.name||null,status:nextStatus});
         if(person)sendAssignmentPush(d.id).catch(()=>undefined);
       }catch(err:any){
-        setCloudError(err?.message||"Personel ataması buluta yazılamadı.");
+        setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
+        setSelected(s=>s?.id===d.id?d:s);
+        setCloudError(err?.message||"Personel ataması buluta yazılamadı; değişiklik geri alındı.");
       }
     }
   }
