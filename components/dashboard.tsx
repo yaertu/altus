@@ -248,7 +248,7 @@ export default function Dashboard(){
     <aside className={"side "+(side?"open":"")} aria-label="Ana menü">
       <div className="brand"><div><Truck size={21}/></div><p><b>yaaTeslimat</b><span>Sevkiyat Yönetimi</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
       {profile?.role==="courier"?<div className="roleChip"><Truck size={15}/><span>Sevkiyatçı modu</span><i>CANLI</i></div>:<div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Dükkan</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Sevkiyatçı</button></div>}
-      {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button><button onClick={()=>setMode("office")}><Store size={18}/><span>Dükkana dön</span></button></nav>}
+      {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={18}/><span>Dükkana dön</span></button>:null}</nav>}
       <div className="grow"/><div className="online"><i/><p><b>Sistem hazır</b><span>Mobil • Tablet • PC</span></p></div><DeveloperBadge/>
     </aside>
     <main>
@@ -286,7 +286,7 @@ export default function Dashboard(){
         </div>
       </section>
       {mode==="courier"?<CourierList list={my} courier={courier} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} requireChecks={requireChecks}/>:<>
-        {view==="dashboard"&&<OperationsCenter deliveries={deliveries} staff={staff} cloud={cloud} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected} onAssign={assignDelivery}/>}
+        {view==="dashboard"&&<OperationsCenter deliveries={deliveries} staff={operationalStaff} cloud={cloud} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected} onAssign={assignDelivery}/>}
         {view==="deliveries"&&<section className="card page"><PageHead tag="DÜKKAN KAYITLARI" title="Tüm teslimatlar" text="Müşteri, adres, ürün ve personel bilgilerini tek yerden takip et." action={<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={16}/>Yeni teslimat</button>}/><div className="filters"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="İsim, telefon, ürün, sipariş no..."/></label><label className="select"><select value={filter} onChange={e=>setFilter(e.target.value as "all"|DeliveryStatus)}><option value="all">Tüm durumlar</option>{Object.keys(labels).map(k=><option key={k} value={k}>{labels[k as DeliveryStatus]}</option>)}</select><ChevronDown size={13}/></label></div><DeliveryList list={filtered} onOpen={setSelected}/></section>}
         {view==="staff"&&<StaffPage staff={staff} deliveries={deliveries} onAdd={()=>setStaffOpen(true)}/>}
         {view==="customers"&&<CustomersPage deliveries={deliveries} onOpen={setSelected}/>}
@@ -295,7 +295,7 @@ export default function Dashboard(){
         {view==="logs"&&<LogsPage events={events}/>}
         {view==="settings"&&<SettingsPage requireChecks={requireChecks} setRequireChecks={setRequireChecks} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([])}}}/>} 
       </>}
-      <footer><span>yaaTeslimat • v0.8</span><DeveloperBadge compact/></footer>
+      <footer><span>yaaTeslimat • v0.9</span><DeveloperBadge compact/></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
     {newOpen&&<NewDelivery staff={names} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>}
