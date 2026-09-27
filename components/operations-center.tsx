@@ -8,7 +8,7 @@ import {
 import type { Delivery } from "@/lib/types";
 
 type StaffLite = { id:string; name:string; phone:string; userId?:string|null };
-type Focus = "all" | "open" | "missing" | "done";
+type Focus = "all" | "open" | "overdue" | "missing" | "done";
 
 function localDay(date:Date){
   const offset=date.getTimezoneOffset()*60000;
@@ -56,13 +56,17 @@ export default function OperationsCenter({
 
   const today=localDay(now);
   const todays=useMemo(()=>deliveries.filter(d=>d.date===today),[deliveries,today]);
-  const open=todays.filter(d=>!["completed","issue"].includes(d.status));
-  const missing=todays.filter(d=>missingFields(d).length>0&&!["completed","issue"].includes(d.status));
+  const carryover=useMemo(()=>deliveries.filter(d=>d.date<today&&!["completed","issue"].includes(d.status)),[deliveries,today]);
+  const queue=useMemo(()=>[...carryover,...todays],[carryover,todays]);
+  const open=queue.filter(d=>!["completed","issue"].includes(d.status));
+  const overdue=carryover;
+  const missing=queue.filter(d=>missingFields(d).length>0&&!["completed","issue"].includes(d.status));
   const done=todays.filter(d=>d.status==="completed");
   const issues=todays.filter(d=>d.status==="issue");
 
-  const visible=todays.filter(d=>{
+  const visible=queue.filter(d=>{
     if(focus==="open"&&["completed","issue"].includes(d.status))return false;
+    if(focus==="overdue"&&!(d.date<today&&!["completed","issue"].includes(d.status)))return false;
     if(focus==="missing"&&!(missingFields(d).length>0&&!["completed","issue"].includes(d.status)))return false;
     if(focus==="done"&&d.status!=="completed")return false;
     const q=search.trim().toLocaleLowerCase("tr-TR");
@@ -86,10 +90,10 @@ export default function OperationsCenter({
 
     <section className="storeStats">
       <Stat icon={<PackageCheck/>} value={todays.length} label="Bugün toplam"/>
-      <Stat icon={<Clock3/>} value={open.length} label="Bekleyen iş"/>
+      <Stat icon={<Clock3/>} value={open.length} label="Açık iş"/>
+      <Stat icon={<AlertTriangle/>} value={overdue.length} label="Dünden kalan" tone={overdue.length?"danger":""}/>
       <Stat icon={<AlertTriangle/>} value={missing.length} label="Eksik / atanmamış" tone={missing.length?"warn":""}/>
-      <Stat icon={<CheckCircle2/>} value={done.length} label="Teslim edildi" tone="ok"/>
-      <Stat icon={<AlertTriangle/>} value={issues.length} label="Sorunlu" tone={issues.length?"danger":""}/>
+      <Stat icon={<CheckCircle2/>} value={done.length} label="Bugün teslim" tone="ok"/>
     </section>
 
     <section className="storeBoard">
@@ -105,7 +109,8 @@ export default function OperationsCenter({
         <label><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Müşteri, telefon, ürün veya adres ara"/></label>
         <div className="storeFilters">
           <button className={focus==="all"?"on":""} onClick={()=>setFocus("all")}>Tümü <b>{todays.length}</b></button>
-          <button className={focus==="open"?"on":""} onClick={()=>setFocus("open")}>Bekleyen <b>{open.length}</b></button>
+          <button className={focus==="open"?"on":""} onClick={()=>setFocus("open")}>Açık <b>{open.length}</b></button>
+          <button className={focus==="overdue"?"on danger":""} onClick={()=>setFocus("overdue")}>Dünden kalan <b>{overdue.length}</b></button>
           <button className={focus==="missing"?"on warn":""} onClick={()=>setFocus("missing")}>Eksik <b>{missing.length}</b></button>
           <button className={focus==="done"?"on":""} onClick={()=>setFocus("done")}>Tamamlanan <b>{done.length}</b></button>
         </div>
@@ -141,6 +146,7 @@ function Stat({icon,value,label,tone=""}:{icon:ReactNode;value:number;label:stri
 
 function DeliveryLine({delivery,staff,onOpen,onAssign}:{delivery:Delivery;staff:StaffLite[];onOpen:(d:Delivery)=>void;onAssign:(d:Delivery,s:StaffLite|null)=>void}){
   const missing=missingFields(delivery);
+  const overdue=delivery.date<localDay(new Date())&&!["completed","issue"].includes(delivery.status);
   const flags=delivery.items.flatMap(i=>[
     i.serviceRequired?"Servis":null,
     i.installationRequired?"Kurulum":null,
@@ -150,7 +156,8 @@ function DeliveryLine({delivery,staff,onOpen,onAssign}:{delivery:Delivery;staff:
   return <article className={"deliveryLine "+(missing.length?"needsAttention":"")}>
     <button className="deliveryStatusCell" onClick={()=>onOpen(delivery)}>
       <span className={"status s-"+delivery.status}>{statusLabel(delivery.status)}</span>
-      <small>{delivery.timeWindow||"Saat yok"}</small>
+      <small>{overdue?delivery.date+" • ":""}{delivery.timeWindow||"Saat yok"}</small>
+      {overdue?<i className="overdueFlag">Dünden kaldı</i>:null}
       {missing.length?<i>{missing.length} eksik</i>:null}
     </button>
 
