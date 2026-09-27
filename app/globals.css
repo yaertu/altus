@@ -6075,3 +6075,114 @@ button.sheetCell{cursor:pointer}
     justify-content:center;
   }
 }
+
+
+.staffCreate{
+  max-width:980px;
+  margin:0 auto;
+}
+.staffCreateGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:16px;
+}
+.staffCreateGrid>section{
+  padding:18px;
+  border:1px solid #dbe3ec;
+  border-radius:14px;
+  background:#fff;
+}
+.staffCreateTitle{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding-bottom:12px;
+  margin-bottom:12px;
+  border-bottom:1px solid #edf1f5;
+}
+.staffCreateTitle>span{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  flex:0 0 34px;
+  color:#1d4ed8;
+  border-radius:9px;
+  background:#dbeafe;
+  font-size:12px;
+  font-weight:900;
+}
+.staffCreateTitle b,
+.staffCreateTitle small{display:block}
+.staffCreateTitle b{font-size:15px}
+.staffCreateTitle small{
+  margin-top:2px;
+  color:#667085;
+  font-size:11px;
+}
+.passwordField{
+  min-height:52px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  overflow:hidden;
+  border:1px solid #cfd6df;
+  border-radius:10px;
+  background:#fff;
+}
+.passwordField:focus-within{
+  border-color:#60a5fa;
+  box-shadow:0 0 0 4px rgba(37,99,235,.08);
+}
+.passwordField input{
+  width:100%;
+  min-width:0;
+  padding:0 12px;
+  color:#344054;
+  border:0!important;
+  outline:0;
+  background:transparent!important;
+  box-shadow:none!important;
+  font-size:15px;
+}
+.passwordField button{
+  padding:0 12px;
+  color:#2563eb;
+  border:0;
+  border-left:1px solid #e4e7ec;
+  background:#f8fafc;
+  font-size:11px;
+  font-weight:800;
+}
+.staffCreateInfo{
+  min-height:74px;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:center;
+  gap:11px;
+  padding:12px 14px;
+  margin-top:12px;
+  color:#1d4ed8;
+  border:1px solid #bfdbfe;
+  border-radius:12px;
+  background:#eff6ff;
+}
+.staffCreateInfo>svg{width:22px;height:22px}
+.staffCreateInfo b,
+.staffCreateInfo span{display:block}
+.staffCreateInfo b{font-size:13px}
+.staffCreateInfo span{
+  margin-top:3px;
+  color:#475467;
+  font-size:12px;
+  line-height:1.5;
+}
+
+@media(max-width:760px){
+  .staffCreateGrid{
+    grid-template-columns:1fr;
+  }
+  .staffCreateGrid>section{
+    padding:14px;
+  }
+}
