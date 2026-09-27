@@ -8146,3 +8146,13 @@ button.sheetCell{cursor:pointer}
   .serviceQuickV2{grid-template-columns:1fr 1fr 1fr!important}
   .serviceQuickV2 a{min-height:48px;font-size:11px}
 }
+
+.deliveryEntryV2 .productEntryGrid{
+  grid-template-columns:180px minmax(210px,1fr) minmax(210px,1fr) 90px;
+}
+@media(max-width:900px){
+  .deliveryEntryV2 .productEntryGrid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .deliveryEntryV2 .productEntryGrid{grid-template-columns:1fr}
+}
