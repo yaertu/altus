@@ -1,23 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin","latin-ext"],
   display: "swap",
-  variable: "--font-inter"
+  variable: "--font-jakarta"
 });
 
-const spaceGrotesk = Space_Grotesk({
+const mono = JetBrains_Mono({
   subsets: ["latin","latin-ext"],
   display: "swap",
-  variable: "--font-space"
+  variable: "--font-mono"
 });
 
 const themeBoot = `
 (function(){
   try{
-    var key="yaateslimat:theme:v2";
+    var key="yaateslimat:theme:v3";
     var saved=localStorage.getItem(key);
     var theme=(saved==="dark"||saved==="light") ? saved : "dark";
     var root=document.documentElement;
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#050506",
+  themeColor: "#08090b",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"
@@ -57,7 +57,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
-      <body className={`${inter.variable} ${spaceGrotesk.variable}`}>{children}</body>
+      <body className={`${jakarta.variable} ${mono.variable}`}>{children}</body>
     </html>
   );
 }
