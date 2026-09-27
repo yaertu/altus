@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   const { data:delivery, error:deliveryError } = await admin
     .from("deliveries")
-    .select("id,order_no,time_window,assignee_id")
+    .select("id,order_no,time_window,assignee_id,customer_name,district,items")
     .eq("id",deliveryId)
     .maybeSingle();
 
@@ -102,10 +102,15 @@ export async function POST(req: NextRequest) {
           keys:{ p256dh:subscription.p256dh, auth:subscription.auth }
         },
         JSON.stringify({
-          title:"Yeni teslimat atandı",
-          body:`${delivery.order_no} • ${delivery.time_window || "Saat bilgisi yok"}`,
-          url:"/",
-          tag:`delivery-${delivery.id}`
+          title:"Yeni teslimat görevi",
+          body:[
+            delivery.customer_name,
+            Array.isArray(delivery.items)&&delivery.items[0]?.product ? delivery.items[0].product : null,
+            delivery.district,
+            delivery.time_window || null
+          ].filter(Boolean).join(" • "),
+          url:"/?delivery="+delivery.id+"&mode=courier",
+          tag:"delivery-"+delivery.id
         })
       );
       sent += 1;
@@ -117,5 +122,5 @@ export async function POST(req: NextRequest) {
     }
   }));
 
-  return NextResponse.json({ sent:sent>0, count:sent });
+  return NextResponse.json({ sent:sent>0, count:sent, reason:sent>0?undefined:"delivery_failed" });
 }
