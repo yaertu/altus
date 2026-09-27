@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Bell, CalendarDays, Check, CheckCircle2, ChevronDown,
   ClipboardCheck, Clock3, History, LayoutDashboard, MapPin, Menu, Navigation,
-  PackageCheck, Phone, Plus, Search, Settings, Store, Trash2, Truck, UserPlus,
+  PackageCheck, Phone, Plus, Search, Settings, Store, Trash2, Truck, UserPlus, MessageCircle,
   UserRound, Users, X
 } from "lucide-react";
 import DeveloperBadge from "./developer-badge";
@@ -40,6 +40,7 @@ function id(p:string){ return p+"-"+Date.now()+"-"+Math.random().toString(36).sl
 function today(){ const d=new Date(), o=d.getTimezoneOffset()*60000; return new Date(d.getTime()-o).toISOString().slice(0,10); }
 function initials(n:string){ return n.split(" ").filter(Boolean).map(x=>x[0]).join("").slice(0,2).toUpperCase(); }
 function tel(p:string){ return "tel:"+p.replace(/[^\d+]/g,""); }
+function whatsapp(p:string){ const digits=p.replace(/\D/g,""); const normalized=digits.startsWith("90")?digits:digits.startsWith("0")?"90"+digits.slice(1):digits.length===10?"90"+digits:digits; return "https://wa.me/"+normalized; }
 function map(d:Delivery){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(d.address+", "+d.district+", "+d.city); }
 
 export default function Dashboard(){
@@ -321,7 +322,7 @@ export default function Dashboard(){
     </main>
     {newOpen&&<NewDelivery staff={names} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>}
     {staffOpen&&<NewStaff onClose={()=>setStaffOpen(false)} onSave={addStaff}/>} 
-    {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(selected,s)} onToggle={k=>toggle(selected,k)} onDelete={()=>remove(selected)}/>}
+    {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} events={events} staff={operationalStaff} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(deliveries.find(x=>x.id===selected.id)||selected,s)} onToggle={k=>toggle(deliveries.find(x=>x.id===selected.id)||selected,k)} onAssign={person=>assignDelivery(deliveries.find(x=>x.id===selected.id)||selected,person)} onDelete={()=>remove(deliveries.find(x=>x.id===selected.id)||selected)}/>}
   </div>;
 }
 
@@ -419,4 +420,136 @@ function Modal({children,onClose}:{children:React.ReactNode;onClose:()=>void}){r
 function Field({label,v,set,wide,type="text",placeholder="",inputMode}:{label:string;v:string;set:(v:string)=>void;wide?:boolean;type?:string;placeholder?:string;inputMode?:React.HTMLAttributes<HTMLInputElement>["inputMode"]}){return <label className={wide?"wide":""}><span>{label}</span><input type={type} value={v} placeholder={placeholder} inputMode={inputMode} onChange={e=>set(e.target.value)}/></label>}
 function Select({label,v,set,opts}:{label:string;v:string;set:(v:string)=>void;opts:string[]}){return <label><span>{label}</span><select value={v} onChange={e=>set(e.target.value)}>{opts.map(o=><option key={o} value={o}>{o==="normal"?"Normal":o==="high"?"Öncelikli":o==="critical"?"Acil":o}</option>)}</select></label>}
 function Opt({t,on,set}:{t:string;on:boolean;set:(v:boolean)=>void}){return <button type="button" className={on?"on":""} onClick={()=>set(!on)}><i>{on?<Check size={13}/>:null}</i>{t}</button>}
-function Drawer({d,office,requireChecks,onClose,onStatus,onToggle,onDelete}:{d:Delivery;office:boolean;requireChecks:boolean;onClose:()=>void;onStatus:(s:DeliveryStatus)=>void;onToggle:(k:keyof Delivery["checklist"])=>void;onDelete:()=>void}){const done=Object.values(d.checklist).filter(Boolean).length;return <div className="drawerBg" onMouseDown={onClose}><aside onMouseDown={e=>e.stopPropagation()}><button className="modalX" aria-label="Pencereyi kapat" onClick={onClose}><X size={18}/></button><div className="badges"><span className={"status s-"+d.status}>{labels[d.status]}</span><small>{d.orderNo}</small></div><h2>{d.customerName}</h2><div className="drawerQuick"><a href={tel(d.phone)}><Phone size={16}/>Ara</a><a href={map(d)} target="_blank" rel="noreferrer"><Navigation size={16}/>Yol tarifi</a></div><div className="block"><small>ADRES</small><b>{d.address}</b><span>{d.district+", "+d.city}</span></div><div className="info"><p><small>TELEFON</small><b>{d.phone}</b></p><p><small>PERSONEL</small><b>{d.assignee}</b></p><p><small>SAAT</small><b>{d.timeWindow}</b></p><p><small>ÖNCELİK</small><b>{d.priority==="critical"?"Acil":d.priority==="high"?"Öncelikli":"Normal"}</b></p></div><div className="block"><small>ÜRÜN</small><b>{d.items[0]?.brand+" • "+d.items[0]?.product}</b><span>{d.items[0]?.model||"Model belirtilmedi"}</span></div>{d.notes?<div className="drawerNote"><b>Dükkan notu</b><span>{d.notes}</span></div>:null}<div className="drawerChecks"><p><b>Zorunlu kontroller</b><span>{done}/6</span></p>{checks.map(([k,l])=><button className={d.checklist[k]?"on":""} onClick={()=>onToggle(k)} key={k}><i>{d.checklist[k]?<Check size={13}/>:null}</i>{l}</button>)}</div><div className="drawerActions">{d.status==="new"?<button className="primary" onClick={()=>onStatus("assigned")}>Personele ata</button>:null}{d.status==="assigned"?<button className="primary" onClick={()=>onStatus("seen")}>Görüldü</button>:null}{d.status==="seen"?<button className="primary" onClick={()=>onStatus("on_route")}>Yola çıktı</button>:null}{d.status==="on_route"?<button className="primary" disabled={requireChecks&&done<6} onClick={()=>onStatus("completed")}>Teslimatı tamamla</button>:null}{!["completed","issue"].includes(d.status)?<button className="issue" onClick={()=>onStatus("issue")}>Sorun bildir</button>:null}</div>{office?<button className="delete" onClick={onDelete}><Trash2 size={14}/>Bu teslimatı sil</button>:null}</aside></div>}
+function Drawer({
+  d,events,staff,office,requireChecks,onClose,onStatus,onToggle,onAssign,onDelete
+}:{
+  d:Delivery;
+  events:ActivityEvent[];
+  staff:Staff[];
+  office:boolean;
+  requireChecks:boolean;
+  onClose:()=>void;
+  onStatus:(s:DeliveryStatus)=>void;
+  onToggle:(k:keyof Delivery["checklist"])=>void;
+  onAssign:(person:Staff|null)=>void;
+  onDelete:()=>void;
+}){
+  const done=Object.values(d.checklist).filter(Boolean).length;
+  const timeline=events
+    .filter(e=>e.deliveryId===d.id || (!e.deliveryId&&e.orderNo===d.orderNo))
+    .sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());
+  const priority=d.priority==="critical"?"Acil":d.priority==="high"?"Öncelikli":"Normal";
+  const itemCount=d.items.reduce((sum,item)=>sum+(item.quantity||1),0);
+
+  return <div className="drawerBg detailOverlay" onMouseDown={onClose}>
+    <aside className="deliveryDetail" onMouseDown={e=>e.stopPropagation()}>
+      <button className="modalX" aria-label="Pencereyi kapat" onClick={onClose}><X size={18}/></button>
+
+      <header className="detailHero">
+        <div className="detailHeroTop">
+          <div className="badges">
+            <span className={"status s-"+d.status}>{labels[d.status]}</span>
+            <span className={"prio p-"+d.priority}>{priority}</span>
+            <small>{d.orderNo}</small>
+          </div>
+          <span className="detailDate"><CalendarDays size={14}/>{d.date} • {d.timeWindow}</span>
+        </div>
+        <div className="detailCustomer">
+          <span>{initials(d.customerName||"Müşteri")}</span>
+          <div><small>MÜŞTERİ</small><h2>{d.customerName||"İsimsiz müşteri"}</h2><p>{d.district}, {d.city}</p></div>
+        </div>
+        <div className="detailQuick">
+          <a href={tel(d.phone)}><Phone size={16}/><span>Ara</span></a>
+          <a href={whatsapp(d.phone)} target="_blank" rel="noreferrer"><MessageCircle size={16}/><span>WhatsApp</span></a>
+          <a href={map(d)} target="_blank" rel="noreferrer"><Navigation size={16}/><span>Yol tarifi</span></a>
+        </div>
+      </header>
+
+      <div className="detailBody">
+        <section className="detailSection">
+          <div className="detailSectionHead"><span><UserRound size={16}/></span><div><small>MÜŞTERİ BİLGİLERİ</small><b>İletişim</b></div></div>
+          <div className="detailInfoGrid">
+            <p><small>Telefon</small><b>{d.phone||"Telefon girilmedi"}</b></p>
+            <p><small>İkinci telefon</small><b>{d.secondaryPhone||"—"}</b></p>
+          </div>
+        </section>
+
+        <section className="detailSection">
+          <div className="detailSectionHead"><span><MapPin size={16}/></span><div><small>TESLİMAT NOKTASI</small><b>Adres</b></div></div>
+          <div className="detailAddress">
+            <b>{d.address||"Adres bilgisi girilmedi"}</b>
+            <span>{d.district}, {d.city}</span>
+            <a href={map(d)} target="_blank" rel="noreferrer"><Navigation size={14}/>Haritada aç</a>
+          </div>
+        </section>
+
+        <section className="detailSection">
+          <div className="detailSectionHead"><span><PackageCheck size={16}/></span><div><small>SİPARİŞ İÇERİĞİ</small><b>{itemCount} ürün</b></div></div>
+          <div className="detailProducts">
+            {d.items.map((item,index)=><div className="detailProduct" key={item.id||index}>
+              <span><WebIcon product={item.product||""} size={32}/></span>
+              <p><small>{item.brand||"MARKA YOK"}</small><b>{item.product||"Ürün bilgisi eksik"}</b><em>{item.model||"Model belirtilmedi"}</em></p>
+              <strong>×{item.quantity||1}</strong>
+              <div className="productFlags">
+                {item.installationRequired?<i>Kurulum</i>:null}
+                {item.serviceRequired?<i>Servis</i>:null}
+                {item.takeBackOldProduct?<i>Eski ürün alımı</i>:null}
+              </div>
+            </div>)}
+          </div>
+        </section>
+
+        <section className="detailSection">
+          <div className="detailSectionHead"><span><Truck size={16}/></span><div><small>SEVKİYAT</small><b>Görev ve plan</b></div></div>
+          <div className="detailInfoGrid detailInfoWide">
+            <p><small>Sevkiyatçı</small><b>{d.assignee||"Atanmamış"}</b></p>
+            <p><small>Tarih</small><b>{d.date}</b></p>
+            <p><small>Saat aralığı</small><b>{d.timeWindow}</b></p>
+            <p><small>Öncelik</small><b>{priority}</b></p>
+          </div>
+          {office?<label className="detailAssignee"><span>Personeli değiştir</span><select value={d.assignee||"Atanmamış"} onChange={e=>{const value=e.target.value;onAssign(value==="Atanmamış"?null:(staff.find(s=>s.name===value)||null));}}><option>Atanmamış</option>{staff.map(person=><option key={person.id}>{person.name}</option>)}</select></label>:null}
+        </section>
+
+        {d.notes?<section className="detailSection detailNote"><div className="detailSectionHead"><span><ClipboardCheck size={16}/></span><div><small>DÜKKAN NOTU</small><b>Sevkiyat notu</b></div></div><p>{d.notes}</p></section>:null}
+
+        <section className="detailSection">
+          <div className="detailSectionHead"><span><ClipboardCheck size={16}/></span><div><small>KONTROL LİSTESİ</small><b>{done}/6 tamamlandı</b></div></div>
+          <div className="detailProgress"><i><em style={{width:(done/6*100)+"%"}}/></i><span>%{Math.round(done/6*100)}</span></div>
+          <div className="detailChecklist">
+            {checks.map(([k,l])=><button className={d.checklist[k]?"on":""} onClick={()=>onToggle(k)} key={k}><i>{d.checklist[k]?<Check size={13}/>:null}</i><span>{l}</span></button>)}
+          </div>
+        </section>
+
+        <section className="detailSection">
+          <div className="detailSectionHead"><span><History size={16}/></span><div><small>ZAMAN ÇİZELGESİ</small><b>İşlem geçmişi</b></div></div>
+          <div className="detailTimeline">
+            {timeline.length?timeline.map(event=><div className={"timelineItem "+event.type} key={event.id}>
+              <i/>
+              <div><b>{event.title}</b>{event.detail?<span>{event.detail}</span>:null}<small>{event.actor} • {new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(event.createdAt))}</small></div>
+            </div>):<div className="timelineEmpty">Bu teslimat için henüz işlem geçmişi oluşmadı.</div>}
+            <div className="timelineItem created">
+              <i/><div><b>Teslimat kaydı oluşturuldu</b><small>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(d.createdAt))}</small></div>
+            </div>
+          </div>
+        </section>
+
+        <section className="detailSection proofSection">
+          <div className="detailSectionHead"><span><PackageCheck size={16}/></span><div><small>TESLİMAT KANITI</small><b>Fotoğraf ve imza</b></div></div>
+          <div className="proofPlaceholder"><span>Sonraki modül</span><p>Fotoğraf, müşteri imzası ve teslimat kanıtı alanı bu bölüme bağlanacak.</p></div>
+        </section>
+      </div>
+
+      <footer className="detailFooter">
+        <div>
+          {d.status==="new"?<button className="primary" onClick={()=>onStatus("assigned")}>Personele ata</button>:null}
+          {d.status==="assigned"?<button className="primary" onClick={()=>onStatus("seen")}>Görüldü olarak işaretle</button>:null}
+          {d.status==="seen"?<button className="primary" onClick={()=>onStatus("on_route")}>Yola çıktı</button>:null}
+          {d.status==="on_route"?<button className="primary" disabled={requireChecks&&done<6} onClick={()=>onStatus("completed")}>Teslimatı tamamla</button>:null}
+          {!["completed","issue"].includes(d.status)?<button className="issue" onClick={()=>onStatus("issue")}>Sorun bildir</button>:null}
+        </div>
+        {office?<button className="delete detailDelete" onClick={onDelete}><Trash2 size={14}/>Teslimatı sil</button>:null}
+      </footer>
+    </aside>
+  </div>;
+}
+
