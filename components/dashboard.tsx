@@ -14,6 +14,7 @@ import InstallPwaCard from "./install-pwa-card";
 import MobileBottomNav from "./mobile-bottom-nav";
 import OperationsCenter from "./operations-center";
 import ThemeToggle from "./theme-toggle";
+import DeliveryProofPanel from "./delivery-proof-panel";
 import { ActivityEvent, Delivery, DeliveryStatus, Priority } from "@/lib/types";
 import {
   cloudAvailable, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
@@ -322,7 +323,7 @@ export default function Dashboard(){
     </main>
     {newOpen&&<NewDelivery staff={names} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>}
     {staffOpen&&<NewStaff onClose={()=>setStaffOpen(false)} onSave={addStaff}/>} 
-    {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} events={events} staff={operationalStaff} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(deliveries.find(x=>x.id===selected.id)||selected,s)} onToggle={k=>toggle(deliveries.find(x=>x.id===selected.id)||selected,k)} onAssign={person=>assignDelivery(deliveries.find(x=>x.id===selected.id)||selected,person)} onDelete={()=>remove(deliveries.find(x=>x.id===selected.id)||selected)}/>}
+    {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} events={events} staff={operationalStaff} cloud={cloud} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(deliveries.find(x=>x.id===selected.id)||selected,s)} onToggle={k=>toggle(deliveries.find(x=>x.id===selected.id)||selected,k)} onAssign={person=>assignDelivery(deliveries.find(x=>x.id===selected.id)||selected,person)} onProofSaved={kind=>log(kind==="photo"?"Teslimat fotoğrafı eklendi":"Müşteri imzası eklendi",deliveries.find(x=>x.id===selected.id)||selected,undefined,"system")} onDelete={()=>remove(deliveries.find(x=>x.id===selected.id)||selected)}/>}
   </div>;
 }
 
@@ -421,17 +422,19 @@ function Field({label,v,set,wide,type="text",placeholder="",inputMode}:{label:st
 function Select({label,v,set,opts}:{label:string;v:string;set:(v:string)=>void;opts:string[]}){return <label><span>{label}</span><select value={v} onChange={e=>set(e.target.value)}>{opts.map(o=><option key={o} value={o}>{o==="normal"?"Normal":o==="high"?"Öncelikli":o==="critical"?"Acil":o}</option>)}</select></label>}
 function Opt({t,on,set}:{t:string;on:boolean;set:(v:boolean)=>void}){return <button type="button" className={on?"on":""} onClick={()=>set(!on)}><i>{on?<Check size={13}/>:null}</i>{t}</button>}
 function Drawer({
-  d,events,staff,office,requireChecks,onClose,onStatus,onToggle,onAssign,onDelete
+  d,events,staff,cloud,office,requireChecks,onClose,onStatus,onToggle,onAssign,onProofSaved,onDelete
 }:{
   d:Delivery;
   events:ActivityEvent[];
   staff:Staff[];
+  cloud:boolean;
   office:boolean;
   requireChecks:boolean;
   onClose:()=>void;
   onStatus:(s:DeliveryStatus)=>void;
   onToggle:(k:keyof Delivery["checklist"])=>void;
   onAssign:(person:Staff|null)=>void;
+  onProofSaved:(kind:"photo"|"signature")=>void;
   onDelete:()=>void;
 }){
   const done=Object.values(d.checklist).filter(Boolean).length;
@@ -532,10 +535,7 @@ function Drawer({
           </div>
         </section>
 
-        <section className="detailSection proofSection">
-          <div className="detailSectionHead"><span><PackageCheck size={16}/></span><div><small>TESLİMAT KANITI</small><b>Fotoğraf ve imza</b></div></div>
-          <div className="proofPlaceholder"><span>Sonraki modül</span><p>Fotoğraf, müşteri imzası ve teslimat kanıtı alanı bu bölüme bağlanacak.</p></div>
-        </section>
+        <DeliveryProofPanel deliveryId={d.id} cloud={cloud} onSaved={onProofSaved}/>
       </div>
 
       <footer className="detailFooter">
