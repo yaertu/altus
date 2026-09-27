@@ -438,6 +438,7 @@ function Drawer({
   const timeline=events
     .filter(e=>e.deliveryId===d.id || (!e.deliveryId&&e.orderNo===d.orderNo))
     .sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());
+  const hasCreatedEvent=timeline.some(event=>event.type==="created");
   const priority=d.priority==="critical"?"Acil":d.priority==="high"?"Öncelikli":"Normal";
   const itemCount=d.items.reduce((sum,item)=>sum+(item.quantity||1),0);
 
@@ -527,9 +528,7 @@ function Drawer({
               <i/>
               <div><b>{event.title}</b>{event.detail?<span>{event.detail}</span>:null}<small>{event.actor} • {new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(event.createdAt))}</small></div>
             </div>):<div className="timelineEmpty">Bu teslimat için henüz işlem geçmişi oluşmadı.</div>}
-            <div className="timelineItem created">
-              <i/><div><b>Teslimat kaydı oluşturuldu</b><small>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(d.createdAt))}</small></div>
-            </div>
+            {!hasCreatedEvent?<div className="timelineItem created"><i/><div><b>Teslimat kaydı oluşturuldu</b><small>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(d.createdAt))}</small></div></div>:null}
           </div>
         </section>
 
@@ -541,7 +540,7 @@ function Drawer({
 
       <footer className="detailFooter">
         <div>
-          {d.status==="new"?<button className="primary" onClick={()=>onStatus("assigned")}>Personele ata</button>:null}
+          {d.status==="new"?<button className="soft" disabled>Önce personel seç</button>:null}
           {d.status==="assigned"?<button className="primary" onClick={()=>onStatus("seen")}>Görüldü olarak işaretle</button>:null}
           {d.status==="seen"?<button className="primary" onClick={()=>onStatus("on_route")}>Yola çıktı</button>:null}
           {d.status==="on_route"?<button className="primary" disabled={requireChecks&&done<6} onClick={()=>onStatus("completed")}>Teslimatı tamamla</button>:null}
