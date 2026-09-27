@@ -236,6 +236,21 @@ export async function uploadDeliveryProof(deliveryId:string, file:File, proofTyp
   return proofFromRow(row, signed?.signedUrl || "");
 }
 
+export async function removeDeliveryProof(proof:Pick<DeliveryProof,"id"|"storagePath">) {
+  if (!supabase) throw new Error("Teslimat kanıtı için Supabase bağlantısı gerekli.");
+
+  const { error:rowError } = await supabase
+    .from("delivery_proofs")
+    .delete()
+    .eq("id", proof.id);
+  if (rowError) throw rowError;
+
+  const { error:storageError } = await supabase.storage
+    .from("delivery-proofs")
+    .remove([proof.storagePath]);
+  if (storageError) throw storageError;
+}
+
 export async function insertEvent(event: Omit<ActivityEvent,"id"|"createdAt">) {
   if (!supabase) return;
   const { error } = await supabase.from("delivery_events").insert({
