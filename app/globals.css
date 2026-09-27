@@ -9367,3 +9367,70 @@ html[data-theme="light"] body{background:#f7f7f8}
 @media(prefers-reduced-motion:reduce){
   .wizardPanel{animation:none!important}
 }
+
+
+/* v2.2.1 audit fixes */
+html[data-theme="light"]{
+  --bg:#f7f7f8;
+  --bg-grid:#f7f7f8;
+  --panel:#ffffff;
+  --panel-2:#fbfafb;
+  --panel-3:#f4f2f4;
+  --panel-4:#fff0f8;
+  --glass:rgba(255,255,255,.96);
+
+  --text:#202027;
+  --text-2:#42424a;
+  --muted:#73737d;
+  --muted-2:#a0a0aa;
+
+  --line:#e5e1e4;
+  --line-2:#d8d2d7;
+  --line-3:#c7bec5;
+
+  --accent:#f00088;
+  --accent-2:#202027;
+  --accent-soft:rgba(240,0,136,.075);
+  --accent-border:rgba(240,0,136,.24);
+
+  --blue:#f00088;
+  --blue-soft:rgba(240,0,136,.07);
+  --violet:#b60067;
+  --violet-soft:rgba(182,0,103,.07);
+}
+html[data-theme="light"] body{
+  background:
+    linear-gradient(rgba(32,32,39,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(32,32,39,.018) 1px,transparent 1px),
+    #f7f7f8;
+  background-size:32px 32px;
+}
+.wizardBody{min-width:0}
+.driverBigButton{min-width:230px;justify-content:center}
+.storeBrandMark.hasBrandLogo{
+  width:86px!important;
+  padding:5px 7px!important;
+  background:#fff!important;
+}
+.storeBrandMark.hasBrandLogo img,
+.brand>div.hasBrandLogo img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+}
+.brand>div.hasBrandLogo{
+  width:96px!important;
+  min-width:96px!important;
+  padding:5px!important;
+}
+.settingsLogo.hasImage{
+  padding:8px;
+  background:#fff!important;
+  border:1px solid #eee1e8;
+}
+.settingsLogo.hasImage img{object-fit:contain}
+.courierMode .mobileBottom{display:none!important}
+@media(max-width:760px){
+  .officeMode .mobileBottom{display:grid!important}
+  .courierMode .mobileBottom{display:none!important}
+}
