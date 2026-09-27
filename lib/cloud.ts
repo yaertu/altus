@@ -159,6 +159,14 @@ export async function insertDelivery(input: Omit<Delivery,"id"|"createdAt"|"upda
   return deliveryFromRow(data);
 }
 
+export async function createCourierStaff(input:{name:string;phone:string;email:string;password:string}) {
+  if (!supabase) throw new Error("Supabase yapılandırılmamış.");
+  const { data, error } = await supabase.functions.invoke("create-courier",{body:input});
+  if (error) throw error;
+  if (!data?.ok || !data?.staff) throw new Error(data?.error||"Personel hesabı oluşturulamadı.");
+  return data.staff as StaffRecord;
+}
+
 export async function insertStaff(name: string, phone: string, userId?: string | null) {
   if (!supabase) throw new Error("Supabase yapılandırılmamış.");
   const { data, error } = await supabase.from("staff").insert({ name, phone:phone || null, user_id:userId || null }).select("id,name,phone,user_id").single();
