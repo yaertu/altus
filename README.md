@@ -2,7 +2,15 @@
 
 Dükkan ve sevkiyat personeli için responsive teslimat operasyon uygulaması.
 
-## v0.7 — Mission Control + Gündüz/Gece
+## v0.9 — Obsidian Operations
+
+- Baştan yazılmış Obsidian koyu tema
+- Plus Jakarta Sans + JetBrains Mono tipografi sistemi
+- Yeni operasyon hero/pulse alanı
+- Dört KPI kartı ve filtrelenebilir risk görünümü
+- Yeniden tasarlanmış teslimat kuyruğu ve kontrol rail'i
+- 1024px altında drawer sidebar, mobil bottom navigation
+- Light mode desteği korunur, varsayılan dark
 
 - Sıfırdan yazılmış semantic token tabanlı responsive tema
 - Gerçek Gündüz / Gece tema anahtarı
