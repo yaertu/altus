@@ -225,7 +225,7 @@ export async function uploadDeliveryProof(deliveryId:string, file:File, proofTyp
     .single();
 
   if (insertError) {
-    await supabase.storage.from("delivery-proofs").remove([path]).catch(()=>undefined);
+    try { await supabase.storage.from("delivery-proofs").remove([path]); } catch {}
     throw insertError;
   }
 
