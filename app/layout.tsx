@@ -17,7 +17,7 @@ const mono = Roboto_Mono({
 const themeBoot = `
 (function(){
   try{
-    var key="yaateslimat:theme:v7";
+    var key="altus-teslimat:theme:v12";
     var saved=localStorage.getItem(key);
     var theme="light";
     var root=document.documentElement;
@@ -29,13 +29,13 @@ const themeBoot = `
 `;
 
 export const metadata: Metadata = {
-  title: "yaaTeslimat | Mağaza & Servis Teslimat Takibi",
+  title: "ALTUS Teslimat | Mağaza & Servis",
   description: "Mağaza ve servis personeli için müşteri, ürün, adres, teslimat ve kontrol yönetimi.",
-  applicationName: "yaaTeslimat",
+  applicationName: "ALTUS Teslimat",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "yaaTeslimat"
+    title: "ALTUS Teslimat"
   },
   formatDetection: { telephone:false },
   icons: {
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f6f8fb",
+  themeColor: "#f00088",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"

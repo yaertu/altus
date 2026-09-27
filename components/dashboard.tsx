@@ -50,6 +50,7 @@ function addressText(address:string,district:string,city:string){ return [addres
 function map(d:Delivery){ return "https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(addressText(d.address,d.district,d.city)); }
 function mapSearch(address:string,district:string,city:string){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addressText(address,district,city)); }
 function mapEmbed(address:string,district:string,city:string){ return "https://www.google.com/maps?q="+encodeURIComponent(addressText(address,district,city))+"&output=embed"; }
+const ALTUS_LOGO_URL="https://www.arcelikglobal.com/media/zl5aashl/altus_logo_pink.png";
 const DEFAULT_APP_SETTINGS:AppSettings={storeName:"ALTUS Mağazası",storeSubtitle:"Teslimat & Servis",storePhone:"",storeAddress:"",storeCity:"İstanbul",logoUrl:""};
 
 export default function Dashboard(){
@@ -346,7 +347,7 @@ export default function Dashboard(){
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
 
     <aside className={"side "+(side?"open":"")} aria-label="Mobil menü">
-      <div className="brand"><div className={appSettings.logoUrl?"hasBrandLogo":"altusFallback"}>{appSettings.logoUrl?<img src={appSettings.logoUrl} alt={appSettings.storeName}/>:<b>ALTUS</b>}</div><p><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle}</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
+      <div className="brand"><div className="hasBrandLogo"><img src={appSettings.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div><p><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle}</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
       {profile?.role==="courier"?<div className="roleChip"><Truck size={15}/><span>Servis personeli</span><i>CANLI</i></div>:<div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Mağaza</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Servis</button></div>}
       {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={18}/><span>Mağazaya dön</span></button>:null}</nav>}
       <div className="grow"/>
@@ -358,11 +359,11 @@ export default function Dashboard(){
       <header className="appTopbar">
         <div className="topBrand">
           <button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button>
-          <div className={"topBrandMark storeBrandMark "+(appSettings.logoUrl?"hasBrandLogo":"altusFallback")}>{appSettings.logoUrl?<img src={appSettings.logoUrl} alt={appSettings.storeName}/>:<b>ALTUS</b>}</div>
+          <div className="topBrandMark storeBrandMark hasBrandLogo"><img src={appSettings.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div>
           <div className="topBrandCopy"><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle.toLocaleUpperCase("tr-TR")}</span></div>
         </div>
 
-        {!(mode==="office"&&view==="dashboard")?<label className="globalSearch">
+        {mode==="office"&&view!=="dashboard"?<label className="globalSearch">
           <Search size={18}/>
           <input
             ref={searchRef}
@@ -372,7 +373,7 @@ export default function Dashboard(){
             placeholder={mode==="office"?"Sipariş, müşteri, ürün, telefon veya adres ara":"Sevkiyatçı görevlerinde ara"}
           />
           <kbd>⌘K</kbd>
-        </label>:<div className="topbarContext"><span>MAĞAZA OPERASYONU</span><b>Bugünkü teslimatlar</b></div>}
+        </label>:<div className="topbarContext"><span>{mode==="courier"?"SERVİS MODU":"MAĞAZA OPERASYONU"}</span><b>{mode==="courier"?"Sıradaki teslimat":"Bugünkü teslimatlar"}</b></div>}
 
         <div className="topbarRight">
           <span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"Offline":cloud?"Canlı":"Yerel"}</span>
@@ -414,7 +415,7 @@ export default function Dashboard(){
         </div>:null}
       </div>
 
-      {!(mode==="office"&&view==="dashboard")?<section className="pageIntro">
+      {mode==="office"&&view!=="dashboard"?<section className="pageIntro">
         <div>
           <small>{mode==="office"?"OPERASYON / "+pageTitle.toLocaleUpperCase("tr-TR"):"SAHA / GÖREVLER"}</small>
           <h1>{pageTitle}</h1>
@@ -425,7 +426,7 @@ export default function Dashboard(){
           {cloudError?<button className="cloudError" onClick={()=>setCloudError("")}><AlertTriangle size={13}/>{cloudError}<X size={12}/></button>:null}
         </div>
       </section>:null}
-      {mode==="courier"?<CourierList list={my} courier={courier} notify={notify} cloud={cloud} onNotify={notifications} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} requireChecks={requireChecks}/>:<>
+      {mode==="courier"?<CourierList list={my} courier={courier} catalog={catalog} notify={notify} cloud={cloud} onNotify={notifications} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} requireChecks={requireChecks}/>:<>
         {view==="dashboard"&&<OperationsCenter deliveries={deliveries} staff={operationalStaff} cloud={cloud} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected} onAssign={assignDelivery}/>}
         {view==="deliveries"&&<section className="card page"><PageHead tag="DÜKKAN KAYITLARI" title="Tüm teslimatlar" text="Müşteri, adres, ürün ve personel bilgilerini tek yerden takip et." action={<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={16}/>Yeni teslimat</button>}/><div className="filters"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="İsim, telefon, ürün, sipariş no..."/></label><label className="select"><select value={filter} onChange={e=>setFilter(e.target.value as "all"|DeliveryStatus)}><option value="all">Tüm durumlar</option>{Object.keys(labels).map(k=><option key={k} value={k}>{labels[k as DeliveryStatus]}</option>)}</select><ChevronDown size={13}/></label></div><DeliveryList list={filtered} onOpen={setSelected}/></section>}
         {view==="staff"&&<StaffPage staff={staff} deliveries={deliveries} onAdd={()=>setStaffOpen(true)}/>}
@@ -435,7 +436,7 @@ export default function Dashboard(){
         {view==="logs"&&<LogsPage events={events}/>}
         {view==="settings"&&<SettingsPage settings={appSettings} catalogCount={catalog.length} requireChecks={requireChecks} setRequireChecks={v=>{setRequireChecks(v);log("Teslimat kuralı değiştirildi",undefined,v?"Kontrol listesi zorunlu":"Kontrol listesi isteğe bağlı","system")}} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSaveSettings={saveStoreSettings} onUploadLogo={uploadBrandLogo} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([]);log("Yerel önbellek temizlendi",undefined,"Bu cihaz","system")}}}/>} 
       </>}
-      <footer><span>yaaTeslimat • v2.1</span><DeveloperBadge compact/></footer>
+      <footer><span>ALTUS Teslimat • v2.2</span><DeveloperBadge compact/></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
     {newOpen&&<NewDelivery staff={operationalStaff} deliveries={deliveries} catalog={catalog} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>} 
@@ -589,7 +590,7 @@ function SettingsPage({
   return <div className="settingsHub">
     <section className="settingsIdentity">
       <div className="settingsIdentityPreview">
-        <div className={"settingsLogo "+(draft.logoUrl?"hasImage":"altusFallback")}>{draft.logoUrl?<img src={draft.logoUrl} alt={draft.storeName}/>:<b>ALTUS</b>}</div>
+        <div className="settingsLogo hasImage"><img src={draft.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div>
         <div><small>MAĞAZA KİMLİĞİ</small><h2>{draft.storeName||"Mağaza adı"}</h2><p>{draft.storeSubtitle||"Teslimat & Servis"}</p></div>
       </div>
       <div className="settingsIdentityActions">
@@ -646,71 +647,120 @@ function SettingsPage({
     <InstallPwaCard/>
   </div>
 }
-function CourierList({list,courier,notify,cloud,onNotify,onOpen,onStatus,onToggle,requireChecks}:{list:Delivery[];courier:string;notify:boolean;cloud:boolean;onNotify:()=>void;onOpen:(d:Delivery)=>void;onStatus:(d:Delivery,s:DeliveryStatus)=>void;onToggle:(d:Delivery,k:keyof Delivery["checklist"])=>void;requireChecks:boolean}){
+function CourierList({
+  list,courier,catalog,notify,cloud,onNotify,onOpen,onStatus,onToggle,requireChecks
+}:{
+  list:Delivery[];
+  courier:string;
+  catalog:ProductCatalogItem[];
+  notify:boolean;
+  cloud:boolean;
+  onNotify:()=>void;
+  onOpen:(d:Delivery)=>void;
+  onStatus:(d:Delivery,s:DeliveryStatus)=>void;
+  onToggle:(d:Delivery,k:keyof Delivery["checklist"])=>void;
+  requireChecks:boolean;
+}){
   if(!courier)return <div className="courierEmpty"><WebIcon name="truck-fast-outline" size={52}/><h2>Personel seçilmedi</h2><p>Servis personelini seçince yalnız ona atanmış bugünkü teslimatlar görünür.</p></div>;
-  return <div className="courier serviceWorkspace serviceWorkspaceV2">
-    <div className={"serviceNotifyBanner "+(notify?"ready":"waiting")}>
-      <span><Bell/></span>
-      <div><b>{notify?"Görev bildirimleri açık":"Yeni görevleri anında telefona al"}</b><small>{notify?"Mağaza sana teslimat atadığında bildirim cihazına düşer.":cloud?"Bir kez bildirim izni ver; yeni teslimatlar uygulama kapalıyken de haber versin.":"Canlı bağlantı kurulunca bildirimleri açabilirsin."}</small></div>
-      {!notify?<button className="primary" disabled={!cloud} onClick={onNotify}><Bell/>Bildirimleri aç</button>:<strong><CheckCircle2/>HAZIR</strong>}
+
+  const ordered=[...list].sort((a,b)=>(a.timeWindow||"").localeCompare(b.timeWindow||""));
+  const active=ordered.filter(d=>!["completed","issue"].includes(d.status));
+  const finished=ordered.filter(d=>d.status==="completed");
+  const next=active[0];
+  const others=active.slice(1);
+
+  if(!next)return <div className="driverFocus driverAllDone">
+    <div className="driverDoneIcon"><CheckCircle2/></div>
+    <small>BUGÜN</small>
+    <h1>Tüm işler tamam 🎉</h1>
+    <p>{finished.length} teslimat tamamlandı. Yeni görev geldiğinde burada otomatik görünecek.</p>
+    {!notify?<button className="primary driverBigButton" disabled={!cloud} onClick={onNotify}><Bell/>Bildirimleri aç</button>:<span className="driverReady"><Bell/><b>Bildirimler açık</b></span>}
+  </div>;
+
+  const done=Object.values(next.checklist).filter(Boolean).length;
+  const nextProducts=next.items.map((item,index)=>{
+    const match=catalog.find(row=>row.model?.toLocaleLowerCase("tr-TR")===(item.model||"").toLocaleLowerCase("tr-TR"));
+    return {item,index,match};
+  });
+
+  return <div className="driverFocus">
+    <section className="driverHeader">
+      <div className="driverHeaderTop">
+        <div><span className="driverEyebrow">SIRADAKİ DURAK</span><h1>{next.customerName}</h1><p><Clock3/>{next.timeWindow||"Saat belirtilmedi"} <b>•</b> {next.district}</p></div>
+        <span className={"driverStatus s-"+next.status}>{labels[next.status]}</span>
+      </div>
+      <div className={"driverNotifyMini "+(notify?"ready":"waiting")} onClick={!notify?onNotify:undefined}>
+        <Bell/>{notify?<><b>Bildirimler açık</b><small>Yeni görevler anında gelir</small></>:<><b>Bildirimleri aç</b><small>Yeni görevi kaçırma</small></>}
+      </div>
+    </section>
+
+    <section className="driverMapCard">
+      <AddressMap address={next.address} district={next.district} city={next.city} compact/>
+      <div className="driverAddress">
+        <span><MapPin/></span>
+        <div><small>GİDECEĞİN ADRES</small><b>{next.address}</b><p>{next.district}, {next.city}</p></div>
+      </div>
+      <a className="driverNavigate" href={map(next)} target="_blank" rel="noreferrer"><Navigation/><span><b>YOL TARİFİNİ AÇ</b><small>Google Maps ile başlat</small></span><ChevronRight/></a>
+    </section>
+
+    <section className="driverCustomerCard">
+      <div className="driverCustomerMain">
+        <span>{initials(next.customerName)}</span>
+        <div><small>MÜŞTERİ</small><h2>{next.customerName}</h2><p>{next.phone}{next.secondaryPhone?" • "+next.secondaryPhone:""}</p></div>
+      </div>
+      <div className="driverContactActions">
+        <a className="call" href={tel(next.phone)}><Phone/><b>ARA</b></a>
+        <a className="whatsapp" href={whatsapp(next.phone)} target="_blank" rel="noreferrer"><MessageCircle/><b>WHATSAPP</b></a>
+      </div>
+    </section>
+
+    <section className="driverProductCard">
+      <header><PackageCheck/><div><small>TESLİM EDECEĞİN ÜRÜN</small><b>{next.items.reduce((sum,item)=>sum+(item.quantity||1),0)} adet ürün</b></div></header>
+      <div className="driverProducts">
+        {nextProducts.map(({item,index,match})=><article className="driverProduct" key={item.id||index}>
+          <div className="driverProductVisual"><WebIcon product={item.product||""} size={52} color="f00088"/></div>
+          <div className="driverProductCopy"><span>{item.brand||"ALTUS"}</span><h3>{item.product||"Ürün bilgisi eksik"}</h3><b>{item.model||"Model girilmedi"}</b>
+            <div>{item.installationRequired?<em>Kurulum</em>:null}{item.serviceRequired?<em>Servis</em>:null}{item.takeBackOldProduct?<em>Eski ürün alınacak</em>:null}</div>
+            {match?.sourceUrl?<a href={match.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink/>Altus ürün bilgisini aç</a>:null}
+          </div>
+          <strong>×{item.quantity||1}</strong>
+        </article>)}
+      </div>
+    </section>
+
+    {next.notes?<section className="driverNote"><AlertTriangle/><div><small>MAĞAZA NOTU</small><b>{next.notes}</b></div></section>:null}
+
+    <section className="driverChecklist">
+      <div className="driverSectionHead"><div><small>SON KONTROL</small><h2>Teslimatı eksiksiz yap</h2></div><strong>{done}/6</strong></div>
+      <div className="driverCheckGrid">{checks.map(([k,l],index)=><button className={next.checklist[k]?"on":""} onClick={()=>onToggle(next,k)} key={k}><i>{next.checklist[k]?<Check/>:index+1}</i><span>{l}</span></button>)}</div>
+    </section>
+
+    <section className="driverFinish">
+      {next.status==="new"||next.status==="assigned"?<button className="primary driverStateAction" onClick={()=>onStatus(next,"seen")}><CheckCircle2/><span><b>GÖREVİ ALDIM</b><small>Müşteri ve ürünü gördüm</small></span></button>:null}
+      {next.status==="seen"?<button className="primary driverStateAction" onClick={()=>onStatus(next,"on_route")}><Truck/><span><b>YOLA ÇIKTIM</b><small>Mağazadan ayrılıyorum</small></span></button>:null}
+      {next.status==="on_route"?<button className="primary driverStateAction complete" disabled={requireChecks&&done<6} onClick={()=>onStatus(next,"completed")}><CheckCircle2/><span><b>TESLİMATI TAMAMLADIM</b><small>{requireChecks&&done<6?"Önce 6 kontrolü tamamla":"İşi kapat"}</small></span></button>:null}
+      <button className="driverIssue" onClick={()=>onStatus(next,"issue")}><AlertTriangle/>Sorun var</button>
+    </section>
+
+    {others.length?<section className="driverOtherStops">
+      <div className="driverSectionHead"><div><small>SONRAKİLER</small><h2>Diğer duraklar</h2></div><strong>{others.length}</strong></div>
+      <div>{others.map((d,index)=><button key={d.id} onClick={()=>onOpen(d)} className="driverStopRow">
+        <span className="driverStopNo">{index+2}</span>
+        <div><b>{d.customerName}</b><small>{d.timeWindow} • {d.district}</small><em>{d.items.map(item=>[item.product,item.model].filter(Boolean).join(" ")).join(" • ")}</em></div>
+        <ChevronRight/>
+      </button>)}</div>
+    </section>:null}
+
+    <div className="driverStickyBar">
+      <a href={tel(next.phone)}><Phone/><span>Ara</span></a>
+      <a className="main" href={map(next)} target="_blank" rel="noreferrer"><Navigation/><span>Yol Tarifi</span></a>
+      <button onClick={()=>onOpen(next)}><PackageCheck/><span>Detay</span></button>
     </div>
-    <div className="serviceHero serviceHeroV2">
-      <div><small>BUGÜNKÜ SEVKİYAT</small><h2>{courier.split(" ")[0]}, {list.length} görevin var.</h2><p>Telefon, teslim edilecek ürün, müşteri adresi ve mağaza notu tek kartta.</p></div>
-      <b>{list.length}<span>görev</span></b>
-    </div>
-
-    {list.length?list.map((d,index)=>{
-      const done=Object.values(d.checklist).filter(Boolean).length;
-      return <article className="serviceTask serviceTaskV2" key={d.id}>
-        <div className="serviceTaskHead">
-          <div><b className="serviceTaskNumber">#{index+1}</b><span className={"status s-"+d.status}>{labels[d.status]}</span><small>{d.timeWindow} • {d.orderNo}</small></div>
-          <button className="soft" onClick={()=>onOpen(d)}>Detay</button>
-        </div>
-
-        <section className="serviceCustomerV2">
-          <span>{initials(d.customerName)}</span>
-          <div><small>MÜŞTERİ</small><h3>{d.customerName}</h3><a href={tel(d.phone)}><Phone/>{d.phone}</a>{d.secondaryPhone?<em>2. tel: {d.secondaryPhone}</em>:null}</div>
-        </section>
-
-        <section className="serviceProductsV2">
-          <header><PackageCheck/><div><small>TESLİM EDİLECEK ÜRÜN</small><b>{d.items.reduce((sum,item)=>sum+(item.quantity||1),0)} adet</b></div></header>
-          <div>{d.items.map((item,itemIndex)=><div className="serviceProductItem" key={item.id||itemIndex}>
-            <span><WebIcon product={item.product||""} size={30}/></span>
-            <p><small>{item.brand||"ALTUS"}</small><b>{item.product||"Ürün bilgisi eksik"}</b><em>{item.model||"Model girilmedi"}</em></p>
-            <strong>×{item.quantity||1}</strong>
-          </div>)}</div>
-        </section>
-
-        <section className="serviceAddressV2">
-          <div className="serviceAddressCopy"><MapPin/><div><small>TESLİMAT ADRESİ</small><b>{d.address}</b><span>{d.district}, {d.city}</span></div></div>
-          <AddressMap address={d.address} district={d.district} city={d.city} compact/>
-        </section>
-
-        {d.notes?<div className="serviceNote serviceNoteV2"><AlertTriangle/><p><b>Mağaza notu</b><span>{d.notes}</span></p></div>:null}
-
-        <div className="serviceQuick serviceQuickV2">
-          <a href={tel(d.phone)}><Phone/>Ara</a>
-          <a href={whatsapp(d.phone)} target="_blank" rel="noreferrer"><MessageCircle/>WhatsApp</a>
-          <a href={map(d)} target="_blank" rel="noreferrer"><Navigation/>Yol tarifi</a>
-        </div>
-
-        <div className="serviceChecklist">
-          <div className="serviceChecklistHead"><div><b>Teslimat kontrolü</b><span>Tamamlamadan işi kapatma.</span></div><strong>{done}/6</strong></div>
-          <div className="serviceProgress"><i><em style={{width:(done/6*100)+"%"}}/></i><span>%{Math.round(done/6*100)}</span></div>
-          <div className="serviceChecks">{checks.map(([k,l])=><button className={d.checklist[k]?"on":""} onClick={()=>onToggle(d,k)} key={k}><i>{d.checklist[k]?<Check size={13}/>:null}</i><span>{l}</span></button>)}</div>
-        </div>
-        <div className="serviceActions">
-          {d.status==="assigned"?<button className="primary" onClick={()=>onStatus(d,"seen")}>Görevi gördüm</button>:null}
-          {d.status==="seen"?<button className="primary" onClick={()=>onStatus(d,"on_route")}><Truck/>Yola çıktım</button>:null}
-          {d.status==="on_route"?<button className="primary" disabled={requireChecks&&done<6} onClick={()=>onStatus(d,"completed")}><CheckCircle2/>Teslimatı tamamla</button>:null}
-          <button className="issue" onClick={()=>onStatus(d,"issue")}><AlertTriangle/>Sorun var</button>
-        </div>
-      </article>
-    }):<div className="card"><Empty title="Bugün atanmış iş yok" text="Mağaza sana teslimat atadığında burada görünecek."/></div>}
   </div>
 }
 function NewDelivery({staff,deliveries,catalog,onClose,onSave}:{staff:Staff[];deliveries:Delivery[];catalog:ProductCatalogItem[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){
   type DraftItem={id:string;brand:string;product:string;model:string;quantity:number;service:boolean;install:boolean;old:boolean};
+  const [step,setStep]=useState(1);
   const [f,setF]=useState({
     name:"",phone:"",secondaryPhone:"",address:"",district:"",city:"İstanbul",
     assignee:"Atanmamış",date:today(),time:"09:00 - 12:00",priority:"normal" as Priority,notes:""
@@ -744,9 +794,7 @@ function NewDelivery({staff,deliveries,catalog,onClose,onSave}:{staff:Staff[];de
     if(hit)setItem(itemId,{brand:hit.brand,product:hit.category,model:hit.model});
     else setItem(itemId,{model});
   }
-  function catalogFor(item:DraftItem){
-    return catalog.filter(row=>!item.product||row.category===item.product).slice(0,80);
-  }
+  function catalogFor(item:DraftItem){return catalog.filter(row=>!item.product||row.category===item.product).slice(0,80)}
 
   const complete={
     customer:Boolean(f.name.trim()&&f.phone.replace(/\D/g,"").length>=10),
@@ -754,98 +802,115 @@ function NewDelivery({staff,deliveries,catalog,onClose,onSave}:{staff:Staff[];de
     products:Boolean(items.length&&items.every(item=>item.product.trim())),
     assignment:Boolean(f.assignee!=="Atanmamış")
   };
+
+  function goNext(){
+    setErr("");
+    if(step===1&&!complete.customer){setErr("Müşteri adı ve telefonunu tamamla.");return}
+    if(step===2&&!complete.address){setErr("Açık adres ve ilçeyi tamamla.");return}
+    if(step===3&&!complete.products){setErr("En az bir ürün seç veya ürün adını yaz.");return}
+    setStep(current=>Math.min(4,current+1));
+  }
   function submit(e:FormEvent){
     e.preventDefault();
     setErr("");
-    const phoneDigits=f.phone.replace(/\D/g,"");
-    if(!f.name.trim()){setErr("Müşteri adı ve soyadı eksik.");return}
-    if(phoneDigits.length<10){setErr("Müşteri telefonunu eksiksiz gir.");return}
-    if(f.address.trim().length<8||!f.district.trim()){setErr("Açık adres ve ilçe eksik. Personel adres aramak zorunda kalmasın.");return}
-    if(!items.length||items.some(item=>!item.product.trim())){setErr("Her ürün satırında ürün adı bulunmalı.");return}
+    if(step<4){goNext();return}
+    if(!complete.assignment){setErr("Teslimatı göndereceğin servis personelini seç.");return}
     const suffix=(Date.now().toString(36).slice(-3)+Math.random().toString(36).slice(2,4)).toUpperCase();
     onSave({
       orderNo:"YD-"+f.date.replaceAll("-","").slice(2)+"-"+suffix,
       customerName:f.name.trim(),phone:f.phone.trim(),secondaryPhone:f.secondaryPhone.trim()||undefined,
       address:f.address.trim(),district:f.district.trim(),city:f.city.trim(),date:f.date,timeWindow:f.time,
-      assignee:f.assignee,assigneeInitials:f.assignee==="Atanmamış"?"--":initials(f.assignee),status:"new",priority:f.priority,notes:f.notes.trim()||undefined,
+      assignee:f.assignee,assigneeInitials:initials(f.assignee),status:"assigned",priority:f.priority,notes:f.notes.trim()||undefined,
       items:items.map(item=>({id:id("i"),brand:item.brand,product:item.product.trim(),model:item.model.trim()||undefined,quantity:item.quantity,serviceRequired:item.service,installationRequired:item.install,takeBackOldProduct:item.old}))
     })
   }
 
-  return <Modal onClose={onClose}><form onSubmit={submit} className="deliveryEntry deliveryEntryV2">
-    <PageHead tag="YENİ TESLİMAT" title="Müşteri + ürün + adres + personel" text="Mağazada tek kez eksiksiz gir; servis personeli telefonda aynı bilgileri ve haritayı görsün."/>
+  const stepInfo=[
+    {n:1,title:"Müşteri",sub:"Kim?",ok:complete.customer,icon:<UserRound/>},
+    {n:2,title:"Adres",sub:"Nereye?",ok:complete.address,icon:<MapPin/>},
+    {n:3,title:"Ürün",sub:"Ne gidecek?",ok:complete.products,icon:<PackageSearch/>},
+    {n:4,title:"Personel",sub:"Kim götürecek?",ok:complete.assignment,icon:<Truck/>}
+  ];
 
-    <div className="entryCompleteness">
-      <span className={complete.customer?"done":""}><i>{complete.customer?<Check/>:"1"}</i>Müşteri</span>
-      <span className={complete.address?"done":""}><i>{complete.address?<Check/>:"2"}</i>Adres</span>
-      <span className={complete.products?"done":""}><i>{complete.products?<Check/>:"3"}</i>Ürün</span>
-      <span className={complete.assignment?"done":""}><i>{complete.assignment?<Check/>:"4"}</i>Personel</span>
+  return <Modal onClose={onClose}><form onSubmit={submit} className="deliveryWizard">
+    <div className="wizardHead">
+      <div><small>YENİ TESLİMAT</small><h2>4 adımda teslimat oluştur</h2><p>Her adımda sadece gerekli bilgiyi gir. Son adımda personele bildirim gider.</p></div>
+      <strong>{step}/4</strong>
     </div>
 
-    <section className="entrySection">
-      <div className="entrySectionTitle"><span><UserRound/></span><div><b>Müşteri</b><small>Yeni müşteri yaz veya geçmiş kayıttan tek tıkla doldur</small></div><button type="button" className="soft reuseCustomer" onClick={()=>setCustomerOpen(v=>!v)}><Search/>Geçmiş müşteri</button></div>
-      {customerOpen?<div className="customerSuggestions">{customerSuggestions.length?customerSuggestions.map(d=><button type="button" key={d.id} onClick={()=>chooseCustomer(d)}><i>{initials(d.customerName)}</i><p><b>{d.customerName}</b><small>{d.phone} • {d.district}</small></p><ChevronRight/></button>):<span>Uygun geçmiş müşteri bulunamadı.</span>}</div>:null}
-      <div className="form">
-        <Field label="Ad soyad *" v={f.name} set={v=>set("name",v)} placeholder="Müşteri adı ve soyadı"/>
-        <Field label="Telefon *" v={f.phone} set={v=>set("phone",v)} placeholder="05xx xxx xx xx" inputMode="tel"/>
-        <Field label="İkinci telefon" v={f.secondaryPhone} set={v=>set("secondaryPhone",v)} placeholder="Varsa ikinci numara" inputMode="tel"/>
-      </div>
-    </section>
+    <nav className="wizardSteps">
+      {stepInfo.map(info=><button type="button" key={info.n} className={(step===info.n?"active ":"")+(info.ok?"done":"")} onClick={()=>{if(info.n<=step||stepInfo.slice(0,info.n-1).every(x=>x.ok)){setErr("");setStep(info.n)}}}>
+        <i>{info.ok?<Check/>:info.icon}</i><span><b>{info.title}</b><small>{info.sub}</small></span>
+      </button>)}
+    </nav>
 
-    <section className="entrySection">
-      <div className="entrySectionTitle"><span><MapPin/></span><div><b>Teslimat adresi</b><small>Servis personelinin haritada açacağı açık adres</small></div></div>
-      <div className="form">
-        <Field label="Açık adres *" v={f.address} set={v=>set("address",v)} placeholder="Mahalle, cadde/sokak, bina no, kat/daire..." wide/>
-        <Field label="İlçe *" v={f.district} set={v=>set("district",v)} placeholder="İlçe"/>
-        <Field label="Şehir" v={f.city} set={v=>set("city",v)} placeholder="İstanbul"/>
-      </div>
-      {f.address.trim().length>=6?<AddressMap address={f.address} district={f.district} city={f.city}/>:<div className="addressHint"><MapPin/><span>Adres yazınca harita önizlemesi burada açılır; servis personeli de aynı konumu görür.</span></div>}
-    </section>
+    <div className="wizardBody">
+      {step===1?<section className="wizardPanel">
+        <div className="wizardPanelTitle"><span>1</span><div><h3>Müşteri kim?</h3><p>Adı ve telefonu yeterli. Eski müşteriyse tek tıkla doldur.</p></div><button type="button" className="soft" onClick={()=>setCustomerOpen(v=>!v)}><Search/>Geçmiş müşteri</button></div>
+        {customerOpen?<div className="customerSuggestions">{customerSuggestions.length?customerSuggestions.map(d=><button type="button" key={d.id} onClick={()=>chooseCustomer(d)}><i>{initials(d.customerName)}</i><p><b>{d.customerName}</b><small>{d.phone} • {d.district}</small></p><ChevronRight/></button>):<span>Uygun geçmiş müşteri bulunamadı.</span>}</div>:null}
+        <div className="wizardFields three">
+          <Field label="Müşteri adı soyadı *" v={f.name} set={v=>set("name",v)} placeholder="Örn. Ayşe Yılmaz"/>
+          <Field label="Telefon *" v={f.phone} set={v=>set("phone",v)} placeholder="05xx xxx xx xx" inputMode="tel"/>
+          <Field label="İkinci telefon" v={f.secondaryPhone} set={v=>set("secondaryPhone",v)} placeholder="Varsa"/>
+        </div>
+      </section>:null}
 
-    <section className="entrySection">
-      <div className="entrySectionTitle productTitle"><span><PackageSearch/></span><div><b>Ürünler</b><small>{catalog.length?catalog.length+" Altus modeli hazır • ":""}Model seç veya manuel ürün gir</small></div><button type="button" className="soft" onClick={addItem}><Plus/>Ürün ekle</button></div>
-      <div className="entryItems">
-        {items.map((item,index)=><div className="entryItem entryItemV2" key={item.id}>
-          <div className="entryItemHead"><b>Ürün {index+1}</b>{items.length>1?<button type="button" onClick={()=>removeItem(item.id)}><Trash2/>Sil</button>:null}</div>
-          <div className="quickProducts">{quickProducts.map(x=><button type="button" className={item.product===x?"on":""} key={x} onClick={()=>setItem(item.id,{product:x})}>{x}</button>)}</div>
-          <div className="form productEntryGrid">
+      {step===2?<section className="wizardPanel">
+        <div className="wizardPanelTitle"><span>2</span><div><h3>Nereye gidecek?</h3><p>Servisçi bu adresi telefonda haritada görecek.</p></div></div>
+        <div className="wizardFields two">
+          <Field label="Açık adres *" v={f.address} set={v=>set("address",v)} placeholder="Mahalle, sokak, bina no, kat/daire..." wide/>
+          <Field label="İlçe *" v={f.district} set={v=>set("district",v)} placeholder="İlçe"/>
+          <Field label="Şehir" v={f.city} set={v=>set("city",v)} placeholder="İstanbul"/>
+        </div>
+        {f.address.trim().length>=6?<AddressMap address={f.address} district={f.district} city={f.city}/>:<div className="wizardHint"><MapPin/><b>Adres yazınca harita burada görünür.</b><span>Servisçi aynı konumu “Yol Tarifi” tuşuyla açar.</span></div>}
+      </section>:null}
+
+      {step===3?<section className="wizardPanel">
+        <div className="wizardPanelTitle"><span>3</span><div><h3>Hangi ürün gidecek?</h3><p>Ürün türünü seç, model kodunu yaz. Birden fazla ürün ekleyebilirsin.</p></div><button type="button" className="soft" onClick={addItem}><Plus/>Ürün ekle</button></div>
+        <div className="productBigChoices">{quickProducts.map(name=><button type="button" className={items[0]?.product===name?"on":""} key={name} onClick={()=>setItem(items[0].id,{product:name})}><WebIcon product={name} size={28} color="f00088"/><span>{name}</span></button>)}</div>
+        <div className="wizardProducts">{items.map((item,index)=><article className="wizardProduct" key={item.id}>
+          <div className="wizardProductHead"><div className="wizardProductIcon"><WebIcon product={item.product||"package"} size={34} color="f00088"/></div><div><small>ÜRÜN {index+1}</small><b>{item.product||"Ürün seçilmedi"}</b></div>{items.length>1?<button type="button" onClick={()=>removeItem(item.id)}><Trash2/>Sil</button>:null}</div>
+          <div className="wizardFields product">
             <Select label="Marka" v={item.brand} set={v=>setItem(item.id,{brand:v})} opts={["ALTUS","BEKO","GRUNDIG","REGAL","HOOVER","PROFILO","KUMTEL","DİĞER"]}/>
-            <Field label="Ürün türü *" v={item.product} set={v=>setItem(item.id,{product:v})} placeholder="Örn. Buzdolabı"/>
+            <Field label="Ürün türü *" v={item.product} set={v=>setItem(item.id,{product:v})} placeholder="Örn. Bulaşık Makinesi"/>
             <label className="catalogModelField"><span>Model / kod</span><input list={"catalog-"+item.id} value={item.model} placeholder="Örn. AL 413 P" onChange={e=>chooseCatalog(item.id,e.target.value)}/><datalist id={"catalog-"+item.id}>{catalogFor(item).map(row=><option value={row.model} key={row.id}>{row.productName}</option>)}</datalist></label>
             <label><span>Adet</span><input type="number" min="1" max="20" value={item.quantity} onChange={e=>setItem(item.id,{quantity:Math.max(1,Number(e.target.value)||1)})}/></label>
           </div>
-          <div className="options">
-            <Opt t="Servis gerekli" on={item.service} set={v=>setItem(item.id,{service:v})}/>
+          <div className="wizardOptions">
             <Opt t="Kurulum gerekli" on={item.install} set={v=>setItem(item.id,{install:v})}/>
+            <Opt t="Servis gerekli" on={item.service} set={v=>setItem(item.id,{service:v})}/>
             <Opt t="Eski ürün geri alınacak" on={item.old} set={v=>setItem(item.id,{old:v})}/>
           </div>
-        </div>)}
-      </div>
-    </section>
+        </article>)}</div>
+      </section>:null}
 
-    <section className="entrySection">
-      <div className="entrySectionTitle"><span><Truck/></span><div><b>Planlama ve personel</b><small>Kimin götüreceğini seç; seçilen personelin telefonuna görev bildirimi gönderilir</small></div></div>
-      <div className="form">
-        <div className="assigneeField wide">
-          <span>Servis / sevkiyat personeli *</span>
-          <div className="assigneePicker">
-            <button type="button" className={f.assignee==="Atanmamış"?"on unassigned":""} onClick={()=>set("assignee","Atanmamış")}><i>—</i><p><b>Atanmamış</b><small>Bildirim gönderilmez</small></p></button>
-            {staff.map(person=><button type="button" key={person.id} className={f.assignee===person.name?"on":""} onClick={()=>set("assignee",person.name)}><i>{initials(person.name)}</i><p><b>{person.name}</b><small>{person.phone||"Telefon yok"}</small><em className={person.userId?"ready":"waiting"}>{person.userId?"Bildirim hesabı bağlı":"Hesap bağlantısı bekliyor"}</em></p></button>)}
-          </div>
+      {step===4?<section className="wizardPanel">
+        <div className="wizardPanelTitle"><span>4</span><div><h3>Kim götürecek?</h3><p>Personeli seç. Kaydedince görev doğrudan telefonuna gönderilir.</p></div></div>
+        <div className="wizardAssignees">
+          {staff.length?staff.map(person=><button type="button" key={person.id} className={f.assignee===person.name?"on":""} onClick={()=>set("assignee",person.name)}>
+            <i>{initials(person.name)}</i><p><b>{person.name}</b><small>{person.phone||"Telefon yok"}</small><em className={person.userId?"ready":"waiting"}>{person.userId?"🔔 Bildirim hazır":"Hesap bağlantısı bekliyor"}</em></p>{f.assignee===person.name?<CheckCircle2/>:<ChevronRight/>}
+          </button>):<div className="wizardNoStaff"><UserPlus/><b>Önce personel ekle</b><span>Servis personeli olmadan bildirim gönderilemez.</span></div>}
         </div>
-        <Field label="Teslim tarihi" v={f.date} set={v=>set("date",v)} type="date"/>
-        <Select label="Saat aralığı" v={f.time} set={v=>set("time",v)} opts={["09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"]}/>
-        <Select label="Öncelik" v={f.priority} set={v=>set("priority",v)} opts={["normal","high","critical"]}/>
-        <Field label="Mağaza notu / unutulmaması gereken" v={f.notes} set={v=>set("notes",v)} placeholder="Örn. Eski ürün geri alınacak; teslimden önce müşteri aranacak." wide/>
-      </div>
-    </section>
-
-    <div className="entryReview entryReviewV2">
-      <div><small>KAYIT ÖZETİ</small><b>{f.name||"Müşteri adı"} • {items.filter(x=>x.product).map(x=>[x.product,x.model].filter(Boolean).join(" ")).join(", ")||"Ürün girilmedi"}</b><span>{f.address||"Adres girilmedi"} • {f.assignee}</span></div>
-      <strong className={Object.values(complete).every(Boolean)?"ready":""}>{Object.values(complete).filter(Boolean).length}/4 hazır</strong>
+        <div className="wizardFields three">
+          <Field label="Teslim tarihi" v={f.date} set={v=>set("date",v)} type="date"/>
+          <Select label="Saat aralığı" v={f.time} set={v=>set("time",v)} opts={["09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"]}/>
+          <Select label="Öncelik" v={f.priority} set={v=>set("priority",v)} opts={["normal","high","critical"]}/>
+          <Field label="Mağaza notu" v={f.notes} set={v=>set("notes",v)} placeholder="Örn. Eski ürün geri alınacak; önce müşteri aranacak." wide/>
+        </div>
+        <div className="wizardSummary">
+          <span><UserRound/><p><small>MÜŞTERİ</small><b>{f.name}</b><em>{f.phone}</em></p></span>
+          <span><PackageCheck/><p><small>ÜRÜN</small><b>{items.map(x=>[x.product,x.model].filter(Boolean).join(" ")).join(", ")}</b><em>{items.reduce((n,x)=>n+x.quantity,0)} adet</em></p></span>
+          <span><MapPin/><p><small>ADRES</small><b>{f.district}, {f.city}</b><em>{f.address}</em></p></span>
+          <span><Bell/><p><small>BİLDİRİM</small><b>{f.assignee}</b><em>{f.assignee==="Atanmamış"?"Personel seç":"Kaydedince gönderilir"}</em></p></span>
+        </div>
+      </section>:null}
     </div>
-    {err?<div className="error">{err}</div>:null}
-    <div className="modalActions"><button type="button" className="soft" onClick={onClose}>Vazgeç</button><button className="primary"><CheckCircle2/>Teslimatı kaydet ve personele gönder</button></div>
+
+    {err?<div className="wizardError"><AlertTriangle/>{err}</div>:null}
+    <div className="wizardFooter">
+      <button type="button" className="soft" onClick={()=>step===1?onClose():setStep(s=>Math.max(1,s-1))}>{step===1?"Vazgeç":"← Geri"}</button>
+      {step<4?<button type="submit" className="primary wizardNext">Devam et <ChevronRight/></button>:<button type="submit" className="primary wizardSave" disabled={!complete.assignment}><Bell/><span><b>KAYDET VE PERSONELE GÖNDER</b><small>Görev bildirimi anında iletilir</small></span></button>}
+    </div>
   </form></Modal>
 }
 function NewStaff({onClose,onSave}:{onClose:()=>void;onSave:(s:{name:string;phone:string;email:string;password:string})=>void}){

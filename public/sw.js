@@ -1,4 +1,4 @@
-const CACHE = "yaateslimat-v7";
+const CACHE = "altus-teslimat-v12";
 const CORE = ["/", "/manifest.webmanifest", "/icon.svg"];
 const ICON_HOSTS = ["api.iconify.design", "api.simplesvg.com", "api.unisvg.com"];
 
@@ -50,7 +50,7 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "yaaTeslimat", body: "Yeni bir sevkiyat güncellemesi var.", url: "/" };
+  let data = { title: "ALTUS Teslimat", body: "Yeni bir teslimat görevin var.", url: "/" };
   try { data = { ...data, ...event.data.json() }; } catch {}
 
   event.waitUntil(
@@ -58,7 +58,7 @@ self.addEventListener("push", (event) => {
       body: data.body,
       icon: "/icon.svg",
       badge: "/icon.svg",
-      tag: data.tag || "yaateslimat-update",
+      tag: data.tag || "altus-teslimat-update",
       renotify: true,
       data: { url: data.url || "/" }
     })
