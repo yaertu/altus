@@ -2864,3 +2864,6 @@ footer{
   .proofGallery{grid-template-columns:1fr}
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
+.proofAction.camera>svg{color:var(--green)}
+.proofAction.upload>svg{color:var(--blue)}
