@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle, ArrowUpDown, BellRing, CalendarDays, CheckCircle2,
-  ChevronLeft, ChevronRight, Clock3, MapPin, PackageCheck, Phone,
-  Plus, Search, SlidersHorizontal, Truck, UserPlus, Wifi, Zap
+  ChevronLeft, ChevronRight, Clock3, Download, MapPin, PackageCheck,
+  Phone, Plus, Printer, Search, SlidersHorizontal, Truck, UserPlus, Wifi
 } from "lucide-react";
 import type { Delivery } from "@/lib/types";
 
@@ -65,6 +65,10 @@ function isLate(delivery:Delivery,now:Date){
 }
 function initials(name:string){
   return name.split(" ").filter(Boolean).map(x=>x[0]).join("").slice(0,2).toUpperCase()||"—";
+}
+function csvCell(value:unknown){
+  const text=String(value??"").replace(/"/g,'""');
+  return '"'+text+'"';
 }
 
 export default function OperationsCenter({
@@ -130,15 +134,31 @@ export default function OperationsCenter({
   const selectedIsToday=selectedDay===today;
   const prettyDate=new Intl.DateTimeFormat("tr-TR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(selectedDate);
 
-  return <div className="opsV2">
-    <section className="opsCommand">
+  function exportCsv(){
+    const header=["Sipariş","Tarih","Saat","Durum","Müşteri","Telefon","2. Telefon","Ürün","Yapılacak İş","Adres","İlçe","Şehir","Personel","Mağaza Notu","Eksikler"];
+    const rows=visible.map(d=>[
+      d.orderNo,d.date,d.timeWindow,statusLabel(d.status),d.customerName,d.phone,d.secondaryPhone||"",
+      productText(d),workFlags(d).join(" / "),d.address,d.district,d.city,d.assignee||"Atanmamış",d.notes||"",missingFields(d).join(", ")
+    ]);
+    const csv="\ufeff"+[header,...rows].map(row=>row.map(csvCell).join(";")).join("\r\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="yaaTeslimat-"+selectedDay+".csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return <div className="opsV3">
+    <section className="opsCommand opsCommandV3">
       <div className="opsCommandCopy">
         <span className="opsBreadcrumb">OPERASYON / {selectedIsToday?"BUGÜN":"TESLİMAT GÜNÜ"}</span>
         <div className="opsTitleLine">
           <span className="opsSun">{selectedIsToday?"☀":"◷"}</span>
           <div>
             <h1>{selectedIsToday?"Bugün":new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"long"}).format(selectedDate)}</h1>
-            <p>Mağazanın teslimatlarını tek ekranda yönet, eksikleri gör ve personeli anında görevlendir.</p>
+            <p>Teslimatları kaydet, personele ata, eksikleri gör ve tamamlanana kadar tek çizelgeden takip et.</p>
           </div>
         </div>
       </div>
@@ -151,49 +171,58 @@ export default function OperationsCenter({
           <button aria-label="Sonraki gün" onClick={()=>setSelectedDay(day=>shiftDay(day,1))}><ChevronRight/></button>
         </div>
         {!selectedIsToday?<button className="soft opsToday" onClick={()=>setSelectedDay(today)}>Bugüne dön</button>:null}
-        <div className="opsDensity">
-          <button className={density==="comfortable"?"on":""} onClick={()=>setDensity("comfortable")}><SlidersHorizontal/>Rahat</button>
-          <button className={density==="compact"?"on":""} onClick={()=>setDensity("compact")}><ArrowUpDown/>Kompakt</button>
-        </div>
       </div>
     </section>
 
-    <section className="opsKpis">
-      <Kpi icon={<PackageCheck/>} value={queue.length} label="Toplam teslimat" detail={selectedIsToday?"Bugünkü liste":"Seçili gün"} tone="blue"/>
-      <Kpi icon={<Clock3/>} value={open.length} label="Açık iş" detail="İşlem bekliyor" tone="blue"/>
-      <Kpi icon={<AlertTriangle/>} value={late.length} label="Geciken" detail="Saat aralığı geçti" tone="red"/>
-      <Kpi icon={<AlertTriangle/>} value={missing.length} label="Eksik bilgi" detail="Telefon, adres veya personel" tone="amber"/>
-      <Kpi icon={<CheckCircle2/>} value={done.length} label="Tamamlanan" detail={dayDeliveries.length?("%"+completion+" tamamlandı"):"Henüz kayıt yok"} tone="green"/>
-      <div className={"opsKpi sync "+(cloud?"online":"local")}>
-        <span className="opsKpiIcon"><Wifi/></span>
-        <div><b>{cloud?"Canlı":"Yerel"}</b><strong>Senkronizasyon</strong><small>{cloud?"Değişiklikler anlık işleniyor":"Bulut bağlantısı yok"}</small></div>
-        <i/>
+    <section className="opsSummaryStrip">
+      <Metric icon={<PackageCheck/>} value={queue.length} label="Toplam" tone="blue"/>
+      <Metric icon={<Clock3/>} value={open.length} label="Açık iş" tone="blue"/>
+      <Metric icon={<AlertTriangle/>} value={late.length} label="Geciken" tone="red"/>
+      <Metric icon={<AlertTriangle/>} value={missing.length} label="Eksik bilgi" tone="amber"/>
+      <Metric icon={<CheckCircle2/>} value={done.length} label="Tamamlanan" tone="green"/>
+      <div className="opsCompletion">
+        <div><span>Tamamlanma</span><b>%{completion}</b></div>
+        <i><em style={{width:completion+"%"}}/></i>
       </div>
+      <div className={"opsLivePill "+(cloud?"online":"local")}><i/><Wifi/><span>{cloud?"Canlı senkron":"Yerel mod"}</span></div>
     </section>
 
-    <div className="opsWorkspace">
-      <section className="opsTableCard">
-        <div className="opsTableTitle">
-          <div className="opsTableIdentity">
-            <span><PackageCheck/></span>
-            <div><h2>Mağaza teslimat listesi</h2><p>Müşteri, telefon, ürün, adres, işlem, personel ve notlar aynı satırda.</p></div>
-          </div>
-          <button className="opsMiniAction" onClick={()=>setDensity(d=>d==="compact"?"comfortable":"compact")}><SlidersHorizontal/>Satır görünümü</button>
-        </div>
+    <section className="opsAttentionStrip">
+      <button className={late.length?"danger":"quiet"} onClick={()=>setFocus("late")}><AlertTriangle/><b>{late.length}</b><span>geciken</span></button>
+      <button className={overdue.length?"violet":"quiet"} onClick={()=>setFocus("overdue")}><Clock3/><b>{overdue.length}</b><span>dünden kalan</span></button>
+      <button className={missing.length?"warn":"quiet"} onClick={()=>setFocus("missing")}><CheckCircle2/><b>{missing.length}</b><span>eksik kayıt</span></button>
+      <button className={staff.length&&linkedStaff===staff.length?"ok":"warn"} onClick={onStaff}><BellRing/><b>{linkedStaff}/{staff.length}</b><span>bildirim hesabı</span></button>
+      <p>{late.length||overdue.length||missing.length||linkedStaff<staff.length?"Kontrol gereken başlıklar burada toplanır.":"Operasyon temiz görünüyor; kritik uyarı yok."}</p>
+    </section>
 
-        <div className="opsToolbar">
-          <label className="opsSearch">
-            <Search/>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Müşteri, telefon, ürün, adres, personel veya not ara..."/>
-          </label>
-          <div className="opsFilters">
-            <Filter on={focus==="all"} onClick={()=>setFocus("all")} label="Tümü" count={queue.length}/>
-            <Filter on={focus==="open"} onClick={()=>setFocus("open")} label="Açık" count={open.length}/>
-            <Filter on={focus==="late"} onClick={()=>setFocus("late")} label="Geciken" count={late.length} tone="danger"/>
-            <Filter on={focus==="overdue"} onClick={()=>setFocus("overdue")} label="Dünden kalan" count={overdue.length} tone="violet"/>
-            <Filter on={focus==="missing"} onClick={()=>setFocus("missing")} label="Eksik" count={missing.length} tone="warn"/>
-            <Filter on={focus==="done"} onClick={()=>setFocus("done")} label="Tamamlanan" count={done.length} tone="ok"/>
-          </div>
+    <section className="opsTableCard opsTableCardV3">
+      <div className="opsTableTitle opsTableTitleV3">
+        <div className="opsTableIdentity">
+          <span><PackageCheck/></span>
+          <div><h2>Mağaza teslimat çizelgesi</h2><p>{prettyDate} • {visible.length} kayıt</p></div>
+        </div>
+        <div className="opsTableActions">
+          <button className="soft compactAction" onClick={onStaff}><UserPlus/>Personel</button>
+          <button className="soft compactAction" onClick={exportCsv}><Download/>CSV</button>
+          <button className="soft compactAction" onClick={()=>window.print()}><Printer/>Yazdır</button>
+          <button className="primary compactAction" onClick={onNew}><Plus/>Yeni teslimat</button>
+        </div>
+      </div>
+
+      <div className="opsToolbar opsToolbarV3">
+        <label className="opsSearch">
+          <Search/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Müşteri, telefon, ürün, adres, personel veya not ara..."/>
+        </label>
+        <div className="opsFilters">
+          <Filter on={focus==="all"} onClick={()=>setFocus("all")} label="Tümü" count={queue.length}/>
+          <Filter on={focus==="open"} onClick={()=>setFocus("open")} label="Açık" count={open.length}/>
+          <Filter on={focus==="late"} onClick={()=>setFocus("late")} label="Geciken" count={late.length} tone="danger"/>
+          <Filter on={focus==="overdue"} onClick={()=>setFocus("overdue")} label="Dünden kalan" count={overdue.length} tone="violet"/>
+          <Filter on={focus==="missing"} onClick={()=>setFocus("missing")} label="Eksik" count={missing.length} tone="warn"/>
+          <Filter on={focus==="done"} onClick={()=>setFocus("done")} label="Tamamlanan" count={done.length} tone="ok"/>
+        </div>
+        <div className="opsViewTools">
           <label className="opsSort">
             <ArrowUpDown/>
             <select value={sort} onChange={e=>setSort(e.target.value as SortKey)}>
@@ -202,91 +231,57 @@ export default function OperationsCenter({
               <option value="status">Duruma göre</option>
             </select>
           </label>
-        </div>
-
-        <div className="opsSubbar">
-          <div><b>{prettyDate}</b><span>{visible.length} kayıt gösteriliyor</span></div>
-          <small>Satıra tıkla → tüm teslimat detayını aç</small>
-        </div>
-
-        <div className={"sheetGridScroll opsGridScroll "+density}>
-          <div className="sheetGrid opsGrid" role="table" aria-label="Teslimat çizelgesi">
-            <div className="sheetHead" role="row">
-              <span className="colNo">#</span>
-              <span className="colStatus">DURUM / SAAT</span>
-              <span className="colCustomer">MÜŞTERİ</span>
-              <span className="colPhone">TELEFON</span>
-              <span className="colProduct">ÜRÜN</span>
-              <span className="colWork">YAPILACAK İŞ</span>
-              <span className="colAddress">ADRES</span>
-              <span className="colStaff">PERSONEL</span>
-              <span className="colNote">MAĞAZA NOTU</span>
-              <span className="colAlert">UYARI</span>
-              <span className="colOpen"></span>
-            </div>
-
-            {visible.length?visible.map((delivery,index)=>
-              <SheetRow
-                key={delivery.id}
-                index={index+1}
-                delivery={delivery}
-                staff={staff}
-                late={isLate(delivery,now)}
-                onOpen={onOpen}
-                onAssign={onAssign}
-              />
-            ):<div className="opsEmpty">
-              <div className="opsEmptyIcon"><CheckCircle2/></div>
-              <h3>{focus==="all"?"Bu gün için kayıt yok":"Bu filtrede teslimat yok"}</h3>
-              <p>{focus==="all"?"İlk teslimatı oluşturduğunda müşteri, ürün, adres ve personel bilgileri burada görünecek.":"Filtreyi değiştir veya yeni bir teslimat oluştur."}</p>
-              <button className="primary" onClick={onNew}><Plus/>Yeni teslimat oluştur</button>
-            </div>}
+          <div className="opsDensity">
+            <button className={density==="comfortable"?"on":""} aria-label="Rahat satır görünümü" onClick={()=>setDensity("comfortable")}><SlidersHorizontal/></button>
+            <button className={density==="compact"?"on":""} aria-label="Kompakt satır görünümü" onClick={()=>setDensity("compact")}><ArrowUpDown/></button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <aside className="opsRail">
-        <section className="opsSideCard quick">
-          <div className="opsSideTitle"><span><Zap/></span><div><b>Hızlı işlemler</b><small>En sık kullanılan işlemler</small></div></div>
-          <button className="opsQuick primaryQuick" onClick={onNew}><Plus/><span><b>Yeni teslimat</b><small>Müşteri ve ürün kaydı oluştur</small></span><ChevronRight/></button>
-          <button className="opsQuick" onClick={onStaff}><UserPlus/><span><b>Personel ekle</b><small>Servis hesabı oluştur</small></span><ChevronRight/></button>
-          <button className="opsQuick" onClick={()=>setFocus("missing")}><AlertTriangle/><span><b>Eksik kayıtlar</b><small>{missing.length} kayıt kontrol bekliyor</small></span><ChevronRight/></button>
-          <button className="opsQuick" onClick={()=>setFocus("overdue")}><Clock3/><span><b>Dünden kalanlar</b><small>{overdue.length} açık iş taşındı</small></span><ChevronRight/></button>
-        </section>
-
-        <section className="opsSideCard summary">
-          <div className="opsSideTitle"><span><PackageCheck/></span><div><b>Operasyon özeti</b><small>{selectedIsToday?"Bugünün ilerlemesi":"Seçili gün"}</small></div></div>
-          <div className="opsProgressBlock">
-            <div className="opsProgressRing" style={{"--progress":completion} as React.CSSProperties}><span>%{completion}</span></div>
-            <div><strong>{done.length} / {dayDeliveries.length}</strong><b>Teslimat tamamlandı</b><small>{open.length} açık iş kaldı</small></div>
+      <div className={"sheetGridScroll opsGridScroll opsGridScrollV3 "+density}>
+        <div className="sheetGrid opsGrid opsGridV3" role="table" aria-label="Teslimat çizelgesi">
+          <div className="sheetHead" role="row">
+            <span className="colNo">#</span>
+            <span className="colStatus">DURUM / SAAT</span>
+            <span className="colCustomer">MÜŞTERİ</span>
+            <span className="colPhone">TELEFON</span>
+            <span className="colProduct">ÜRÜN</span>
+            <span className="colWork">YAPILACAK İŞ</span>
+            <span className="colAddress">ADRES</span>
+            <span className="colStaff">PERSONEL</span>
+            <span className="colNote">MAĞAZA NOTU</span>
+            <span className="colAlert">UYARI</span>
+            <span className="colOpen"></span>
           </div>
-          <div className="opsMiniStats">
-            <span><i className="blue"/><b>{open.length}</b><small>Açık</small></span>
-            <span><i className="red"/><b>{late.length}</b><small>Geciken</small></span>
-            <span><i className="amber"/><b>{missing.length}</b><small>Eksik</small></span>
-            <span><i className="violet"/><b>{overdue.length}</b><small>Dünden</small></span>
-          </div>
-        </section>
 
-        <section className="opsSideCard health">
-          <div className="opsSideTitle"><span><Wifi/></span><div><b>Sistem durumu</b><small>{cloud?"Bağlantı aktif":"Yerel çalışma"}</small></div><em className={cloud?"ready":"warn"}>{cloud?"CANLI":"YEREL"}</em></div>
-          <div className="opsHealthRow"><span className={cloud?"ok":"warn"}><Wifi/></span><p><b>Canlı senkronizasyon</b><small>{cloud?"Teslimatlar anlık güncelleniyor":"Bulut bağlantısı kapalı"}</small></p></div>
-          <div className="opsHealthRow"><span className={linkedStaff===staff.length&&staff.length?"ok":"warn"}><BellRing/></span><p><b>Personel bildirim hesapları</b><small>{staff.length?linkedStaff+" / "+staff.length+" hesap bağlı":"Henüz personel yok"}</small></p></div>
-          <div className="opsHealthRow"><span className={missing.length?"warn":"ok"}><CheckCircle2/></span><p><b>Veri kalitesi</b><small>{missing.length?missing.length+" kayıt eksik bilgi içeriyor":"Eksik alan görünmüyor"}</small></p></div>
-        </section>
-      </aside>
-    </div>
+          {visible.length?visible.map((delivery,index)=>
+            <SheetRow
+              key={delivery.id}
+              index={index+1}
+              delivery={delivery}
+              staff={staff}
+              late={isLate(delivery,now)}
+              onOpen={onOpen}
+              onAssign={onAssign}
+            />
+          ):<div className="opsEmpty opsEmptyV3">
+            <div className="opsEmptyIcon"><CheckCircle2/></div>
+            <h3>{focus==="all"?"Bu gün için kayıt yok":"Bu filtrede teslimat yok"}</h3>
+            <p>{focus==="all"?"İlk teslimatı oluşturduğunda müşteri, ürün, adres ve personel bilgileri burada görünecek.":"Filtreyi değiştir veya yeni bir teslimat oluştur."}</p>
+            <button className="primary" onClick={onNew}><Plus/>Yeni teslimat oluştur</button>
+          </div>}
+        </div>
+      </div>
+    </section>
   </div>;
 }
 
-function Kpi({icon,value,label,detail,tone}:{icon:ReactNode;value:number;label:string;detail:string;tone:"blue"|"red"|"amber"|"green"}){
-  return <div className={"opsKpi "+tone}><span className="opsKpiIcon">{icon}</span><div><b>{value}</b><strong>{label}</strong><small>{detail}</small></div><em/></div>;
+function Metric({icon,value,label,tone}:{icon:ReactNode;value:number;label:string;tone:"blue"|"red"|"amber"|"green"}){
+  return <div className={"opsMetric "+tone}><span>{icon}</span><p><b>{value}</b><small>{label}</small></p></div>;
 }
-
 function Filter({on,onClick,label,count,tone=""}:{on:boolean;onClick:()=>void;label:string;count:number;tone?:string}){
   return <button className={(on?"on ":"")+tone} onClick={onClick}>{label}<b>{count}</b></button>;
 }
-
 function SheetRow({
   index,delivery,staff,late,onOpen,onAssign
 }:{
@@ -303,33 +298,26 @@ function SheetRow({
 
   return <article className={"sheetRow "+(missing.length?"hasMissing ":"")+(overdue?"isOverdue ":"")+(late?"isLate ":"")+(delivery.status==="completed"?"isDone":"")} role="row">
     <button className="sheetCell colNo" data-label="#" onClick={()=>onOpen(delivery)}><b>{index}</b></button>
-
     <button className="sheetCell colStatus" data-label="Durum / Saat" onClick={()=>onOpen(delivery)}>
       <span className={"status s-"+delivery.status}>{late&&delivery.status!=="completed"?"Geciken":statusLabel(delivery.status)}</span>
       <b>{delivery.timeWindow||"Saat yok"}</b>
       <small>{overdue?delivery.date:delivery.orderNo}</small>
     </button>
-
     <button className="sheetCell colCustomer" data-label="Müşteri" onClick={()=>onOpen(delivery)}>
       <div className="opsCustomer"><span>{initials(delivery.customerName)}</span><p><b>{delivery.customerName||"İsimsiz müşteri"}</b><small>{delivery.orderNo}</small></p></div>
     </button>
-
     <a className="sheetCell colPhone" data-label="Telefon" href={"tel:"+delivery.phone.replace(/[^\d+]/g,"")}>
       <Phone/><b>{delivery.phone||"Telefon yok"}</b>{delivery.secondaryPhone?<small>{delivery.secondaryPhone}</small>:null}
     </a>
-
     <button className="sheetCell colProduct" data-label="Ürün" onClick={()=>onOpen(delivery)}>
       <b>{productText(delivery)}</b><small>{delivery.items.reduce((sum,item)=>sum+(item.quantity||1),0)} ürün/adet</small>
     </button>
-
     <button className="sheetCell colWork" data-label="Yapılacak İş" onClick={()=>onOpen(delivery)}>
       <div className="sheetTags">{flags.map(flag=><span key={flag}>{flag}</span>)}</div>
     </button>
-
     <button className="sheetCell colAddress" data-label="Adres" onClick={()=>onOpen(delivery)}>
       <b>{delivery.address||"Adres girilmedi"}</b><small><MapPin/>{delivery.district||"İlçe yok"}{delivery.city?", "+delivery.city:""}</small>
     </button>
-
     <div className="sheetCell colStaff" data-label="Personel">
       <select value={delivery.assignee||"Atanmamış"} onChange={e=>{
         const value=e.target.value;
@@ -340,18 +328,15 @@ function SheetRow({
       </select>
       <small><Truck/>{delivery.assignee||"Atanmamış"}</small>
     </div>
-
     <button className="sheetCell colNote" data-label="Mağaza Notu" onClick={()=>onOpen(delivery)}>
       {delivery.notes?<b>{delivery.notes}</b>:<span className="sheetMuted">Not yok</span>}
     </button>
-
     <button className="sheetCell colAlert" data-label="Uyarı" onClick={()=>onOpen(delivery)}>
       {late?<span className="sheetAlert danger">Geciken</span>:null}
       {overdue?<span className="sheetAlert violet">Dünden kaldı</span>:null}
       {missing.length?missing.slice(0,2).map(item=><span className="sheetAlert warn" key={item}>{item} eksik</span>):!late&&!overdue?<span className="sheetAlert ok">Hazır</span>:null}
       {missing.length>2?<small className="moreAlert">+{missing.length-2} eksik</small>:null}
     </button>
-
     <button className="sheetCell colOpen sheetOpen" aria-label="Teslimat detayını aç" onClick={()=>onOpen(delivery)}><ChevronRight/></button>
   </article>;
 }

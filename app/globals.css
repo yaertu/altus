@@ -7034,3 +7034,326 @@ button.sheetCell{cursor:pointer}
   .opsKpi,.opsSideCard,.opsSun,.opsKpi.sync.online>i{animation:none!important}
   .opsQuick,.opsQuick>svg:last-child{transition:none!important}
 }
+
+
+/* =========================================================
+   yaaTeslimat v2.0 — CLEAN WORKSPACE
+   Less chrome, one primary spreadsheet, actionable warnings.
+   ========================================================= */
+
+.topbarContext{
+  min-width:0;
+  flex:1;
+  max-width:600px;
+  padding-left:8px;
+}
+.topbarContext span,.topbarContext b{display:block}
+.topbarContext span{
+  color:#98a2b3;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.topbarContext b{
+  margin-top:3px;
+  color:#344054;
+  font-size:13px;
+}
+.desktopNavActions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-left:auto;
+}
+.moreNavWrap{position:relative}
+.moreNavButton{
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:0 10px;
+  color:#667085;
+  border:1px solid #e4e7ec;
+  border-radius:9px;
+  background:#fff;
+  font-size:11px;
+  font-weight:800;
+}
+.moreNavButton.on,.moreNavButton:hover{color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}
+.moreNavMenu{
+  position:absolute;
+  z-index:80;
+  top:48px;
+  right:0;
+  width:210px;
+  padding:6px;
+  border:1px solid #dbe2ea;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 18px 46px rgba(16,24,40,.15);
+}
+.moreNavMenu button{
+  width:100%;
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:0 10px;
+  color:#475467;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  font-size:12px;
+  font-weight:800;
+}
+.moreNavMenu button:hover,.moreNavMenu button.on{color:#1d4ed8;background:#eff6ff}
+.moreNavMenu button svg{width:16px}
+
+.opsV3{
+  max-width:1780px;
+  margin:0 auto;
+  padding:20px 0 10px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.opsCommandV3{
+  min-height:88px;
+  padding:0 2px;
+}
+.opsCommandV3 .opsTitleLine h1{font-size:38px}
+.opsCommandV3 .opsTitleLine p{font-size:13px}
+.opsCommandCopy{min-width:0}
+
+.opsSummaryStrip{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(120px,1fr)) minmax(180px,1.2fr) auto;
+  overflow:hidden;
+  border:1px solid #dbe2ea;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 4px 14px rgba(16,24,40,.04);
+}
+.opsMetric{
+  min-height:78px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  border-right:1px solid #e7ebf0;
+}
+.opsMetric>span{
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  flex:0 0 38px;
+  color:#2563eb;
+  border-radius:10px;
+  background:#eff6ff;
+}
+.opsMetric>span svg{width:18px}
+.opsMetric p{margin:0}
+.opsMetric b,.opsMetric small{display:block}
+.opsMetric b{
+  color:#101828;
+  font-size:22px;
+  line-height:1;
+}
+.opsMetric small{
+  margin-top:5px;
+  color:#667085;
+  font-size:10px;
+  font-weight:800;
+}
+.opsMetric.red>span{color:#dc2626;background:#fef2f2}
+.opsMetric.amber>span{color:#d97706;background:#fff7ed}
+.opsMetric.green>span{color:#059669;background:#ecfdf5}
+
+.opsCompletion{
+  min-height:78px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:8px;
+  padding:11px 14px;
+  border-right:1px solid #e7ebf0;
+}
+.opsCompletion>div{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.opsCompletion span{color:#667085;font-size:10px;font-weight:800}
+.opsCompletion b{font-size:16px}
+.opsCompletion>i{
+  height:7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#edf1f5;
+}
+.opsCompletion>i>em{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#10b981,#34d399);
+  transition:width .35s ease;
+}
+.opsLivePill{
+  min-width:140px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:0 14px;
+  color:#667085;
+  font-size:10px;
+  font-weight:850;
+}
+.opsLivePill>i{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#94a3b8;
+}
+.opsLivePill svg{width:15px}
+.opsLivePill.online{color:#047857;background:#f6fffa}
+.opsLivePill.online>i{
+  background:#10b981;
+  animation:opsPulse 1.8s ease-out infinite;
+}
+
+.opsAttentionStrip{
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 9px;
+  border:1px solid #e1e6ec;
+  border-radius:12px;
+  background:#fbfcfd;
+}
+.opsAttentionStrip button{
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:0 9px;
+  color:#475467;
+  border:1px solid #e4e7ec;
+  border-radius:8px;
+  background:#fff;
+  font-size:10px;
+}
+.opsAttentionStrip button svg{width:14px}
+.opsAttentionStrip button b{font-size:11px}
+.opsAttentionStrip button span{font-weight:750}
+.opsAttentionStrip button.danger{color:#b42318;border-color:#fecaca;background:#fef2f2}
+.opsAttentionStrip button.violet{color:#6d28d9;border-color:#ddd6fe;background:#f5f3ff}
+.opsAttentionStrip button.warn{color:#b45309;border-color:#fed7aa;background:#fff7ed}
+.opsAttentionStrip button.ok{color:#047857;border-color:#a7f3d0;background:#ecfdf5}
+.opsAttentionStrip button.quiet{color:#667085;background:#fff}
+.opsAttentionStrip>p{
+  margin:0 2px 0 auto;
+  color:#98a2b3;
+  font-size:10px;
+}
+
+.opsTableCardV3{
+  min-height:580px;
+}
+.opsTableTitleV3{
+  min-height:70px;
+}
+.opsTableActions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.compactAction{
+  min-height:38px;
+  padding:0 10px;
+  font-size:10px;
+}
+.compactAction svg{width:15px}
+
+.opsToolbarV3{
+  grid-template-columns:minmax(280px,430px) minmax(0,1fr) auto;
+}
+.opsViewTools{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.opsViewTools .opsDensity button{
+  width:34px;
+  padding:0;
+  justify-content:center;
+}
+.opsGridScrollV3{
+  min-height:460px;
+  background:#fff;
+}
+.opsGridV3{
+  min-width:1640px;
+}
+.opsEmptyV3{
+  min-height:460px;
+}
+
+@media(max-width:1450px){
+  .opsSummaryStrip{
+    grid-template-columns:repeat(3,1fr);
+  }
+  .opsMetric,.opsCompletion{border-bottom:1px solid #e7ebf0}
+  .opsLivePill{min-height:70px}
+}
+@media(max-width:1100px){
+  .topbarContext{display:none}
+  .opsAttentionStrip{
+    overflow-x:auto;
+  }
+  .opsAttentionStrip>p{display:none}
+  .opsToolbarV3{
+    grid-template-columns:1fr;
+  }
+  .opsViewTools{
+    justify-content:space-between;
+  }
+}
+@media(max-width:900px){
+  .desktopNavActions{display:none}
+  .opsSummaryStrip{
+    grid-template-columns:1fr 1fr;
+  }
+  .opsLivePill{min-height:62px}
+  .opsCommandV3 .opsTitleLine h1{font-size:32px}
+  .opsTableActions{width:100%;justify-content:flex-start}
+  .opsTableTitleV3{align-items:flex-start;flex-direction:column}
+}
+@media(max-width:620px){
+  .opsSummaryStrip{grid-template-columns:1fr}
+  .opsMetric,.opsCompletion{min-height:66px}
+  .opsAttentionStrip{padding:6px}
+  .opsTableActions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .compactAction{width:100%;justify-content:center}
+}
+
+@media print{
+  .appTopbar,.desktopNav,.opsCommandTools,.opsAttentionStrip,.opsTableActions,.opsToolbarV3,.mobileBottom,footer{display:none!important}
+  main{padding:0!important}
+  .opsV3{padding:0!important}
+  .opsTableCardV3{border:0!important;box-shadow:none!important}
+  .opsGridScrollV3{overflow:visible!important}
+  .opsGridV3{min-width:0!important}
+  .opsGridV3 .sheetHead,.opsGridV3 .sheetRow{
+    grid-template-columns:32px 95px 130px 105px 150px 110px 180px 120px 150px 110px 30px!important;
+  }
+  .opsGridV3 .sheetRow{break-inside:avoid}
+}

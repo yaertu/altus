@@ -37,6 +37,8 @@ const nav: Array<[View,string,React.ReactNode]> = [
   ["checklists","Kontrol Listeleri",<ClipboardCheck size={18}/>], ["planning","Planlama",<CalendarDays size={18}/>],
   ["logs","İşlem Kayıtları",<History size={18}/>], ["settings","Ayarlar",<Settings size={18}/>]
 ];
+const primaryNav=nav.filter(([view])=>["dashboard","deliveries","staff","customers","planning"].includes(view));
+const secondaryNav=nav.filter(([view])=>["checklists","logs","settings"].includes(view));
 function id(p:string){ return p+"-"+Date.now()+"-"+Math.random().toString(36).slice(2,7); }
 function today(){ const d=new Date(), o=d.getTimezoneOffset()*60000; return new Date(d.getTime()-o).toISOString().slice(0,10); }
 function initials(n:string){ return n.split(" ").filter(Boolean).map(x=>x[0]).join("").slice(0,2).toUpperCase(); }
@@ -54,6 +56,7 @@ export default function Dashboard(){
   const [online,setOnline]=useState(true);
   const [inboxNotifications,setInboxNotifications]=useState<AppNotification[]>([]);
   const [notificationOpen,setNotificationOpen]=useState(false);
+  const [moreOpen,setMoreOpen]=useState(false);
   const [actionNotice,setActionNotice]=useState<{text:string;tone:"ok"|"warn"}|null>(null);
   const [pendingDeliveryId,setPendingDeliveryId]=useState("");
   const searchRef=useRef<HTMLInputElement|null>(null);
@@ -83,7 +86,9 @@ export default function Dashboard(){
     const shortcut=(event:KeyboardEvent)=>{
       if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="k"){
         event.preventDefault();
-        searchRef.current?.focus();
+        setMode("office");
+        setView("deliveries");
+        window.setTimeout(()=>searchRef.current?.focus(),60);
       }
     };
     window.addEventListener("keydown",shortcut);
@@ -322,7 +327,7 @@ export default function Dashboard(){
           <div className="topBrandCopy"><b>yaaTeslimat</b><span>TESLİMAT TAKİP</span></div>
         </div>
 
-        <label className="globalSearch">
+        {!(mode==="office"&&view==="dashboard")?<label className="globalSearch">
           <Search size={18}/>
           <input
             ref={searchRef}
@@ -332,7 +337,7 @@ export default function Dashboard(){
             placeholder={mode==="office"?"Sipariş, müşteri, ürün, telefon veya adres ara":"Sevkiyatçı görevlerinde ara"}
           />
           <kbd>⌘K</kbd>
-        </label>
+        </label>:<div className="topbarContext"><span>MAĞAZA OPERASYONU</span><b>Bugünkü teslimatlar</b></div>}
 
         <div className="topbarRight">
           <span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"Offline":cloud?"Canlı":"Yerel"}</span>
@@ -364,8 +369,14 @@ export default function Dashboard(){
             <button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={14}/>Servis</button>
           </>}
         </div>
-        {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>setView(v)}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={17}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={17}/><span>Mağazaya dön</span></button>:null}</nav>}
-        {mode==="office"?<button className="primary navCreate" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}
+        {mode==="office"?<nav>{primaryNav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setMoreOpen(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={17}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={17}/><span>Mağazaya dön</span></button>:null}</nav>}
+        {mode==="office"?<div className="desktopNavActions">
+          <div className="moreNavWrap">
+            <button className={"moreNavButton "+(secondaryNav.some(([v])=>v===view)?"on":"")} onClick={()=>setMoreOpen(v=>!v)}><Settings size={16}/><span>Diğer</span><ChevronDown size={13}/></button>
+            {moreOpen?<div className="moreNavMenu">{secondaryNav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setMoreOpen(false)}}>{i}<span>{l}</span></button>)}</div>:null}
+          </div>
+          <button className="primary navCreate" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>
+        </div>:null}
       </div>
 
       {!(mode==="office"&&view==="dashboard")?<section className="pageIntro">
@@ -389,7 +400,7 @@ export default function Dashboard(){
         {view==="logs"&&<LogsPage events={events}/>}
         {view==="settings"&&<SettingsPage requireChecks={requireChecks} setRequireChecks={setRequireChecks} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([])}}}/>} 
       </>}
-      <footer><span>yaaTeslimat • v1.9</span><DeveloperBadge compact/></footer>
+      <footer><span>yaaTeslimat • v2.0</span><DeveloperBadge compact/></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
     {newOpen&&<NewDelivery staff={operationalStaff} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>} 
