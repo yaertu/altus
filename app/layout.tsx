@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { DM_Sans, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
+const dmSans = DM_Sans({
   subsets: ["latin","latin-ext"],
   display: "swap",
-  variable: "--font-jakarta"
+  variable: "--font-ui"
 });
 
-const mono = JetBrains_Mono({
+const mono = Roboto_Mono({
   subsets: ["latin","latin-ext"],
   display: "swap",
   variable: "--font-mono"
@@ -17,7 +17,7 @@ const mono = JetBrains_Mono({
 const themeBoot = `
 (function(){
   try{
-    var key="yaateslimat:theme:v3";
+    var key="yaateslimat:theme:v4";
     var saved=localStorage.getItem(key);
     var theme=(saved==="dark"||saved==="light") ? saved : "dark";
     var root=document.documentElement;
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#08090b",
+  themeColor: "#0b0b0a",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"
@@ -57,7 +57,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
-      <body className={`${jakarta.variable} ${mono.variable}`}>{children}</body>
+      <body className={`${dmSans.variable} ${mono.variable}`}>{children}</body>
     </html>
   );
 }
