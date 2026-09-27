@@ -431,7 +431,7 @@ export default function Dashboard(){
         {view==="staff"&&<StaffPage staff={staff} deliveries={deliveries} onAdd={()=>setStaffOpen(true)}/>}
         {view==="customers"&&<CustomersPage deliveries={deliveries} onOpen={setSelected}/>}
         {view==="checklists"&&<ChecklistPage deliveries={deliveries}/>}
-        {view==="planning"&&<PlanningPage deliveries={deliveries} onOpen={setSelected}/>}
+        {view==="planning"&&<PlanningPage deliveries={deliveries} staff={operationalStaff} onOpen={setSelected}/>}
         {view==="logs"&&<LogsPage events={events}/>}
         {view==="settings"&&<SettingsPage settings={appSettings} catalogCount={catalog.length} requireChecks={requireChecks} setRequireChecks={v=>{setRequireChecks(v);log("Teslimat kuralı değiştirildi",undefined,v?"Kontrol listesi zorunlu":"Kontrol listesi isteğe bağlı","system")}} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSaveSettings={saveStoreSettings} onUploadLogo={uploadBrandLogo} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([]);log("Yerel önbellek temizlendi",undefined,"Bu cihaz","system")}}}/>} 
       </>}
