@@ -53,3 +53,19 @@ export interface ActivityEvent {
   detail?: string;
   createdAt: string;
 }
+
+
+export type DeliveryProofType = "photo" | "signature";
+
+export interface DeliveryProof {
+  id: string;
+  deliveryId: string;
+  proofType: DeliveryProofType;
+  storagePath: string;
+  fileName?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  createdBy?: string;
+  createdAt: string;
+  signedUrl: string;
+}
