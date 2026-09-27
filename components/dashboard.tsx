@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle, Bell, CalendarDays, Check, CheckCircle2, ChevronDown,
-  ClipboardCheck, Clock3, History, LayoutDashboard, MapPin, Menu, Navigation,
-  PackageCheck, Phone, Plus, Search, Settings, Store, Trash2, Truck, UserPlus, MessageCircle,
+  AlertTriangle, Bell, Building2, CalendarDays, Check, CheckCircle2, ChevronDown,
+  ChevronLeft, ChevronRight, ClipboardCheck, Clock3, ExternalLink, History, Image,
+  LayoutDashboard, MapPin, Menu, Navigation, PackageCheck, PackageSearch, Phone, Plus,
+  Save, Search, Settings, ShieldCheck, Store, Trash2, Truck, Upload, UserPlus, MessageCircle,
   UserRound, Users, X
 } from "lucide-react";
 import DeveloperBadge from "./developer-badge";
@@ -17,9 +18,10 @@ import DeliveryProofPanel from "./delivery-proof-panel";
 import { ActivityEvent, Delivery, DeliveryStatus, Priority } from "@/lib/types";
 import {
   cloudAvailable, createCourierStaff, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
-  loadCloudData, loadMyNotifications, markNotificationRead, patchDelivery, removeCloudDelivery,
-  signOut, subscribeCloud, subscribeMyNotifications, unsubscribeCloud,
-  type AppNotification, type Profile
+  loadAppSettings, loadCloudData, loadMyNotifications, loadProductCatalog, markNotificationRead,
+  patchDelivery, removeCloudDelivery, signOut, subscribeCloud, subscribeMyNotifications, unsubscribeCloud,
+  updateAppSettings, uploadStoreLogo,
+  type AppNotification, type AppSettings, type ProductCatalogItem, type Profile
 } from "@/lib/cloud";
 import { enablePushNotifications, sendAssignmentPush, syncPushSubscription } from "@/lib/push";
 
@@ -44,7 +46,11 @@ function today(){ const d=new Date(), o=d.getTimezoneOffset()*60000; return new 
 function initials(n:string){ return n.split(" ").filter(Boolean).map(x=>x[0]).join("").slice(0,2).toUpperCase(); }
 function tel(p:string){ return "tel:"+p.replace(/[^\d+]/g,""); }
 function whatsapp(p:string){ const digits=p.replace(/\D/g,""); const normalized=digits.startsWith("90")?digits:digits.startsWith("0")?"90"+digits.slice(1):digits.length===10?"90"+digits:digits; return "https://wa.me/"+normalized; }
-function map(d:Delivery){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(d.address+", "+d.district+", "+d.city); }
+function addressText(address:string,district:string,city:string){ return [address,district,city].filter(Boolean).join(", "); }
+function map(d:Delivery){ return "https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(addressText(d.address,d.district,d.city)); }
+function mapSearch(address:string,district:string,city:string){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addressText(address,district,city)); }
+function mapEmbed(address:string,district:string,city:string){ return "https://www.google.com/maps?q="+encodeURIComponent(addressText(address,district,city))+"&output=embed"; }
+const DEFAULT_APP_SETTINGS:AppSettings={storeName:"ALTUS Mağazası",storeSubtitle:"Teslimat & Servis",storePhone:"",storeAddress:"",storeCity:"İstanbul",logoUrl:""};
 
 export default function Dashboard(){
   const [view,setView]=useState<View>("dashboard"), [mode,setMode]=useState<"office"|"courier">("office"), [side,setSide]=useState(false);
@@ -59,6 +65,8 @@ export default function Dashboard(){
   const [moreOpen,setMoreOpen]=useState(false);
   const [actionNotice,setActionNotice]=useState<{text:string;tone:"ok"|"warn"}|null>(null);
   const [pendingDeliveryId,setPendingDeliveryId]=useState("");
+  const [appSettings,setAppSettings]=useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [catalog,setCatalog]=useState<ProductCatalogItem[]>([]);
   const searchRef=useRef<HTMLInputElement|null>(null);
 
   useEffect(()=>{ try{
@@ -100,11 +108,15 @@ export default function Dashboard(){
     let channel:any=null;
     let notificationChannel:any=null;
     async function refresh(){
-      const data=await loadCloudData();
+      const [data,settings]=await Promise.all([
+        loadCloudData(),
+        loadAppSettings().catch(()=>DEFAULT_APP_SETTINGS)
+      ]);
       if(!alive)return;
       setDeliveries(data.deliveries);
       setStaff(data.staff);
       setEvents(data.events);
+      setAppSettings(settings);
     }
     async function connect(){
       if(!cloudAvailable()){ setAuthReady(true); return; }
@@ -123,6 +135,8 @@ export default function Dashboard(){
           syncPushSubscription().then(ok=>{if(ok)setNotify(true)}).catch(()=>undefined);
         }
         await refresh();
+        const productRows=await loadProductCatalog().catch(()=>[]);
+        if(alive)setCatalog(productRows);
         const inbox=await loadMyNotifications().catch(()=>[]);
         if(!alive)return;
         setInboxNotifications(inbox);
@@ -222,7 +236,7 @@ export default function Dashboard(){
     const now=new Date().toISOString();
     try{
       const rec=cloud ? await insertDelivery(d,staff) : {...d,id:id("d"),createdAt:now,updatedAt:now,status:(d.assignee==="Atanmamış"?"new":"assigned") as DeliveryStatus,checklist:{addressVerified:false,customerCalled:false,productLoaded:false,modelChecked:false,accessoriesChecked:false,returnChecked:false}};
-      setDeliveries(p=>[rec,...p.filter(x=>x.id!==rec.id)]); setNewOpen(false); log("Yeni teslimat oluşturuldu",rec,rec.assignee,"created");
+      setDeliveries(p=>[rec,...p.filter(x=>x.id!==rec.id)]); setNewOpen(false); log("Yeni teslimat oluşturuldu",rec,[rec.customerName,rec.items.map(x=>[x.product,x.model].filter(Boolean).join(" ")).join(", "),rec.address,rec.assignee].filter(Boolean).join(" • "),"created");
       if(cloud&&rec.assignee!=="Atanmamış"){
         const push=await sendAssignmentPush(rec.id);
         setActionNotice(push.sent
@@ -240,6 +254,7 @@ export default function Dashboard(){
         : await insertStaff(s.name,s.phone);
       setStaff(p=>[...p.filter(x=>x.id!==rec.id),rec]);
       setStaffOpen(false);
+      log("Servis personeli oluşturuldu",undefined,s.name+" • "+s.phone,"system");
       setActionNotice({text:cloud?s.name+" için servis hesabı oluşturuldu. Telefonda giriş yapıp bildirimleri açabilir.":s.name+" personel listesine eklendi.",tone:"ok"});
     }catch(err:any){ setCloudError(err?.message||"Personel hesabı oluşturulamadı."); }
   }
@@ -272,6 +287,26 @@ export default function Dashboard(){
       setCloudError(err?.message||"Personel ataması buluta yazılamadı; değişiklik geri alındı.");
     }
   }
+  async function saveStoreSettings(next:AppSettings){
+    try{
+      const saved=cloud ? await updateAppSettings(next) : next;
+      setAppSettings(saved);
+      log("Mağaza ayarları güncellendi",undefined,saved.storeName+" • "+(saved.storeCity||""),"system");
+      setActionNotice({text:"Mağaza kimliği ve iletişim bilgileri kaydedildi.",tone:"ok"});
+      return saved;
+    }catch(err:any){
+      setCloudError(err?.message||"Mağaza ayarları kaydedilemedi.");
+      throw err;
+    }
+  }
+
+  async function uploadBrandLogo(file:File){
+    if(!cloud)throw new Error("Logo yüklemek için canlı bağlantı gerekli.");
+    const url=await uploadStoreLogo(file);
+    log("Mağaza logosu yüklendi",undefined,file.name,"system");
+    return url;
+  }
+
   async function remove(d:Delivery){
     try{
       if(cloud)await removeCloudDelivery(d.id);
@@ -311,7 +346,7 @@ export default function Dashboard(){
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
 
     <aside className={"side "+(side?"open":"")} aria-label="Mobil menü">
-      <div className="brand"><div><Truck size={21}/></div><p><b>yaaTeslimat</b><span>Teslimat Takip</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
+      <div className="brand"><div className={appSettings.logoUrl?"hasBrandLogo":"altusFallback"}>{appSettings.logoUrl?<img src={appSettings.logoUrl} alt={appSettings.storeName}/>:<b>ALTUS</b>}</div><p><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle}</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
       {profile?.role==="courier"?<div className="roleChip"><Truck size={15}/><span>Servis personeli</span><i>CANLI</i></div>:<div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Mağaza</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Servis</button></div>}
       {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={18}/><span>Mağazaya dön</span></button>:null}</nav>}
       <div className="grow"/>
@@ -323,8 +358,8 @@ export default function Dashboard(){
       <header className="appTopbar">
         <div className="topBrand">
           <button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button>
-          <div className="topBrandMark"><Truck size={19}/></div>
-          <div className="topBrandCopy"><b>yaaTeslimat</b><span>TESLİMAT TAKİP</span></div>
+          <div className={"topBrandMark storeBrandMark "+(appSettings.logoUrl?"hasBrandLogo":"altusFallback")}>{appSettings.logoUrl?<img src={appSettings.logoUrl} alt={appSettings.storeName}/>:<b>ALTUS</b>}</div>
+          <div className="topBrandCopy"><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle.toLocaleUpperCase("tr-TR")}</span></div>
         </div>
 
         {!(mode==="office"&&view==="dashboard")?<label className="globalSearch">
@@ -398,12 +433,12 @@ export default function Dashboard(){
         {view==="checklists"&&<ChecklistPage deliveries={deliveries}/>}
         {view==="planning"&&<PlanningPage deliveries={deliveries} onOpen={setSelected}/>}
         {view==="logs"&&<LogsPage events={events}/>}
-        {view==="settings"&&<SettingsPage requireChecks={requireChecks} setRequireChecks={setRequireChecks} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([])}}}/>} 
+        {view==="settings"&&<SettingsPage settings={appSettings} catalogCount={catalog.length} requireChecks={requireChecks} setRequireChecks={v=>{setRequireChecks(v);log("Teslimat kuralı değiştirildi",undefined,v?"Kontrol listesi zorunlu":"Kontrol listesi isteğe bağlı","system")}} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSaveSettings={saveStoreSettings} onUploadLogo={uploadBrandLogo} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([]);log("Yerel önbellek temizlendi",undefined,"Bu cihaz","system")}}}/>} 
       </>}
-      <footer><span>yaaTeslimat • v2.0</span><DeveloperBadge compact/></footer>
+      <footer><span>yaaTeslimat • v2.1</span><DeveloperBadge compact/></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
-    {newOpen&&<NewDelivery staff={operationalStaff} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>} 
+    {newOpen&&<NewDelivery staff={operationalStaff} deliveries={deliveries} catalog={catalog} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>} 
     {staffOpen&&<NewStaff onClose={()=>setStaffOpen(false)} onSave={addStaff}/>} 
     {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} events={events} staff={operationalStaff} cloud={cloud} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(deliveries.find(x=>x.id===selected.id)||selected,s)} onToggle={k=>toggle(deliveries.find(x=>x.id===selected.id)||selected,k)} onAssign={person=>assignDelivery(deliveries.find(x=>x.id===selected.id)||selected,person)} onProofSaved={kind=>log(kind==="photo"?"Teslimat fotoğrafı eklendi":"Müşteri imzası eklendi",deliveries.find(x=>x.id===selected.id)||selected,undefined,"system")} onDelete={()=>remove(deliveries.find(x=>x.id===selected.id)||selected)}/>}
   </div>;
@@ -413,62 +448,268 @@ function PageHead({tag,title,text,action}:{tag:string;title:string;text:string;a
 function Empty({title,text}:{title:string;text:string}){return <div className="empty"><PackageCheck size={28}/><b>{title}</b><span>{text}</span></div>}
 function DeliveryList({list,onOpen}:{list:Delivery[];onOpen:(d:Delivery)=>void}){return <div className="list">{list.length?list.map(d=>{const done=Object.values(d.checklist).filter(Boolean).length;const item=d.items[0];return <button className="row deliveryRow" key={d.id} onClick={()=>onOpen(d)}><div className="customerCell"><div className="badges"><span className={"status s-"+d.status}>{labels[d.status]}</span>{d.priority!=="normal"?<span className={"prio p-"+d.priority}>{d.priority==="critical"?"Acil":"Öncelikli"}</span>:null}<small>{d.orderNo}</small></div><h3>{d.customerName}</h3><p><span><MapPin size={14}/>{d.district||"İlçe yok"}</span><span><Clock3 size={14}/>{d.timeWindow}</span><span><UserRound size={14}/>{d.assignee}</span></p></div><div className="product deliveryProduct"><span className="productIcon"><WebIcon product={item?.product||""} size={30}/></span><p><small>ÜRÜN</small><b>{item?.brand+" • "+item?.product}</b><span>{item?.model||"Model yok"}</span></p></div><div className="progress deliveryProgress"><p><span>Hazırlık</span><b>{done}/6</b></p><i><em style={{width:(done/6*100)+"%"}}/></i><small>{done===6?"Hazır":"Kontroller sürüyor"}</small></div><span className="rowArrow">›</span></button>}):<Empty title="Kayıt yok" text="Henüz teslimat oluşturulmadı."/>}</div>}
 function StaffPage({staff,deliveries,onAdd}:{staff:Staff[];deliveries:Delivery[];onAdd:()=>void}){return <section className="card page"><PageHead tag="SEVKİYAT EKİBİ" title="Personeller" text="Dükkandan görev atayacağın personeller." action={<button className="primary" onClick={onAdd}><UserPlus size={16}/>Personel ekle</button>}/>{staff.length?<div className="staffGrid">{staff.map(s=>{const a=deliveries.filter(d=>d.assignee===s.name&&!["completed","issue"].includes(d.status)).length;return <div className="staffCard" key={s.id}><div>{initials(s.name)}</div><h3>{s.name}</h3><a href={tel(s.phone)}>{s.phone||"Telefon yok"}</a><div className={"staffNotify "+(s.userId?"ready":"waiting")}><Bell size={13}/>{s.userId?"Bildirim hesabı bağlı":"Bildirim hesabı bağlı değil"}</div><p><b>{a}</b><span>aktif teslimat</span></p></div>})}</div>:<Empty title="Personel eklenmedi" text="Önce sevkiyat personelini ekle."/>}</section>}
-function CustomersPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Delivery)=>void}){const groups=Array.from(new Map(deliveries.map(d=>[d.customerName+"|"+d.phone,d])).values());return <section className="card page"><PageHead tag="MÜŞTERİLER" title="Müşteri rehberi" text="Teslimatlardan otomatik oluşur."/>{groups.length?<div className="customerList">{groups.map(d=><button key={d.id} onClick={()=>onOpen(d)}><span>{initials(d.customerName)}</span><p><b>{d.customerName}</b><small>{d.address+" • "+d.district}</small></p><em><Phone size={14}/>{d.phone}</em></button>)}</div>:<Empty title="Müşteri yok" text="Teslimat oluşturdukça rehber oluşur."/>}</section>}
+function CustomersPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Delivery)=>void}){
+  const [search,setSearch]=useState("");
+  const customers=useMemo(()=>{
+    const sorted=[...deliveries].sort((a,b)=>new Date(b.updatedAt).getTime()-new Date(a.updatedAt).getTime());
+    const map=new Map<string,{key:string;name:string;phone:string;last:Delivery;count:number;addresses:Set<string>}>();
+    for(const d of sorted){
+      const key=(d.phone||d.customerName).replace(/\s/g,"").toLocaleLowerCase("tr-TR");
+      const existing=map.get(key);
+      if(existing){
+        existing.count++;
+        existing.addresses.add(addressText(d.address,d.district,d.city));
+      }else{
+        map.set(key,{key,name:d.customerName,phone:d.phone,last:d,count:1,addresses:new Set([addressText(d.address,d.district,d.city)])});
+      }
+    }
+    return Array.from(map.values());
+  },[deliveries]);
+  const q=search.trim().toLocaleLowerCase("tr-TR");
+  const visible=customers.filter(c=>!q||[c.name,c.phone,c.last.address,c.last.district,productLabel(c.last)].join(" ").toLocaleLowerCase("tr-TR").includes(q));
+  return <section className="customerDirectory">
+    <div className="customerDirectoryHead">
+      <PageHead tag="MÜŞTERİLER" title="Müşteri rehberi" text="Teslimatlardan otomatik oluşur; tekrar gelen müşteriyi aramak ve geçmişini görmek kolaydır."/>
+      <div className="customerStats"><span><b>{customers.length}</b><small>müşteri</small></span><span><b>{deliveries.length}</b><small>teslimat kaydı</small></span></div>
+    </div>
+    <label className="customerSearch"><Search/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="İsim, telefon, adres veya ürün ara..."/></label>
+    {visible.length?<div className="customerCards">{visible.map(customer=><article className="customerCardV2" key={customer.key}>
+      <div className="customerCardMain">
+        <span className="customerAvatar">{initials(customer.name)}</span>
+        <div><small>MÜŞTERİ</small><h3>{customer.name}</h3><a href={tel(customer.phone)}><Phone/>{customer.phone}</a></div>
+        <em>{customer.count} teslimat</em>
+      </div>
+      <div className="customerCardInfo">
+        <p><MapPin/><span><small>Son adres</small><b>{addressText(customer.last.address,customer.last.district,customer.last.city)}</b></span></p>
+        <p><PackageCheck/><span><small>Son ürün</small><b>{productLabel(customer.last)}</b></span></p>
+      </div>
+      <div className="customerCardActions">
+        <a href={whatsapp(customer.phone)} target="_blank" rel="noreferrer"><MessageCircle/>WhatsApp</a>
+        <a href={map(customer.last)} target="_blank" rel="noreferrer"><Navigation/>Yol tarifi</a>
+        <button onClick={()=>onOpen(customer.last)}>Son teslimatı aç<ChevronRight/></button>
+      </div>
+    </article>)}</div>:<Empty title="Müşteri bulunamadı" text={customers.length?"Arama kriterini değiştir.":"Teslimat oluşturdukça müşteri rehberi otomatik oluşur."}/>}
+  </section>
+}
+function productLabel(d:Delivery){return d.items.map(item=>[item.brand,item.product,item.model].filter(Boolean).join(" ")).join(" • ")||"Ürün yok";}
 function ChecklistPage({deliveries}:{deliveries:Delivery[]}){return <section className="card page"><PageHead tag="ZORUNLU KONTROLLER" title="Kontrol listeleri" text="Personel teslimatı kapatmadan önce bu adımları işaretler."/><div className="checkDefs">{checks.map(([k,l])=>{const n=deliveries.filter(d=>d.checklist[k]).length;return <div key={k}><span><Check/></span><p><b>{l}</b><small>{n+" / "+deliveries.length+" kayıtta tamamlandı"}</small></p></div>})}</div></section>}
-function PlanningPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Delivery)=>void}){const [date,setDate]=useState(today());const list=deliveries.filter(d=>d.date===date).sort((a,b)=>a.timeWindow.localeCompare(b.timeWindow));return <section className="card page"><PageHead tag="GÜNLÜK PLAN" title="Planlama" text="Tarih seçip günün sevkiyat sırasını gör." action={<input className="dateInput" type="date" value={date} onChange={e=>setDate(e.target.value)}/>} /><DeliveryList list={list} onOpen={onOpen}/></section>}
-function LogsPage({events}:{events:ActivityEvent[]}){return <section className="card page"><PageHead tag="DENETİM İZİ" title="İşlem kayıtları" text="Oluşturma, durum ve kontrol hareketleri."/>{events.length?<div className="logs">{events.map(e=><div key={e.id}><span><History size={15}/></span><p><b>{e.title}</b><small>{(e.detail||"")+" • "+(e.orderNo||"Sistem")}</small></p><time>{new Intl.DateTimeFormat("tr-TR",{hour:"2-digit",minute:"2-digit"}).format(new Date(e.createdAt))}</time></div>)}</div>:<Empty title="İşlem kaydı yok" text="İşlem yaptıkça burada görünür."/>}</section>}
-function SettingsPage({requireChecks,setRequireChecks,notify,onNotify,cloud,profile,onSignOut,onClear}:{requireChecks:boolean;setRequireChecks:(v:boolean)=>void;notify:boolean;onNotify:()=>void;cloud:boolean;profile:Profile|null;onSignOut:()=>void;onClear:()=>void}){return <div className="settings settingsV4"><InstallPwaCard/><section className="card"><PageHead tag="OPERASYON" title="Teslimat kuralı" text="Personel işi eksik kapatmasın."/><div className="setting"><p><b>6 kontrol tamamlanmadan “Teslim edildi” olmasın</b><small>Adres, arama, yükleme, model, aksesuar ve geri alım kontrol edilir.</small></p><button className={requireChecks?"on":""} onClick={()=>setRequireChecks(!requireChecks)}><i/></button></div></section><section className="card"><PageHead tag="BAĞLANTI" title={cloud?"Canlı bağlantı açık":"Bu cihazda çalışıyor"} text={cloud?"Dükkan ve sevkiyatçı aynı veriyi anında görür.":"Supabase bağlanınca cihazlar otomatik senkron olur."}/><div className="connectionInfo"><i className={cloud?"on":""}/><p><b>{profile?.fullName||"Bu cihaz"}</b><small>{cloud?"canlı senkron":profile?.role||"yerel mod"}</small></p>{profile?<button className="soft" onClick={onSignOut}>Çıkış yap</button>:null}</div></section><section className="card"><PageHead tag="BİLDİRİM" title={notify?"Bildirimler açık":"Bildirimleri aç"} text="Yeni görev geldiğinde personelin telefonuna haber ver."/><button className="primary settingsAction" onClick={onNotify}><Bell size={16}/>{notify?"Bildirim hazır":"Bildirim izni ver"}</button></section><section className="card danger"><PageHead tag="BAKIM" title="Yerel önbelleği temizle" text="Canlı veritabanını silmez; yalnız bu cihazdaki kopyayı temizler."/><button onClick={onClear}><Trash2 size={16}/>Bu cihazı temizle</button></section></div>}
+function PlanningPage({deliveries,staff,onOpen}:{deliveries:Delivery[];staff:Staff[];onOpen:(d:Delivery)=>void}){
+  const [date,setDate]=useState(today());
+  const list=deliveries.filter(d=>d.date===date).sort((a,b)=>a.timeWindow.localeCompare(b.timeWindow));
+  const slots=["09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"];
+  const assigned=list.filter(d=>d.assignee&&d.assignee!=="Atanmamış").length;
+  const unassigned=list.length-assigned;
+  const completed=list.filter(d=>d.status==="completed").length;
+  function move(amount:number){
+    const next=new Date(date+"T12:00:00");
+    next.setDate(next.getDate()+amount);
+    const offset=next.getTimezoneOffset()*60000;
+    setDate(new Date(next.getTime()-offset).toISOString().slice(0,10));
+  }
+  return <section className="planningWorkspace">
+    <div className="planningHead">
+      <PageHead tag="GÜNLÜK PLAN" title="Sevkiyat planı" text="Günü saat aralıklarına böl, personel yükünü gör ve teslimatı doğrudan aç."/>
+      <div className="planningDate"><button onClick={()=>move(-1)}><ChevronLeft/></button><label><CalendarDays/><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button onClick={()=>move(1)}><ChevronRight/></button></div>
+    </div>
+    <div className="planningSummary">
+      <span><PackageCheck/><p><b>{list.length}</b><small>toplam iş</small></p></span>
+      <span><Truck/><p><b>{assigned}</b><small>personel atandı</small></p></span>
+      <span className={unassigned?"warn":""}><AlertTriangle/><p><b>{unassigned}</b><small>atanmamış</small></p></span>
+      <span className="ok"><CheckCircle2/><p><b>{completed}</b><small>tamamlandı</small></p></span>
+    </div>
+    <div className="planningBoardV2">
+      {slots.map(slot=>{
+        const items=list.filter(d=>d.timeWindow===slot);
+        return <section className="planLane" key={slot}>
+          <header><Clock3/><div><b>{slot}</b><small>{items.length} teslimat</small></div></header>
+          <div>{items.length?items.map(d=><button className={"planTask "+(d.assignee==="Atanmamış"?"unassigned":"")} key={d.id} onClick={()=>onOpen(d)}>
+            <div className="planTaskTop"><span className={"status s-"+d.status}>{labels[d.status]}</span><small>{d.orderNo}</small></div>
+            <h3>{d.customerName}</h3>
+            <p><PackageCheck/>{productLabel(d)}</p>
+            <p><MapPin/>{d.district}, {d.city}</p>
+            <footer><span><Truck/>{d.assignee||"Atanmamış"}</span><ChevronRight/></footer>
+          </button>):<div className="planLaneEmpty">Bu saat aralığında iş yok.</div>}</div>
+        </section>
+      })}
+    </div>
+    <div className="planningCrew">
+      <div><b>Personel yükü</b><small>Seçili gündeki açık görev sayısı</small></div>
+      <div>{staff.length?staff.map(person=>{const count=list.filter(d=>d.assignee===person.name&&!["completed","issue"].includes(d.status)).length;return <span key={person.id}><i>{initials(person.name)}</i><p><b>{person.name}</b><small>{count} açık görev</small></p><em>{person.userId?"Bildirim hazır":"Hesap bekliyor"}</em></span>}):<small>Personel eklenmedi.</small>}</div>
+    </div>
+  </section>
+}
+function LogsPage({events}:{events:ActivityEvent[]}){
+  const [filter,setFilter]=useState<"all"|ActivityEvent["type"]>("all");
+  const [search,setSearch]=useState("");
+  const q=search.trim().toLocaleLowerCase("tr-TR");
+  const visible=events.filter(event=>(filter==="all"||event.type===filter)&&(!q||[event.title,event.detail,event.orderNo,event.actor].filter(Boolean).join(" ").toLocaleLowerCase("tr-TR").includes(q)));
+  return <section className="auditWorkspace">
+    <div className="auditHead"><PageHead tag="DENETİM İZİ" title="İşlem kayıtları" text="Teslimat, personel, ayar, durum ve kontrol değişiklikleri kronolojik olarak tutulur."/><span><ShieldCheck/><b>{events.length}</b><small>kayıt</small></span></div>
+    <div className="auditTools"><label><Search/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Sipariş, müşteri, işlem veya kullanıcı ara..."/></label><select value={filter} onChange={e=>setFilter(e.target.value as any)}><option value="all">Tüm hareketler</option><option value="created">Oluşturma</option><option value="status">Durum</option><option value="checklist">Kontrol</option><option value="issue">Sorun</option><option value="system">Sistem / ayar</option></select></div>
+    {visible.length?<div className="auditList">{visible.map(event=><article className={"auditRow "+event.type} key={event.id}><span><History/></span><div><div><b>{event.title}</b><em>{event.type}</em></div><p>{event.detail||"Detay yok"}</p><small>{event.actor} • {event.orderNo||"Sistem"}</small></div><time>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(event.createdAt))}</time></article>)}</div>:<Empty title="İşlem kaydı bulunamadı" text="Filtreyi değiştir veya sistemde bir işlem yap."/>}
+  </section>
+}
+function SettingsPage({
+  settings,catalogCount,requireChecks,setRequireChecks,notify,onNotify,cloud,profile,onSaveSettings,onUploadLogo,onSignOut,onClear
+}:{
+  settings:AppSettings;
+  catalogCount:number;
+  requireChecks:boolean;
+  setRequireChecks:(v:boolean)=>void;
+  notify:boolean;
+  onNotify:()=>void;
+  cloud:boolean;
+  profile:Profile|null;
+  onSaveSettings:(settings:AppSettings)=>Promise<AppSettings>;
+  onUploadLogo:(file:File)=>Promise<string>;
+  onSignOut:()=>void;
+  onClear:()=>void;
+}){
+  const [draft,setDraft]=useState<AppSettings>(settings);
+  const [saving,setSaving]=useState(false);
+  const [logoBusy,setLogoBusy]=useState(false);
+  const [message,setMessage]=useState("");
+  useEffect(()=>setDraft(settings),[settings]);
+
+  function set<K extends keyof AppSettings>(key:K,value:AppSettings[K]){setDraft(current=>({...current,[key]:value}))}
+  async function save(){
+    setSaving(true);setMessage("");
+    try{const saved=await onSaveSettings(draft);setDraft(saved);setMessage("Ayarlar kaydedildi.");}
+    catch{setMessage("Ayarlar kaydedilemedi.");}
+    finally{setSaving(false);}
+  }
+  async function logo(file?:File){
+    if(!file)return;
+    setLogoBusy(true);setMessage("");
+    try{const url=await onUploadLogo(file);setDraft(current=>({...current,logoUrl:url}));setMessage("Logo yüklendi. Kaydet butonuna bas.");}
+    catch(err:any){setMessage(err?.message||"Logo yüklenemedi.");}
+    finally{setLogoBusy(false);}
+  }
+
+  return <div className="settingsHub">
+    <section className="settingsIdentity">
+      <div className="settingsIdentityPreview">
+        <div className={"settingsLogo "+(draft.logoUrl?"hasImage":"altusFallback")}>{draft.logoUrl?<img src={draft.logoUrl} alt={draft.storeName}/>:<b>ALTUS</b>}</div>
+        <div><small>MAĞAZA KİMLİĞİ</small><h2>{draft.storeName||"Mağaza adı"}</h2><p>{draft.storeSubtitle||"Teslimat & Servis"}</p></div>
+      </div>
+      <div className="settingsIdentityActions">
+        <label className="soft uploadLogo"><Upload/>{logoBusy?"Yükleniyor...":"Logo yükle"}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={logoBusy||!cloud} onChange={e=>logo(e.target.files?.[0])}/></label>
+        <button className="primary" disabled={saving} onClick={save}><Save/>{saving?"Kaydediliyor...":"Ayarları kaydet"}</button>
+      </div>
+    </section>
+
+    {message?<div className="settingsMessage">{message}</div>:null}
+
+    <div className="settingsGridV5">
+      <section className="settingsPanel branding">
+        <div className="settingsPanelHead"><span><Building2/></span><div><small>MAĞAZA</small><h3>Kimlik ve iletişim</h3><p>Mağaza personeli ve servis ekranlarında ortak görünür.</p></div></div>
+        <div className="settingsForm">
+          <Field label="Mağaza adı" v={draft.storeName} set={v=>set("storeName",v)} placeholder="ALTUS Mağazası"/>
+          <Field label="Alt başlık" v={draft.storeSubtitle} set={v=>set("storeSubtitle",v)} placeholder="Teslimat & Servis"/>
+          <Field label="Mağaza telefonu" v={draft.storePhone} set={v=>set("storePhone",v)} placeholder="0212..." inputMode="tel"/>
+          <Field label="Şehir" v={draft.storeCity} set={v=>set("storeCity",v)} placeholder="İstanbul"/>
+          <Field label="Mağaza adresi" v={draft.storeAddress} set={v=>set("storeAddress",v)} placeholder="Mağaza açık adresi" wide/>
+        </div>
+      </section>
+
+      <section className="settingsPanel">
+        <div className="settingsPanelHead"><span><ClipboardCheck/></span><div><small>OPERASYON</small><h3>Teslimat kuralları</h3><p>Servis personelinin işi eksik kapatmasını engelle.</p></div></div>
+        <div className="setting settingRich"><p><b>6 kontrol tamamlanmadan teslimatı kapatma</b><small>Adres, müşteri araması, araç yükleme, model, aksesuar ve geri alım kontrol edilir.</small></p><button className={requireChecks?"on":""} onClick={()=>setRequireChecks(!requireChecks)}><i/></button></div>
+        <div className="settingsRule"><CheckCircle2/><p><b>Fotoğraf ve imza kanıtı</b><small>Teslimat detayından fotoğraf ve müşteri imzası Supabase Storage'a kaydedilir.</small></p></div>
+        <div className="settingsRule"><History/><p><b>İşlem geçmişi</b><small>Durum, checklist, atama, personel ve ayar değişiklikleri loglanır.</small></p></div>
+      </section>
+
+      <section className="settingsPanel">
+        <div className="settingsPanelHead"><span><Bell/></span><div><small>BİLDİRİM</small><h3>Servis personeli bildirimi</h3><p>Yeni görev atandığında personelin telefonuna haber ver.</p></div></div>
+        <div className={"settingsStatus "+(notify?"ready":"warn")}><i/><div><b>{notify?"Bu cihazın bildirimleri açık":"Bu cihazın bildirim izni kapalı"}</b><small>{notify?"Push aboneliği hazır.":"İzin vererek görev uyarılarını etkinleştir."}</small></div></div>
+        <button className="primary settingsWideAction" onClick={onNotify}><Bell/>{notify?"Bildirimleri yeniden doğrula":"Bildirimleri aç"}</button>
+      </section>
+
+      <section className="settingsPanel">
+        <div className="settingsPanelHead"><span><PackageSearch/></span><div><small>ÜRÜN KATALOĞU</small><h3>Altus ürünleri</h3><p>Yeni teslimat formundaki model aramasını besler.</p></div></div>
+        <div className="catalogSummary"><b>{catalogCount}</b><span>hazır Altus model kaydı</span></div>
+        <p className="settingsHelp">Buzdolabı, çamaşır/bulaşık makinesi, kurutma, televizyon, süpürge, mikrodalga ve klima modelleri başlangıç kataloğunda hazırdır.</p>
+        <a className="soft settingsLink" href="https://www.altus.com.tr/urunler/beyaz-esya" target="_blank" rel="noreferrer"><ExternalLink/>Altus ürün kataloğunu aç</a>
+      </section>
+
+      <section className="settingsPanel">
+        <div className="settingsPanelHead"><span><ShieldCheck/></span><div><small>HESAP & BAĞLANTI</small><h3>{cloud?"Canlı bağlantı açık":"Yerel çalışma"}</h3><p>{cloud?"Mağaza ve servis personeli aynı veriyi anlık görür.":"Bulut bağlantısı kapalı."}</p></div></div>
+        <div className="connectionInfo settingsConnection"><i className={cloud?"on":""}/><p><b>{profile?.fullName||"Bu cihaz"}</b><small>{profile?.role||"yerel mod"} • {cloud?"Supabase bağlı":"yerel"}</small></p>{profile?<button className="soft" onClick={onSignOut}>Çıkış yap</button>:null}</div>
+      </section>
+
+      <section className="settingsPanel dangerZone">
+        <div className="settingsPanelHead"><span><Trash2/></span><div><small>BAKIM</small><h3>Yerel önbellek</h3><p>Canlı veritabanını silmeden yalnız bu cihazdaki yerel kopyayı temizler.</p></div></div>
+        <button className="delete settingsWideAction" onClick={onClear}><Trash2/>Bu cihazdaki yerel veriyi temizle</button>
+      </section>
+    </div>
+
+    <InstallPwaCard/>
+  </div>
+}
 function CourierList({list,courier,notify,cloud,onNotify,onOpen,onStatus,onToggle,requireChecks}:{list:Delivery[];courier:string;notify:boolean;cloud:boolean;onNotify:()=>void;onOpen:(d:Delivery)=>void;onStatus:(d:Delivery,s:DeliveryStatus)=>void;onToggle:(d:Delivery,k:keyof Delivery["checklist"])=>void;requireChecks:boolean}){
   if(!courier)return <div className="courierEmpty"><WebIcon name="truck-fast-outline" size={52}/><h2>Personel seçilmedi</h2><p>Servis personelini seçince yalnız ona atanmış bugünkü teslimatlar görünür.</p></div>;
-  return <div className="courier serviceWorkspace">
+  return <div className="courier serviceWorkspace serviceWorkspaceV2">
     <div className={"serviceNotifyBanner "+(notify?"ready":"waiting")}>
       <span><Bell/></span>
       <div><b>{notify?"Görev bildirimleri açık":"Yeni görevleri anında telefona al"}</b><small>{notify?"Mağaza sana teslimat atadığında bildirim cihazına düşer.":cloud?"Bir kez bildirim izni ver; yeni teslimatlar uygulama kapalıyken de haber versin.":"Canlı bağlantı kurulunca bildirimleri açabilirsin."}</small></div>
       {!notify?<button className="primary" disabled={!cloud} onClick={onNotify}><Bell/>Bildirimleri aç</button>:<strong><CheckCircle2/>HAZIR</strong>}
     </div>
-    <div className="serviceHero">
-      <div><small>SERVİS PERSONELİ</small><h2>{courier.split(" ")[0]}, bugün {list.length} işin var.</h2><p>Her kartta müşterinin telefonu, ürünleri, adresi ve mağazanın notu birlikte durur.</p></div>
-      <b>{list.length}<span>açık iş</span></b>
+    <div className="serviceHero serviceHeroV2">
+      <div><small>BUGÜNKÜ SEVKİYAT</small><h2>{courier.split(" ")[0]}, {list.length} görevin var.</h2><p>Telefon, teslim edilecek ürün, müşteri adresi ve mağaza notu tek kartta.</p></div>
+      <b>{list.length}<span>görev</span></b>
     </div>
-    {list.length?list.map(d=>{
+
+    {list.length?list.map((d,index)=>{
       const done=Object.values(d.checklist).filter(Boolean).length;
-      const productText=d.items.map(item=>[item.brand,item.product,item.model].filter(Boolean).join(" ")+(item.quantity>1?` ×${item.quantity}`:"")).join(" • ");
-      return <article className="serviceTask" key={d.id}>
+      return <article className="serviceTask serviceTaskV2" key={d.id}>
         <div className="serviceTaskHead">
-          <div><span className={"status s-"+d.status}>{labels[d.status]}</span><small>{d.timeWindow} • {d.orderNo}</small></div>
-          <button className="soft" onClick={()=>onOpen(d)}>Tüm detaylar</button>
+          <div><b className="serviceTaskNumber">#{index+1}</b><span className={"status s-"+d.status}>{labels[d.status]}</span><small>{d.timeWindow} • {d.orderNo}</small></div>
+          <button className="soft" onClick={()=>onOpen(d)}>Detay</button>
         </div>
-        <div className="serviceCustomer">
+
+        <section className="serviceCustomerV2">
           <span>{initials(d.customerName)}</span>
-          <div><small>MÜŞTERİ</small><h3>{d.customerName}</h3><a href={tel(d.phone)}><Phone size={14}/>{d.phone}</a></div>
-        </div>
-        <div className="serviceFacts">
-          <div className="serviceFact product"><PackageCheck/><p><small>ÜRÜN / İŞLEM</small><b>{productText||"Ürün bilgisi yok"}</b></p></div>
-          <div className="serviceFact address"><MapPin/><p><small>TESLİMAT ADRESİ</small><b>{d.address}</b><span>{d.district}, {d.city}</span></p></div>
-        </div>
-        {d.notes?<div className="serviceNote"><AlertTriangle/><p><b>Mağaza notu</b><span>{d.notes}</span></p></div>:null}
-        <div className="serviceQuick">
-          <a href={tel(d.phone)}><Phone/>Müşteriyi ara</a>
+          <div><small>MÜŞTERİ</small><h3>{d.customerName}</h3><a href={tel(d.phone)}><Phone/>{d.phone}</a>{d.secondaryPhone?<em>2. tel: {d.secondaryPhone}</em>:null}</div>
+        </section>
+
+        <section className="serviceProductsV2">
+          <header><PackageCheck/><div><small>TESLİM EDİLECEK ÜRÜN</small><b>{d.items.reduce((sum,item)=>sum+(item.quantity||1),0)} adet</b></div></header>
+          <div>{d.items.map((item,itemIndex)=><div className="serviceProductItem" key={item.id||itemIndex}>
+            <span><WebIcon product={item.product||""} size={30}/></span>
+            <p><small>{item.brand||"ALTUS"}</small><b>{item.product||"Ürün bilgisi eksik"}</b><em>{item.model||"Model girilmedi"}</em></p>
+            <strong>×{item.quantity||1}</strong>
+          </div>)}</div>
+        </section>
+
+        <section className="serviceAddressV2">
+          <div className="serviceAddressCopy"><MapPin/><div><small>TESLİMAT ADRESİ</small><b>{d.address}</b><span>{d.district}, {d.city}</span></div></div>
+          <AddressMap address={d.address} district={d.district} city={d.city} compact/>
+        </section>
+
+        {d.notes?<div className="serviceNote serviceNoteV2"><AlertTriangle/><p><b>Mağaza notu</b><span>{d.notes}</span></p></div>:null}
+
+        <div className="serviceQuick serviceQuickV2">
+          <a href={tel(d.phone)}><Phone/>Ara</a>
           <a href={whatsapp(d.phone)} target="_blank" rel="noreferrer"><MessageCircle/>WhatsApp</a>
-          <a href={map(d)} target="_blank" rel="noreferrer"><Navigation/>Haritada aç</a>
+          <a href={map(d)} target="_blank" rel="noreferrer"><Navigation/>Yol tarifi</a>
         </div>
+
         <div className="serviceChecklist">
-          <div className="serviceChecklistHead"><div><b>Teslimat kontrolü</b><span>Eksik adım kalınca teslimat kapanmaz.</span></div><strong>{done}/6</strong></div>
+          <div className="serviceChecklistHead"><div><b>Teslimat kontrolü</b><span>Tamamlamadan işi kapatma.</span></div><strong>{done}/6</strong></div>
           <div className="serviceProgress"><i><em style={{width:(done/6*100)+"%"}}/></i><span>%{Math.round(done/6*100)}</span></div>
           <div className="serviceChecks">{checks.map(([k,l])=><button className={d.checklist[k]?"on":""} onClick={()=>onToggle(d,k)} key={k}><i>{d.checklist[k]?<Check size={13}/>:null}</i><span>{l}</span></button>)}</div>
         </div>
         <div className="serviceActions">
           {d.status==="assigned"?<button className="primary" onClick={()=>onStatus(d,"seen")}>Görevi gördüm</button>:null}
-          {d.status==="seen"?<button className="primary" onClick={()=>onStatus(d,"on_route")}><Truck size={17}/>Yola çıktım</button>:null}
-          {d.status==="on_route"?<button className="primary" disabled={requireChecks&&done<6} onClick={()=>onStatus(d,"completed")}><CheckCircle2 size={17}/>Teslimatı tamamla</button>:null}
-          <button className="issue" onClick={()=>onStatus(d,"issue")}><AlertTriangle size={16}/>Sorun var</button>
+          {d.status==="seen"?<button className="primary" onClick={()=>onStatus(d,"on_route")}><Truck/>Yola çıktım</button>:null}
+          {d.status==="on_route"?<button className="primary" disabled={requireChecks&&done<6} onClick={()=>onStatus(d,"completed")}><CheckCircle2/>Teslimatı tamamla</button>:null}
+          <button className="issue" onClick={()=>onStatus(d,"issue")}><AlertTriangle/>Sorun var</button>
         </div>
       </article>
     }):<div className="card"><Empty title="Bugün atanmış iş yok" text="Mağaza sana teslimat atadığında burada görünecek."/></div>}
   </div>
 }
-
-function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){
+function NewDelivery({staff,deliveries,catalog,onClose,onSave}:{staff:Staff[];deliveries:Delivery[];catalog:ProductCatalogItem[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){
   type DraftItem={id:string;brand:string;product:string;model:string;quantity:number;service:boolean;install:boolean;old:boolean};
   const [f,setF]=useState({
     name:"",phone:"",secondaryPhone:"",address:"",district:"",city:"İstanbul",
@@ -476,11 +717,37 @@ function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSa
   });
   const [items,setItems]=useState<DraftItem[]>([{id:id("draft"),brand:"ALTUS",product:"",model:"",quantity:1,service:false,install:false,old:false}]);
   const [err,setErr]=useState("");
-  const quickProducts=["Bulaşık Makinesi","Çamaşır Makinesi","Buzdolabı","Fırın","Mikrodalga","Televizyon","Süpürge"];
+  const [customerOpen,setCustomerOpen]=useState(false);
+  const quickProducts=["Buzdolabı","Derin Dondurucu","Bulaşık Makinesi","Çamaşır Makinesi","Kurutma Makinesi","Fırın","Mikrodalga Fırın","Televizyon","Klima","Süpürge"];
+
+  const recentCustomers=useMemo(()=>{
+    const map=new Map<string,Delivery>();
+    [...deliveries].sort((a,b)=>new Date(b.updatedAt).getTime()-new Date(a.updatedAt).getTime()).forEach(d=>{const key=(d.phone||d.customerName).replace(/\s/g,"").toLowerCase();if(!map.has(key))map.set(key,d)});
+    return Array.from(map.values()).slice(0,50);
+  },[deliveries]);
+  const customerSuggestions=recentCustomers.filter(d=>{
+    const q=(f.name+" "+f.phone).trim().toLocaleLowerCase("tr-TR");
+    if(!q)return true;
+    return [d.customerName,d.phone,d.address,d.district].join(" ").toLocaleLowerCase("tr-TR").includes(q);
+  }).slice(0,5);
+
   function set(k:string,v:string){setF(x=>({...x,[k]:v}))}
   function setItem(itemId:string,patch:Partial<DraftItem>){setItems(list=>list.map(item=>item.id===itemId?{...item,...patch}:item))}
   function addItem(){setItems(list=>[...list,{id:id("draft"),brand:"ALTUS",product:"",model:"",quantity:1,service:false,install:false,old:false}])}
   function removeItem(itemId:string){setItems(list=>list.length===1?list:list.filter(item=>item.id!==itemId))}
+  function chooseCustomer(d:Delivery){
+    setF(current=>({...current,name:d.customerName,phone:d.phone,secondaryPhone:d.secondaryPhone||"",address:d.address,district:d.district,city:d.city||"İstanbul"}));
+    setCustomerOpen(false);
+  }
+  function chooseCatalog(itemId:string,model:string){
+    const hit=catalog.find(row=>row.model===model);
+    if(hit)setItem(itemId,{brand:hit.brand,product:hit.category,model:hit.model});
+    else setItem(itemId,{model});
+  }
+  function catalogFor(item:DraftItem){
+    return catalog.filter(row=>!item.product||row.category===item.product).slice(0,80);
+  }
+
   const complete={
     customer:Boolean(f.name.trim()&&f.phone.replace(/\D/g,"").length>=10),
     address:Boolean(f.address.trim().length>=8&&f.district.trim()),
@@ -504,8 +771,10 @@ function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSa
       items:items.map(item=>({id:id("i"),brand:item.brand,product:item.product.trim(),model:item.model.trim()||undefined,quantity:item.quantity,serviceRequired:item.service,installationRequired:item.install,takeBackOldProduct:item.old}))
     })
   }
-  return <Modal onClose={onClose}><form onSubmit={submit} className="deliveryEntry">
-    <PageHead tag="YENİ TESLİMAT" title="Mağazada bir kez doğru gir, servis personeli aynısını görsün." text="Kağıttaki günlük listeyi dijitale çeviriyoruz: müşteri, telefon, ürün, adres, personel ve özel not."/>
+
+  return <Modal onClose={onClose}><form onSubmit={submit} className="deliveryEntry deliveryEntryV2">
+    <PageHead tag="YENİ TESLİMAT" title="Müşteri + ürün + adres + personel" text="Mağazada tek kez eksiksiz gir; servis personeli telefonda aynı bilgileri ve haritayı görsün."/>
+
     <div className="entryCompleteness">
       <span className={complete.customer?"done":""}><i>{complete.customer?<Check/>:"1"}</i>Müşteri</span>
       <span className={complete.address?"done":""}><i>{complete.address?<Check/>:"2"}</i>Adres</span>
@@ -514,7 +783,8 @@ function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSa
     </div>
 
     <section className="entrySection">
-      <div className="entrySectionTitle"><span><UserRound/></span><div><b>Müşteri bilgileri</b><small>Servis personelinin arayacağı kişi</small></div></div>
+      <div className="entrySectionTitle"><span><UserRound/></span><div><b>Müşteri</b><small>Yeni müşteri yaz veya geçmiş kayıttan tek tıkla doldur</small></div><button type="button" className="soft reuseCustomer" onClick={()=>setCustomerOpen(v=>!v)}><Search/>Geçmiş müşteri</button></div>
+      {customerOpen?<div className="customerSuggestions">{customerSuggestions.length?customerSuggestions.map(d=><button type="button" key={d.id} onClick={()=>chooseCustomer(d)}><i>{initials(d.customerName)}</i><p><b>{d.customerName}</b><small>{d.phone} • {d.district}</small></p><ChevronRight/></button>):<span>Uygun geçmiş müşteri bulunamadı.</span>}</div>:null}
       <div className="form">
         <Field label="Ad soyad *" v={f.name} set={v=>set("name",v)} placeholder="Müşteri adı ve soyadı"/>
         <Field label="Telefon *" v={f.phone} set={v=>set("phone",v)} placeholder="05xx xxx xx xx" inputMode="tel"/>
@@ -523,24 +793,25 @@ function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSa
     </section>
 
     <section className="entrySection">
-      <div className="entrySectionTitle"><span><MapPin/></span><div><b>Teslimat adresi</b><small>Mahalle, sokak ve bina bilgisi eksik kalmasın</small></div></div>
+      <div className="entrySectionTitle"><span><MapPin/></span><div><b>Teslimat adresi</b><small>Servis personelinin haritada açacağı açık adres</small></div></div>
       <div className="form">
         <Field label="Açık adres *" v={f.address} set={v=>set("address",v)} placeholder="Mahalle, cadde/sokak, bina no, kat/daire..." wide/>
         <Field label="İlçe *" v={f.district} set={v=>set("district",v)} placeholder="İlçe"/>
         <Field label="Şehir" v={f.city} set={v=>set("city",v)} placeholder="İstanbul"/>
       </div>
+      {f.address.trim().length>=6?<AddressMap address={f.address} district={f.district} city={f.city}/>:<div className="addressHint"><MapPin/><span>Adres yazınca harita önizlemesi burada açılır; servis personeli de aynı konumu görür.</span></div>}
     </section>
 
     <section className="entrySection">
-      <div className="entrySectionTitle productTitle"><span><PackageCheck/></span><div><b>Ürünler ve yapılacak işlem</b><small>Aynı müşteride birden fazla ürün varsa ayrı satır ekle</small></div><button type="button" className="soft" onClick={addItem}><Plus size={15}/>Ürün ekle</button></div>
+      <div className="entrySectionTitle productTitle"><span><PackageSearch/></span><div><b>Ürünler</b><small>{catalog.length?catalog.length+" Altus modeli hazır • ":""}Model seç veya manuel ürün gir</small></div><button type="button" className="soft" onClick={addItem}><Plus/>Ürün ekle</button></div>
       <div className="entryItems">
-        {items.map((item,index)=><div className="entryItem" key={item.id}>
-          <div className="entryItemHead"><b>Ürün {index+1}</b>{items.length>1?<button type="button" onClick={()=>removeItem(item.id)}><Trash2 size={14}/>Sil</button>:null}</div>
+        {items.map((item,index)=><div className="entryItem entryItemV2" key={item.id}>
+          <div className="entryItemHead"><b>Ürün {index+1}</b>{items.length>1?<button type="button" onClick={()=>removeItem(item.id)}><Trash2/>Sil</button>:null}</div>
           <div className="quickProducts">{quickProducts.map(x=><button type="button" className={item.product===x?"on":""} key={x} onClick={()=>setItem(item.id,{product:x})}>{x}</button>)}</div>
-          <div className="form">
+          <div className="form productEntryGrid">
             <Select label="Marka" v={item.brand} set={v=>setItem(item.id,{brand:v})} opts={["ALTUS","BEKO","GRUNDIG","REGAL","HOOVER","PROFILO","KUMTEL","DİĞER"]}/>
-            <Field label="Ürün *" v={item.product} set={v=>setItem(item.id,{product:v})} placeholder="Örn. Buzdolabı"/>
-            <Field label="Model / kod" v={item.model} set={v=>setItem(item.id,{model:v})} placeholder="Örn. AL 413 P"/>
+            <Field label="Ürün türü *" v={item.product} set={v=>setItem(item.id,{product:v})} placeholder="Örn. Buzdolabı"/>
+            <label className="catalogModelField"><span>Model / kod</span><input list={"catalog-"+item.id} value={item.model} placeholder="Örn. AL 413 P" onChange={e=>chooseCatalog(item.id,e.target.value)}/><datalist id={"catalog-"+item.id}>{catalogFor(item).map(row=><option value={row.model} key={row.id}>{row.productName}</option>)}</datalist></label>
             <label><span>Adet</span><input type="number" min="1" max="20" value={item.quantity} onChange={e=>setItem(item.id,{quantity:Math.max(1,Number(e.target.value)||1)})}/></label>
           </div>
           <div className="options">
@@ -553,7 +824,7 @@ function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSa
     </section>
 
     <section className="entrySection">
-      <div className="entrySectionTitle"><span><Truck/></span><div><b>Planlama ve personel</b><small>Kimin götüreceği ve mağazanın özel notu</small></div></div>
+      <div className="entrySectionTitle"><span><Truck/></span><div><b>Planlama ve personel</b><small>Kimin götüreceğini seç; seçilen personelin telefonuna görev bildirimi gönderilir</small></div></div>
       <div className="form">
         <div className="assigneeField wide">
           <span>Servis / sevkiyat personeli *</span>
@@ -565,19 +836,18 @@ function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSa
         <Field label="Teslim tarihi" v={f.date} set={v=>set("date",v)} type="date"/>
         <Select label="Saat aralığı" v={f.time} set={v=>set("time",v)} opts={["09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"]}/>
         <Select label="Öncelik" v={f.priority} set={v=>set("priority",v)} opts={["normal","high","critical"]}/>
-        <Field label="Mağaza notu / unutulmaması gereken" v={f.notes} set={v=>set("notes",v)} placeholder="Örn. Eski bulaşık makinesi geri alınacak, teslimden önce ara." wide/>
+        <Field label="Mağaza notu / unutulmaması gereken" v={f.notes} set={v=>set("notes",v)} placeholder="Örn. Eski ürün geri alınacak; teslimden önce müşteri aranacak." wide/>
       </div>
     </section>
 
-    <div className="entryReview">
-      <div><small>KAYIT ÖZETİ</small><b>{f.name||"Müşteri adı"} • {items.filter(x=>x.product).map(x=>x.product).join(", ")||"Ürün girilmedi"}</b><span>{f.address||"Adres girilmedi"}</span></div>
+    <div className="entryReview entryReviewV2">
+      <div><small>KAYIT ÖZETİ</small><b>{f.name||"Müşteri adı"} • {items.filter(x=>x.product).map(x=>[x.product,x.model].filter(Boolean).join(" ")).join(", ")||"Ürün girilmedi"}</b><span>{f.address||"Adres girilmedi"} • {f.assignee}</span></div>
       <strong className={Object.values(complete).every(Boolean)?"ready":""}>{Object.values(complete).filter(Boolean).length}/4 hazır</strong>
     </div>
     {err?<div className="error">{err}</div>:null}
-    <div className="modalActions"><button type="button" className="soft" onClick={onClose}>Vazgeç</button><button className="primary"><CheckCircle2 size={17}/>Teslimatı kaydet ve personele gönder</button></div>
+    <div className="modalActions"><button type="button" className="soft" onClick={onClose}>Vazgeç</button><button className="primary"><CheckCircle2/>Teslimatı kaydet ve personele gönder</button></div>
   </form></Modal>
 }
-
 function NewStaff({onClose,onSave}:{onClose:()=>void;onSave:(s:{name:string;phone:string;email:string;password:string})=>void}){
   const [name,setName]=useState("");
   const [phone,setPhone]=useState("");
@@ -607,6 +877,15 @@ function NewStaff({onClose,onSave}:{onClose:()=>void;onSave:(s:{name:string;phon
     <div className="staffCreateInfo"><Bell/><div><b>Bildirim akışı</b><span>Hesap oluşturulur → personel telefonda giriş yapar → “Bildirimleri aç”a bir kez basar → mağazadan atanan yeni teslimatlar anında o telefona gönderilir.</span></div></div>
     <div className="modalActions"><button type="button" className="soft" onClick={onClose}>Vazgeç</button><button className="primary" disabled={!valid}><UserPlus/>Personeli ve hesabı oluştur</button></div>
   </form></Modal>
+}
+
+function AddressMap({address,district,city,compact=false}:{address:string;district:string;city:string;compact?:boolean}){
+  const query=addressText(address,district,city);
+  if(!query.trim())return null;
+  return <div className={"addressMap "+(compact?"compact":"")}>
+    <iframe title={"Harita: "+query} loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={mapEmbed(address,district,city)}/>
+    <a href={mapSearch(address,district,city)} target="_blank" rel="noreferrer"><ExternalLink/>Google Maps'te aç</a>
+  </div>
 }
 
 function Modal({children,onClose}:{children:React.ReactNode;onClose:()=>void}){return <div className="modalBg" onMouseDown={onClose}><div className="modal" onMouseDown={e=>e.stopPropagation()}><button className="modalX" aria-label="Pencereyi kapat" onClick={onClose}><X size={18}/></button>{children}</div></div>}
@@ -675,8 +954,9 @@ function Drawer({
           <div className="detailAddress">
             <b>{d.address||"Adres bilgisi girilmedi"}</b>
             <span>{d.district}, {d.city}</span>
-            <a href={map(d)} target="_blank" rel="noreferrer"><Navigation size={14}/>Haritada aç</a>
+            <a href={map(d)} target="_blank" rel="noreferrer"><Navigation size={14}/>Yol tarifi</a>
           </div>
+          <AddressMap address={d.address} district={d.district} city={d.city} compact/>
         </section>
 
         <section className="detailSection">
