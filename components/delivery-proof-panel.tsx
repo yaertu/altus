@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Check, Image as ImageIcon, LoaderCircle, PenLine, RefreshCw, Trash2, Upload } from "lucide-react";
-import { loadDeliveryProofs, uploadDeliveryProof } from "@/lib/cloud";
+import { loadDeliveryProofs, removeDeliveryProof, uploadDeliveryProof } from "@/lib/cloud";
 import type { DeliveryProof, DeliveryProofType } from "@/lib/types";
 
 export default function DeliveryProofPanel({
@@ -102,6 +102,29 @@ export default function DeliveryProofPanel({
     try{canvasRef.current?.releasePointerCapture(event.pointerId)}catch{}
   }
 
+  async function optimizePhoto(file:File){
+    if(file.size<2*1024*1024 || !file.type.match(/^image\/(jpeg|jpg|png|webp)$/i))return file;
+    try{
+      const bitmap=await createImageBitmap(file);
+      const max=1920;
+      const scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+      const width=Math.max(1,Math.round(bitmap.width*scale));
+      const height=Math.max(1,Math.round(bitmap.height*scale));
+      const canvas=document.createElement("canvas");
+      canvas.width=width;
+      canvas.height=height;
+      const ctx=canvas.getContext("2d");
+      if(!ctx){bitmap.close();return file}
+      ctx.drawImage(bitmap,0,0,width,height);
+      bitmap.close();
+      const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",.86));
+      if(!blob || blob.size>=file.size)return file;
+      return new File([blob],file.name.replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg",lastModified:Date.now()});
+    }catch{
+      return file;
+    }
+  }
+
   async function upload(file:File,type:DeliveryProofType){
     if(!cloud){
       setError("Fotoğraf ve imza kaydı için canlı Supabase bağlantısı gerekli.");
@@ -110,7 +133,8 @@ export default function DeliveryProofPanel({
     setBusy(true);
     setError("");
     try{
-      const proof=await uploadDeliveryProof(deliveryId,file,type);
+      const ready=type==="photo"?await optimizePhoto(file):file;
+      const proof=await uploadDeliveryProof(deliveryId,ready,type);
       setProofs(current=>[proof,...current]);
       onSaved?.(type);
     }catch(err:any){
@@ -143,6 +167,20 @@ export default function DeliveryProofPanel({
       setSigning(false);
     }catch(err:any){
       setError(err?.message||"İmza kaydedilemedi.");
+      setBusy(false);
+    }
+  }
+
+  async function removeProof(proof:DeliveryProof){
+    if(!window.confirm(proof.proofType==="signature"?"Müşteri imzası silinsin mi?":"Teslimat fotoğrafı silinsin mi?"))return;
+    setBusy(true);
+    setError("");
+    try{
+      await removeDeliveryProof(proof);
+      setProofs(current=>current.filter(item=>item.id!==proof.id));
+    }catch(err:any){
+      setError(err?.message||"Teslimat kanıtı silinemedi.");
+    }finally{
       setBusy(false);
     }
   }
@@ -189,13 +227,16 @@ export default function DeliveryProofPanel({
     {loading?<div className="proofLoading"><LoaderCircle className="spin"/>Kanıtlar yükleniyor…</div>:null}
 
     {!loading&&proofs.length?<div className="proofGallery">
-      {proofs.map(proof=><a className={"proofCard "+proof.proofType} href={proof.signedUrl} target="_blank" rel="noreferrer" key={proof.id}>
-        <div className="proofPreview">
-          {proof.signedUrl?<img src={proof.signedUrl} alt={proof.proofType==="signature"?"Müşteri imzası":"Teslimat fotoğrafı"}/>:<ImageIcon/>}
-          <span>{proof.proofType==="signature"?"İMZA":"FOTOĞRAF"}</span>
-        </div>
-        <p><b>{proof.proofType==="signature"?"Müşteri imzası":"Teslimat fotoğrafı"}</b><small>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(proof.createdAt))}</small></p>
-      </a>)}
+      {proofs.map(proof=><article className={"proofCard "+proof.proofType} key={proof.id}>
+        <a href={proof.signedUrl} target="_blank" rel="noreferrer">
+          <div className="proofPreview">
+            {proof.signedUrl?<img src={proof.signedUrl} alt={proof.proofType==="signature"?"Müşteri imzası":"Teslimat fotoğrafı"}/>:<ImageIcon/>}
+            <span>{proof.proofType==="signature"?"İMZA":"FOTOĞRAF"}</span>
+          </div>
+          <p><b>{proof.proofType==="signature"?"Müşteri imzası":"Teslimat fotoğrafı"}</b><small>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(proof.createdAt))}</small></p>
+        </a>
+        <button className="proofDelete" disabled={busy} onClick={()=>removeProof(proof)} aria-label="Teslimat kanıtını sil"><Trash2 size={13}/></button>
+      </article>)}
     </div>:null}
 
     {!loading&&cloud&&!proofs.length&&!error?<div className="proofEmpty"><ImageIcon/><div><b>Henüz teslimat kanıtı yok</b><span>Fotoğraf çekebilir veya müşteriden imza alabilirsin.</span></div></div>:null}
