@@ -274,7 +274,7 @@ export default function Dashboard(){
     }
   }
 
-  const authRequired=process.env.NEXT_PUBLIC_REQUIRE_AUTH==="true";
+  const authRequired=cloudAvailable() && process.env.NEXT_PUBLIC_REQUIRE_AUTH!=="false";
   if(authRequired&&cloudAvailable()&&authReady&&!signedIn) return <LoginScreen onSuccess={()=>window.location.reload()}/>;
 
   const pageTitle=mode==="office" ? (nav.find(x=>x[0]===view)?.[1]||"Kontrol Merkezi") : "Bugünkü Görevler";
