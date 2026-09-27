@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 import type { ActivityEvent, Delivery, DeliveryProof, DeliveryProofType, DeliveryStatus, Priority } from "./types";
 
 export type StaffRecord = { id: string; name: string; phone: string; userId?: string | null };
-export type Profile = { id: string; fullName: string; role: "admin" | "office" | "courier" | "viewer"; phone?: string | null; active: boolean };
+export type Profile = { id: string; fullName: string; role: "admin" | "office" | "courier" | "viewer"; phone?: string | null; active: boolean };\nexport type AppNotification = { id:string; deliveryId?:string; kind:"assignment"|"reassignment"|"system"; title:string; body:string; readAt?:string; createdAt:string };
 
 const blankChecklist = {
   addressVerified: false,
@@ -51,6 +51,18 @@ function eventFromRow(row: any): ActivityEvent {
   };
 }
 
+
+function notificationFromRow(row:any): AppNotification {
+  return {
+    id:row.id,
+    deliveryId:row.delivery_id || undefined,
+    kind:row.kind,
+    title:row.title,
+    body:row.body,
+    readAt:row.read_at || undefined,
+    createdAt:row.created_at
+  };
+}
 
 function proofFromRow(row:any, signedUrl:string): DeliveryProof {
   return {
@@ -170,6 +182,38 @@ export async function removeCloudDelivery(id: string) {
   if (!supabase) return;
   const { error } = await supabase.from("deliveries").delete().eq("id",id);
   if (error) throw error;
+}
+
+export async function loadMyNotifications(limit=30): Promise<AppNotification[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id,delivery_id,kind,title,body,read_at,created_at")
+    .order("created_at",{ascending:false})
+    .limit(limit);
+  if (error) throw error;
+  return (data||[]).map(notificationFromRow);
+}
+
+export async function markNotificationRead(id:string) {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from("notifications")
+    .update({read_at:new Date().toISOString()})
+    .eq("id",id);
+  if (error) throw error;
+}
+
+export function subscribeMyNotifications(userId:string,onNotification:(notification:AppNotification)=>void): RealtimeChannel | null {
+  if (!supabase) return null;
+  return supabase.channel("yaa-notifications-"+userId)
+    .on("postgres_changes",{
+      event:"INSERT",
+      schema:"public",
+      table:"notifications",
+      filter:"user_id=eq."+userId
+    },payload=>onNotification(notificationFromRow(payload.new)))
+    .subscribe();
 }
 
 export async function loadDeliveryProofs(deliveryId:string): Promise<DeliveryProof[]> {
