@@ -6186,3 +6186,6 @@ button.sheetCell{cursor:pointer}
     padding:14px;
   }
 }
+
+.serviceFact.address{background:#f8fbff}
+.sheetHead .colOpen{justify-content:center;padding:0}
