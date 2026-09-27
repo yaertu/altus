@@ -21,7 +21,7 @@ import {
   signOut, subscribeCloud, subscribeMyNotifications, unsubscribeCloud,
   type AppNotification, type Profile
 } from "@/lib/cloud";
-import { enablePushNotifications, sendAssignmentPush } from "@/lib/push";
+import { enablePushNotifications, sendAssignmentPush, syncPushSubscription } from "@/lib/push";
 
 type View = "dashboard" | "deliveries" | "staff" | "customers" | "checklists" | "planning" | "logs" | "settings";
 type Staff = { id: string; name: string; phone: string; userId?: string | null };
@@ -112,7 +112,11 @@ export default function Dashboard(){
         const p=await getMyProfile();
         if(!alive)return;
         setProfile(p);
-        if(p?.role==="courier"){ setMode("courier"); setCourier(p.fullName); }
+        if(p?.role==="courier"){
+          setMode("courier");
+          setCourier(p.fullName);
+          syncPushSubscription().then(ok=>{if(ok)setNotify(true)}).catch(()=>undefined);
+        }
         await refresh();
         const inbox=await loadMyNotifications().catch(()=>[]);
         if(!alive)return;
@@ -204,7 +208,7 @@ export default function Dashboard(){
   function pushResultMessage(reason?:string){
     if(reason==="no_target")return "Personelin kullanıcı hesabı henüz bu personele bağlı değil.";
     if(reason==="no_subscription")return "Personel hesabı bağlı ama bu telefonda bildirimler henüz açılmamış.";
-    if(reason==="push_not_configured")return "Arka plan bildirimi için VAPID / sunucu anahtarları henüz tamamlanmamış.";
+    if(reason==="push_not_configured")return "Arka plan bildirim servisi henüz hazır değil.";
     if(reason==="login_required")return "Bildirim göndermek için mağaza hesabıyla giriş gerekli.";
     return "Görev kaydedildi; arka plan bildiriminin ulaştığı doğrulanamadı.";
   }
