@@ -5,6 +5,23 @@ import type { ActivityEvent, Delivery, DeliveryProof, DeliveryProofType, Deliver
 export type StaffRecord = { id: string; name: string; phone: string; userId?: string | null };
 export type Profile = { id: string; fullName: string; role: "admin" | "office" | "courier" | "viewer"; phone?: string | null; active: boolean };
 export type AppNotification = { id:string; deliveryId?:string; kind:"assignment"|"reassignment"|"system"; title:string; body:string; readAt?:string; createdAt:string };
+export type AppSettings = {
+  storeName:string;
+  storeSubtitle:string;
+  storePhone:string;
+  storeAddress:string;
+  storeCity:string;
+  logoUrl:string;
+  updatedAt?:string;
+};
+export type ProductCatalogItem = {
+  id:string;
+  brand:string;
+  category:string;
+  model:string;
+  productName:string;
+  sourceUrl?:string;
+};
 
 const blankChecklist = {
   addressVerified: false,
@@ -115,6 +132,94 @@ export async function getMyProfile(): Promise<Profile | null> {
   if (error) throw error;
   if (!data) return null;
   return { id:data.id, fullName:data.full_name, role:data.role, phone:data.phone, active:data.active };
+}
+
+export async function loadAppSettings(): Promise<AppSettings> {
+  const fallback:AppSettings={
+    storeName:"ALTUS Mağazası",
+    storeSubtitle:"Teslimat & Servis",
+    storePhone:"",
+    storeAddress:"",
+    storeCity:"İstanbul",
+    logoUrl:""
+  };
+  if(!supabase)return fallback;
+  const {data,error}=await supabase
+    .from("app_settings")
+    .select("store_name,store_subtitle,store_phone,store_address,store_city,logo_url,updated_at")
+    .eq("id","default")
+    .maybeSingle();
+  if(error)throw error;
+  if(!data)return fallback;
+  return {
+    storeName:data.store_name||fallback.storeName,
+    storeSubtitle:data.store_subtitle||fallback.storeSubtitle,
+    storePhone:data.store_phone||"",
+    storeAddress:data.store_address||"",
+    storeCity:data.store_city||fallback.storeCity,
+    logoUrl:data.logo_url||"",
+    updatedAt:data.updated_at||undefined
+  };
+}
+
+export async function updateAppSettings(input:AppSettings): Promise<AppSettings> {
+  if(!supabase)throw new Error("Supabase yapılandırılmamış.");
+  const {data,error}=await supabase
+    .from("app_settings")
+    .upsert({
+      id:"default",
+      store_name:input.storeName.trim()||"ALTUS Mağazası",
+      store_subtitle:input.storeSubtitle.trim()||"Teslimat & Servis",
+      store_phone:input.storePhone.trim()||null,
+      store_address:input.storeAddress.trim()||null,
+      store_city:input.storeCity.trim()||"İstanbul",
+      logo_url:input.logoUrl.trim()||null,
+      updated_at:new Date().toISOString()
+    },{onConflict:"id"})
+    .select("store_name,store_subtitle,store_phone,store_address,store_city,logo_url,updated_at")
+    .single();
+  if(error)throw error;
+  return {
+    storeName:data.store_name,
+    storeSubtitle:data.store_subtitle,
+    storePhone:data.store_phone||"",
+    storeAddress:data.store_address||"",
+    storeCity:data.store_city||"İstanbul",
+    logoUrl:data.logo_url||"",
+    updatedAt:data.updated_at
+  };
+}
+
+export async function uploadStoreLogo(file:File): Promise<string> {
+  if(!supabase)throw new Error("Logo yüklemek için Supabase bağlantısı gerekli.");
+  if(!file.type.startsWith("image/"))throw new Error("Logo dosyası görsel olmalı.");
+  if(file.size>5*1024*1024)throw new Error("Logo 5 MB sınırını aşıyor.");
+  const ext=(file.name.split(".").pop()||file.type.split("/")[1]||"png").replace(/[^a-z0-9]/gi,"").toLowerCase()||"png";
+  const path="logos/store-"+Date.now()+"."+ext;
+  const {error}=await supabase.storage.from("store-assets").upload(path,file,{contentType:file.type,upsert:false,cacheControl:"3600"});
+  if(error)throw error;
+  const {data}=supabase.storage.from("store-assets").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function loadProductCatalog(): Promise<ProductCatalogItem[]> {
+  if(!supabase)return [];
+  const {data,error}=await supabase
+    .from("product_catalog")
+    .select("id,brand,category,model,product_name,source_url")
+    .eq("active",true)
+    .order("category")
+    .order("model")
+    .limit(500);
+  if(error)throw error;
+  return (data||[]).map((row:any)=>({
+    id:row.id,
+    brand:row.brand,
+    category:row.category,
+    model:row.model,
+    productName:row.product_name,
+    sourceUrl:row.source_url||undefined
+  }));
 }
 
 export async function loadCloudData() {
@@ -323,6 +428,7 @@ export function subscribeCloud(onChange:()=>void): RealtimeChannel | null {
     .on("postgres_changes",{event:"*",schema:"public",table:"deliveries"},onChange)
     .on("postgres_changes",{event:"*",schema:"public",table:"staff"},onChange)
     .on("postgres_changes",{event:"*",schema:"public",table:"delivery_events"},onChange)
+    .on("postgres_changes",{event:"*",schema:"public",table:"app_settings"},onChange)
     .subscribe();
 }
 
