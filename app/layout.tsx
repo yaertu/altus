@@ -17,7 +17,7 @@ const mono = Roboto_Mono({
 const themeBoot = `
 (function(){
   try{
-    var key="yaateslimat:theme:v5";
+    var key="yaateslimat:theme:v6";
     var saved=localStorage.getItem(key);
     var theme="light";
     var root=document.documentElement;
@@ -29,8 +29,8 @@ const themeBoot = `
 `;
 
 export const metadata: Metadata = {
-  title: "yaaTeslimat | Sevkiyat Yönetimi",
-  description: "Dükkan ve saha ekibi için canlı teslimat, sevkiyat ve kontrol yönetimi.",
+  title: "yaaTeslimat | Mağaza & Servis Teslimat Takibi",
+  description: "Mağaza ve servis personeli için müşteri, ürün, adres, teslimat ve kontrol yönetimi.",
   applicationName: "yaaTeslimat",
   appleWebApp: {
     capable: true,
