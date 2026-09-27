@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import {
   AlertTriangle, BellRing, CheckCircle2, ChevronRight, Clock3, Gauge,
   GripVertical, MapPin, PackageCheck, Phone, Plus, Route, ShieldAlert,
-  Sparkles, Truck, UserCheck, UserPlus, UsersRound
+  Sparkles, Truck, UserCheck, UserPlus, UsersRound, Zap
 } from "lucide-react";
 import type { Delivery } from "@/lib/types";
 import WebIcon from "./web-icon";
@@ -86,6 +86,7 @@ export default function OperationsCenter({
   const missing=operational.filter(d=>missingFields(d).length>0 && !["completed","issue"].includes(d.status));
   const completed=operational.filter(d=>d.date===today&&d.status==="completed");
   const active=operational.filter(d=>!["completed","issue"].includes(d.status));
+  const onRoute=operational.filter(d=>d.status==="on_route");
   const completionRate=operational.length ? Math.round((completed.length/operational.length)*100) : 0;
 
   const visible=operational.filter(d=>{
@@ -96,15 +97,15 @@ export default function OperationsCenter({
   });
 
   const waiting=visible.filter(d=>["new","assigned","seen"].includes(d.status));
-  const onRoute=visible.filter(d=>d.status==="on_route");
+  const route=visible.filter(d=>d.status==="on_route");
   const done=visible.filter(d=>d.status==="completed");
   const issues=visible.filter(d=>d.status==="issue");
 
   const groups=[
-    {key:"waiting",title:"Bekliyor",subtitle:"Yeni, atandı veya görüldü",tone:"wait",icon:<Clock3/>,list:waiting},
-    {key:"route",title:"Yolda",subtitle:"Sahaya çıkan teslimatlar",tone:"route",icon:<Route/>,list:onRoute},
-    {key:"done",title:"Tamamlandı",subtitle:"Bugün kapanan işler",tone:"done",icon:<CheckCircle2/>,list:done},
-    {key:"problem",title:"Sorun",subtitle:"Müdahale bekleyen işler",tone:"problem",icon:<AlertTriangle/>,list:issues}
+    {key:"waiting",title:"Bekleyen işler",subtitle:"Yeni, atanmış veya görüldü",tone:"wait",icon:<Clock3/>,list:waiting},
+    {key:"route",title:"Yoldaki işler",subtitle:"Sahaya çıkan teslimatlar",tone:"route",icon:<Route/>,list:route},
+    {key:"done",title:"Tamamlananlar",subtitle:"Bugün başarıyla kapanan işler",tone:"done",icon:<CheckCircle2/>,list:done},
+    {key:"problem",title:"Sorunlu işler",subtitle:"Operasyon müdahalesi bekleyenler",tone:"problem",icon:<AlertTriangle/>,list:issues}
   ];
 
   function dropTo(staffMember:StaffLite|null){
@@ -115,34 +116,41 @@ export default function OperationsCenter({
   }
 
   return <div className="opsDashboard">
-    <section className="metricRibbon">
-      <article className="metricLead">
-        <div className="metricLeadTop">
-          <span className="liveLabel"><i/>{cloud?"Canlı senkron":"Yerel çalışma"}</span>
-          <span className="clockLabel">{new Intl.DateTimeFormat("tr-TR",{hour:"2-digit",minute:"2-digit"}).format(now)}</span>
+    <section className="opsHero">
+      <div className="opsHeroCopy">
+        <span className="sectionEyebrow"><Sparkles/>OPERASYON MASASI</span>
+        <h2>Bugünün sevkiyat akışını tek ekrandan yönet.</h2>
+        <p>Riskli teslimatları öne çıkar, personeli hızlı ata ve sahadaki hareketi anlık takip et.</p>
+        <div className="opsHeroActions">
+          <button className="primary" onClick={onNew}><Plus/>Yeni teslimat</button>
+          <button className="soft" onClick={onStaff}><UserPlus/>Personel ekle</button>
+          <span className="heroStatus"><i/>{cloud?"Canlı bulut bağlantısı":"Yerel çalışma modu"}</span>
         </div>
-        <div className="metricLeadBody">
-          <div className="progressRing" style={{"--progress":`${completionRate}%`} as CSSProperties}><b>%{completionRate}</b></div>
-          <div><small>BUGÜNÜN İLERLEMESİ</small><h2>{completed.length}<span> / {operational.length}</span></h2><p>Tamamlanan teslimat</p></div>
+      </div>
+      <div className="opsHeroPulse">
+        <div className="pulseRing" style={{"--progress":`${completionRate}%`} as CSSProperties}><span><b>%{completionRate}</b><small>Tamamlandı</small></span></div>
+        <div className="pulseStats">
+          <p><b>{active.length}</b><span>Aktif iş</span></p>
+          <p><b>{onRoute.length}</b><span>Yolda</span></p>
+          <p><b>{completed.length}</b><span>Tamam</span></p>
         </div>
-        <div className="metricLeadFoot">
-          <span><Truck/>{active.length} aktif iş</span>
-          <span><UserCheck/>{operational.filter(d=>["seen","on_route","completed"].includes(d.status)).length} görüldü</span>
-        </div>
-      </article>
+      </div>
+    </section>
 
+    <section className="metricRibbon">
+      <MetricCard tone="neutral" icon={<Truck/>} value={operational.length} title="Bugünkü operasyon" text="Bugüne ait veya gecikmiş işler" onClick={()=>setFocus("all")} active={focus==="all"}/>
       <MetricCard tone="danger" icon={<Clock3/>} value={overdue.length} title="Geciken" text="Planlanan süre aşıldı" onClick={()=>setFocus("overdue")} active={focus==="overdue"}/>
       <MetricCard tone="warning" icon={<BellRing/>} value={unseen.length} title="Görülmedi" text="15 dakikadır yanıt yok" onClick={()=>setFocus("unseen")} active={focus==="unseen"}/>
-      <MetricCard tone="violet" icon={<ShieldAlert/>} value={missing.length} title="Eksik Bilgi" text="Telefon, adres veya atama" onClick={()=>setFocus("missing")} active={focus==="missing"}/>
+      <MetricCard tone="violet" icon={<ShieldAlert/>} value={missing.length} title="Eksik bilgi" text="Telefon, adres veya atama eksik" onClick={()=>setFocus("missing")} active={focus==="missing"}/>
     </section>
 
     <div className="opsWorkspace">
       <section className="queuePanel">
         <div className="queueHeader">
           <div>
-            <span className="sectionEyebrow"><Sparkles/>BUGÜNÜN OPERASYONU</span>
-            <h3>{focus==="all"?"Teslimat kuyruğu":focus==="overdue"?"Geciken teslimatlar":focus==="unseen"?"Henüz görülmeyen görevler":"Eksik bilgili kayıtlar"}</h3>
-            <p>Boş kolonlar yerine yalnız gerçek işleri gösterir. Kartı aç, personeli değiştir veya masaüstünde sağdaki atama alanına sürükle.</p>
+            <span className="sectionEyebrow"><Zap/>AKTİF KUYRUK</span>
+            <h3>{focus==="all"?"Teslimat akışı":focus==="overdue"?"Geciken teslimatlar":focus==="unseen"?"Henüz görülmeyen görevler":"Eksik bilgili kayıtlar"}</h3>
+            <p>Yalnızca gerçek işlerin olduğu gruplar gösterilir. Kartı açabilir, personeli değiştirebilir veya masaüstünde sağdaki atama alanına sürükleyebilirsin.</p>
           </div>
           <div className="focusTabs" role="tablist" aria-label="Operasyon filtresi">
             <button className={focus==="all"?"on":""} onClick={()=>setFocus("all")}>Tümü <b>{operational.length}</b></button>
@@ -150,13 +158,6 @@ export default function OperationsCenter({
             <button className={focus==="unseen"?"on warning":""} onClick={()=>setFocus("unseen")}>Görülmedi <b>{unseen.length}</b></button>
             <button className={focus==="missing"?"on warning":""} onClick={()=>setFocus("missing")}>Eksik <b>{missing.length}</b></button>
           </div>
-        </div>
-
-        <div className="statusStrip" aria-label="Teslimat durum özeti">
-          <StatusPill tone="wait" icon={<Clock3/>} label="Bekliyor" value={waiting.length}/>
-          <StatusPill tone="route" icon={<Route/>} label="Yolda" value={onRoute.length}/>
-          <StatusPill tone="done" icon={<CheckCircle2/>} label="Tamamlandı" value={done.length}/>
-          <StatusPill tone="problem" icon={<AlertTriangle/>} label="Sorun" value={issues.length}/>
         </div>
 
         <div className="queueContent">
@@ -174,22 +175,26 @@ export default function OperationsCenter({
               onAssign={onAssign}
               onDragStart={setDragId}
             />
-          ) : <div className="queueEmpty"><PackageCheck/><b>Gösterilecek teslimat yok</b><span>Seçili filtre için operasyon kuyruğu temiz.</span></div>}
+          ) : <div className="queueEmpty"><PackageCheck/><b>Operasyon kuyruğu temiz</b><span>Bu filtre için gösterilecek teslimat bulunmuyor.</span></div>}
         </div>
       </section>
 
       <aside className="controlRail">
-        <section className="railCard quickRail">
-          <div className="railHead"><span><Plus/></span><div><b>Hızlı İşlemler</b><small>Dükkanda en sık yapılanlar</small></div></div>
-          <button className="railPrimary" onClick={onNew}><Plus/><span><b>Teslimat oluştur</b><small>Müşteri + ürün + personel</small></span><ChevronRight/></button>
-          <button className="railAction" onClick={onStaff}><UserPlus/><span><b>Personel ekle</b><small>Saha ekibini güncelle</small></span><ChevronRight/></button>
+        <section className="railCard commandRail">
+          <div className="railHead"><span><Gauge/></span><div><b>Canlı özet</b><small>Bugünkü operasyon durumu</small></div></div>
+          <div className="commandMetrics">
+            <div><small>AKTİF</small><b>{active.length}</b></div>
+            <div><small>YOLDA</small><b>{onRoute.length}</b></div>
+            <div><small>TAMAM</small><b>{completed.length}</b></div>
+            <div><small>SORUN</small><b>{operational.filter(d=>d.status==="issue").length}</b></div>
+          </div>
         </section>
 
         <section className="railCard staffRail">
-          <div className="railHead"><span><UsersRound/></span><div><b>Atama Merkezi</b><small>Kartı personelin üstüne bırak</small></div><em>{staff.length}</em></div>
+          <div className="railHead"><span><UsersRound/></span><div><b>Atama merkezi</b><small>Kartı personelin üstüne bırak</small></div><em>{staff.length}</em></div>
           <div className="staffTargets">
             <button className="staffTarget unassigned" onDragOver={e=>e.preventDefault()} onDrop={()=>dropTo(null)}>
-              <span>?</span><p><b>Atanmamış</b><small>Görevi havuza geri bırak</small></p>
+              <span>?</span><p><b>Atanmamış</b><small>Görevi ortak havuza bırak</small></p>
             </button>
             {staff.map(person=><button key={person.id} className="staffTarget" onDragOver={e=>e.preventDefault()} onDrop={()=>dropTo(person)}>
               <span>{initials(person.name)}</span>
@@ -200,14 +205,10 @@ export default function OperationsCenter({
           </div>
         </section>
 
-        <section className="railCard healthRail">
-          <div className="railHead"><span><Gauge/></span><div><b>Günün Sağlığı</b><small>Operasyon kısa özeti</small></div></div>
-          <div className="healthList">
-            <div><span className="healthIcon route"><Route/></span><p><b>{onRoute.length}</b><small>şu an yolda</small></p></div>
-            <div><span className="healthIcon done"><CheckCircle2/></span><p><b>{completed.length}</b><small>teslim edildi</small></p></div>
-            <div><span className="healthIcon seen"><Phone/></span><p><b>{operational.filter(d=>d.checklist.customerCalled).length}</b><small>müşteri arandı</small></p></div>
-            <div><span className="healthIcon alert"><AlertTriangle/></span><p><b>{issues.length}</b><small>sorun bekliyor</small></p></div>
-          </div>
+        <section className="railCard quickRail">
+          <div className="railHead"><span><Plus/></span><div><b>Hızlı işlemler</b><small>En sık kullanılan aksiyonlar</small></div></div>
+          <button className="railPrimary" onClick={onNew}><Plus/><span><b>Teslimat oluştur</b><small>Müşteri + ürün + personel</small></span><ChevronRight/></button>
+          <button className="railAction" onClick={onStaff}><UserPlus/><span><b>Personel ekle</b><small>Saha ekibini güncelle</small></span><ChevronRight/></button>
         </section>
       </aside>
     </div>
@@ -220,10 +221,6 @@ function MetricCard({tone,icon,value,title,text,onClick,active}:{tone:string;ico
     <div><b>{value}</b><strong>{title}</strong><small>{text}</small></div>
     <ChevronRight className="metricArrow"/>
   </button>;
-}
-
-function StatusPill({tone,icon,label,value}:{tone:string;icon:ReactNode;label:string;value:number}){
-  return <div className={"statusPill "+tone}><span>{icon}</span><p><b>{label}</b><small>{value} kayıt</small></p><strong>{value}</strong></div>;
 }
 
 function QueueGroup({
