@@ -62,7 +62,6 @@ export default function OperationsCenter({
   const overdue=carryover;
   const missing=queue.filter(d=>missingFields(d).length>0&&!["completed","issue"].includes(d.status));
   const done=todays.filter(d=>d.status==="completed");
-  const issues=todays.filter(d=>d.status==="issue");
 
   const visible=queue.filter(d=>{
     if(focus==="open"&&["completed","issue"].includes(d.status))return false;
