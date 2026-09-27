@@ -52,7 +52,7 @@ export default function Dashboard(){
   const [requireChecks,setRequireChecks]=useState(true), [query,setQuery]=useState(""), [filter,setFilter]=useState<"all"|DeliveryStatus>("all");
   const [cloud,setCloud]=useState(false), [cloudError,setCloudError]=useState(""), [profile,setProfile]=useState<Profile|null>(null), [signedIn,setSignedIn]=useState(false), [authReady,setAuthReady]=useState(!cloudAvailable());
   const [online,setOnline]=useState(true);
-  const [notifications,setNotifications]=useState<AppNotification[]>([]);
+  const [inboxNotifications,setInboxNotifications]=useState<AppNotification[]>([]);
   const [notificationOpen,setNotificationOpen]=useState(false);
   const [actionNotice,setActionNotice]=useState<{text:string;tone:"ok"|"warn"}|null>(null);
   const [pendingDeliveryId,setPendingDeliveryId]=useState("");
@@ -116,11 +116,11 @@ export default function Dashboard(){
         await refresh();
         const inbox=await loadMyNotifications().catch(()=>[]);
         if(!alive)return;
-        setNotifications(inbox);
+        setInboxNotifications(inbox);
         setCloud(true);
         channel=subscribeCloud(()=>{ refresh().catch(()=>undefined); });
         notificationChannel=subscribeMyNotifications(user.id,(notification)=>{
-          setNotifications(current=>[notification,...current.filter(item=>item.id!==notification.id)].slice(0,30));
+          setInboxNotifications(current=>[notification,...current.filter(item=>item.id!==notification.id)].slice(0,30));
           setActionNotice({text:notification.title+" • "+notification.body,tone:"ok"});
         });
       }catch(err:any){
@@ -335,14 +335,14 @@ export default function Dashboard(){
           {mode==="courier"&&profile?.role!=="courier"?<label className="select courierSelect"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}
           <div className="notifyWrap">
             <button className="iconButton notifyButton" aria-label="Bildirimler" onClick={()=>setNotificationOpen(v=>!v)}>
-              <Bell size={18}/>{notifications.some(n=>!n.readAt)?<i/>:notify?<i className="ready"/>:null}
-              {notifications.filter(n=>!n.readAt).length?<b>{Math.min(9,notifications.filter(n=>!n.readAt).length)}</b>:null}
+              <Bell size={18}/>{inboxNotifications.some(n=>!n.readAt)?<i/>:notify?<i className="ready"/>:null}
+              {inboxNotifications.filter(n=>!n.readAt).length?<b>{Math.min(9,inboxNotifications.filter(n=>!n.readAt).length)}</b>:null}
             </button>
             {notificationOpen?<div className="notificationTray">
-              <div className="notificationTrayHead"><div><b>Bildirimler</b><span>{notifications.filter(n=>!n.readAt).length} okunmamış</span></div><button onClick={notifications}><Bell size={14}/>{notify?"Cihaz açık":"Bildirimleri aç"}</button></div>
+              <div className="notificationTrayHead"><div><b>Bildirimler</b><span>{inboxNotifications.filter(n=>!n.readAt).length} okunmamış</span></div><button onClick={notifications}><Bell size={14}/>{notify?"Cihaz açık":"Bildirimleri aç"}</button></div>
               <div className="notificationTrayList">
-                {notifications.length?notifications.slice(0,10).map(item=><button className={item.readAt?"":"unread"} key={item.id} onClick={async()=>{
-                  if(!item.readAt){await markNotificationRead(item.id).catch(()=>undefined);setNotifications(current=>current.map(n=>n.id===item.id?{...n,readAt:new Date().toISOString()}:n))}
+                {inboxNotifications.length?inboxNotifications.slice(0,10).map(item=><button className={item.readAt?"":"unread"} key={item.id} onClick={async()=>{
+                  if(!item.readAt){await markNotificationRead(item.id).catch(()=>undefined);setInboxNotifications(current=>current.map(n=>n.id===item.id?{...n,readAt:new Date().toISOString()}:n))}
                   if(item.deliveryId){const delivery=deliveries.find(d=>d.id===item.deliveryId);if(delivery)setSelected(delivery)}
                   setNotificationOpen(false);
                 }}><i/><p><b>{item.title}</b><span>{item.body}</span><small>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(item.createdAt))}</small></p></button>):<div className="notificationEmpty">Henüz görev bildirimi yok.</div>}
