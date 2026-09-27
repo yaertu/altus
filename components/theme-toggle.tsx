@@ -4,7 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
-const KEY = "yaateslimat:theme:v2";
+const KEY = "yaateslimat:theme:v3";
 
 function applyTheme(theme: Theme){
   const root=document.documentElement;
@@ -18,7 +18,7 @@ function applyTheme(theme: Theme){
     meta.dataset.yaaTheme="true";
     document.head.appendChild(meta);
   }
-  meta.content=theme==="dark"?"#050506":"#f4f5f7";
+  meta.content=theme==="dark"?"#08090b":"#f5f6f8";
 }
 
 export default function ThemeToggle(){
