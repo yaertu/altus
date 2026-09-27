@@ -17,8 +17,9 @@ import DeliveryProofPanel from "./delivery-proof-panel";
 import { ActivityEvent, Delivery, DeliveryStatus, Priority } from "@/lib/types";
 import {
   cloudAvailable, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
-  loadCloudData, patchDelivery, removeCloudDelivery, signOut, subscribeCloud, unsubscribeCloud,
-  type Profile
+  loadCloudData, loadMyNotifications, markNotificationRead, patchDelivery, removeCloudDelivery,
+  signOut, subscribeCloud, subscribeMyNotifications, unsubscribeCloud,
+  type AppNotification, type Profile
 } from "@/lib/cloud";
 import { enablePushNotifications, sendAssignmentPush } from "@/lib/push";
 
@@ -51,6 +52,10 @@ export default function Dashboard(){
   const [requireChecks,setRequireChecks]=useState(true), [query,setQuery]=useState(""), [filter,setFilter]=useState<"all"|DeliveryStatus>("all");
   const [cloud,setCloud]=useState(false), [cloudError,setCloudError]=useState(""), [profile,setProfile]=useState<Profile|null>(null), [signedIn,setSignedIn]=useState(false), [authReady,setAuthReady]=useState(!cloudAvailable());
   const [online,setOnline]=useState(true);
+  const [notifications,setNotifications]=useState<AppNotification[]>([]);
+  const [notificationOpen,setNotificationOpen]=useState(false);
+  const [actionNotice,setActionNotice]=useState<{text:string;tone:"ok"|"warn"}|null>(null);
+  const [pendingDeliveryId,setPendingDeliveryId]=useState("");
   const searchRef=useRef<HTMLInputElement|null>(null);
 
   useEffect(()=>{ try{
@@ -65,7 +70,9 @@ export default function Dashboard(){
     const params=new URLSearchParams(window.location.search);
     if(params.get("action")==="new-delivery") setNewOpen(true);
     if(params.get("view")==="deliveries") setView("deliveries");
-    if(params.has("action")||params.has("view")) window.history.replaceState({},"",window.location.pathname);
+    if(params.get("mode")==="courier") setMode("courier");
+    if(params.get("delivery")) setPendingDeliveryId(params.get("delivery")||"");
+    if(params.has("action")||params.has("view")||params.has("mode")||params.has("delivery")) window.history.replaceState({},"",window.location.pathname);
     const t=window.setTimeout(()=>setSplash(false),900);
     return()=>{window.clearTimeout(t);window.removeEventListener("online",goOnline);window.removeEventListener("offline",goOffline)};
   },[]);
@@ -86,6 +93,7 @@ export default function Dashboard(){
   useEffect(()=>{
     let alive=true;
     let channel:any=null;
+    let notificationChannel:any=null;
     async function refresh(){
       const data=await loadCloudData();
       if(!alive)return;
@@ -106,15 +114,36 @@ export default function Dashboard(){
         setProfile(p);
         if(p?.role==="courier"){ setMode("courier"); setCourier(p.fullName); }
         await refresh();
+        const inbox=await loadMyNotifications().catch(()=>[]);
+        if(!alive)return;
+        setNotifications(inbox);
         setCloud(true);
         channel=subscribeCloud(()=>{ refresh().catch(()=>undefined); });
+        notificationChannel=subscribeMyNotifications(user.id,(notification)=>{
+          setNotifications(current=>[notification,...current.filter(item=>item.id!==notification.id)].slice(0,30));
+          setActionNotice({text:notification.title+" • "+notification.body,tone:"ok"});
+        });
       }catch(err:any){
         if(alive){ setCloud(false); setCloudError(err?.message||"Bulut bağlantısı kurulamadı."); }
       }
     }
     connect();
-    return()=>{alive=false;unsubscribeCloud(channel)};
+    return()=>{alive=false;unsubscribeCloud(channel);unsubscribeCloud(notificationChannel)};
   },[]);
+
+  useEffect(()=>{
+    if(!pendingDeliveryId)return;
+    const delivery=deliveries.find(item=>item.id===pendingDeliveryId);
+    if(!delivery)return;
+    setSelected(delivery);
+    setPendingDeliveryId("");
+  },[pendingDeliveryId,deliveries]);
+
+  useEffect(()=>{
+    if(!actionNotice)return;
+    const timer=window.setTimeout(()=>setActionNotice(null),5200);
+    return()=>window.clearTimeout(timer);
+  },[actionNotice]);
 
   const names=useMemo(()=>Array.from(new Set(staff.map(x=>x.name).concat(deliveries.map(x=>x.assignee).filter(x=>x&&x!=="Atanmamış")))),[staff,deliveries]);
   const operationalStaff=useMemo(()=>{
@@ -172,12 +201,27 @@ export default function Dashboard(){
       else if("Notification" in window){ const p=await Notification.requestPermission(); setNotify(p==="granted"); }
     }catch(err:any){ setCloudError(err?.message||"Bildirim açılamadı."); }
   }
+  function pushResultMessage(reason?:string){
+    if(reason==="no_target")return "Personelin kullanıcı hesabı henüz bu personele bağlı değil.";
+    if(reason==="no_subscription")return "Personel hesabı bağlı ama bu telefonda bildirimler henüz açılmamış.";
+    if(reason==="push_not_configured")return "Arka plan bildirimi için VAPID / sunucu anahtarları henüz tamamlanmamış.";
+    if(reason==="login_required")return "Bildirim göndermek için mağaza hesabıyla giriş gerekli.";
+    return "Görev kaydedildi; arka plan bildiriminin ulaştığı doğrulanamadı.";
+  }
+
   async function addDelivery(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">){
     const now=new Date().toISOString();
     try{
       const rec=cloud ? await insertDelivery(d,staff) : {...d,id:id("d"),createdAt:now,updatedAt:now,status:(d.assignee==="Atanmamış"?"new":"assigned") as DeliveryStatus,checklist:{addressVerified:false,customerCalled:false,productLoaded:false,modelChecked:false,accessoriesChecked:false,returnChecked:false}};
       setDeliveries(p=>[rec,...p.filter(x=>x.id!==rec.id)]); setNewOpen(false); log("Yeni teslimat oluşturuldu",rec,rec.assignee,"created");
-      if(cloud&&rec.assignee!=="Atanmamış") sendAssignmentPush(rec.id).catch(()=>undefined);
+      if(cloud&&rec.assignee!=="Atanmamış"){
+        const push=await sendAssignmentPush(rec.id);
+        setActionNotice(push.sent
+          ? {text:"Teslimat kaydedildi • "+rec.assignee+" cihazına bildirim gönderildi.",tone:"ok"}
+          : {text:"Teslimat kaydedildi • "+pushResultMessage(push.reason),tone:"warn"});
+      }else{
+        setActionNotice({text:rec.assignee==="Atanmamış"?"Teslimat kaydedildi • Personel seçilmediği için bildirim gönderilmedi.":"Teslimat kaydedildi.",tone:"ok"});
+      }
     }catch(err:any){ setCloudError(err?.message||"Teslimat kaydedilemedi."); }
   }
   async function addStaff(s:{name:string;phone:string}){
@@ -203,7 +247,12 @@ export default function Dashboard(){
     try{
       if(cloud)await patchDelivery(d.id,{assigneeId:person?.id||null,assigneeName:person?.name||null,status:nextStatus});
       log(person?"Personel atandı":"Personel ataması kaldırıldı",updated,assignee);
-      if(cloud&&person)sendAssignmentPush(d.id).catch(()=>undefined);
+      if(cloud&&person){
+        const push=await sendAssignmentPush(d.id);
+        setActionNotice(push.sent
+          ? {text:person.name+" cihazına yeni görev bildirimi gönderildi.",tone:"ok"}
+          : {text:pushResultMessage(push.reason),tone:"warn"});
+      }
     }catch(err:any){
       setDeliveries(p=>p.map(x=>x.id===d.id?d:x));
       setSelected(s=>s?.id===d.id?d:s);
@@ -244,6 +293,7 @@ export default function Dashboard(){
                   : "Uygulama, bildirim ve cihaz ayarlarını yönet.";
 
   return <div className="app">
+    {actionNotice?<div className={"actionNotice "+actionNotice.tone}>{actionNotice.tone==="ok"?<CheckCircle2/>:<AlertTriangle/>}<span>{actionNotice.text}</span><button onClick={()=>setActionNotice(null)}><X/></button></div>:null}
     {splash&&<div className="splash"><div className="splashLogo"><Truck/></div><b>yaaTeslimat</b><span>Teslimat Takip</span><DeveloperBadge compact/></div>}
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
 
@@ -279,7 +329,22 @@ export default function Dashboard(){
         <div className="topbarRight">
           <span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"Offline":cloud?"Canlı":"Yerel"}</span>
           {mode==="courier"&&profile?.role!=="courier"?<label className="select courierSelect"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}
-          <button className="iconButton notifyButton" aria-label={notify?"Bildirimler açık":"Bildirimleri aç"} onClick={notifications}><Bell size={18}/>{notify?<i/>:null}</button>
+          <div className="notifyWrap">
+            <button className="iconButton notifyButton" aria-label="Bildirimler" onClick={()=>setNotificationOpen(v=>!v)}>
+              <Bell size={18}/>{notifications.some(n=>!n.readAt)?<i/>:notify?<i className="ready"/>:null}
+              {notifications.filter(n=>!n.readAt).length?<b>{Math.min(9,notifications.filter(n=>!n.readAt).length)}</b>:null}
+            </button>
+            {notificationOpen?<div className="notificationTray">
+              <div className="notificationTrayHead"><div><b>Bildirimler</b><span>{notifications.filter(n=>!n.readAt).length} okunmamış</span></div><button onClick={notifications}><Bell size={14}/>{notify?"Cihaz açık":"Bildirimleri aç"}</button></div>
+              <div className="notificationTrayList">
+                {notifications.length?notifications.slice(0,10).map(item=><button className={item.readAt?"":"unread"} key={item.id} onClick={async()=>{
+                  if(!item.readAt){await markNotificationRead(item.id).catch(()=>undefined);setNotifications(current=>current.map(n=>n.id===item.id?{...n,readAt:new Date().toISOString()}:n))}
+                  if(item.deliveryId){const delivery=deliveries.find(d=>d.id===item.deliveryId);if(delivery)setSelected(delivery)}
+                  setNotificationOpen(false);
+                }}><i/><p><b>{item.title}</b><span>{item.body}</span><small>{new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(item.createdAt))}</small></p></button>):<div className="notificationEmpty">Henüz görev bildirimi yok.</div>}
+              </div>
+            </div>:null}
+          </div>
           <div className="userChip"><span>{initials(profile?.fullName||courier||"Dükkan")}</span><p><b>{profile?.fullName||courier||"Dükkan"}</b><small>{profile?.role==="courier"?"Sevkiyatçı":"Operasyon"}</small></p></div>
         </div>
       </header>
@@ -319,7 +384,7 @@ export default function Dashboard(){
       <footer><span>yaaTeslimat • v1.7</span><DeveloperBadge compact/></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
-    {newOpen&&<NewDelivery staff={names} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>}
+    {newOpen&&<NewDelivery staff={operationalStaff} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>} 
     {staffOpen&&<NewStaff onClose={()=>setStaffOpen(false)} onSave={addStaff}/>} 
     {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} events={events} staff={operationalStaff} cloud={cloud} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(deliveries.find(x=>x.id===selected.id)||selected,s)} onToggle={k=>toggle(deliveries.find(x=>x.id===selected.id)||selected,k)} onAssign={person=>assignDelivery(deliveries.find(x=>x.id===selected.id)||selected,person)} onProofSaved={kind=>log(kind==="photo"?"Teslimat fotoğrafı eklendi":"Müşteri imzası eklendi",deliveries.find(x=>x.id===selected.id)||selected,undefined,"system")} onDelete={()=>remove(deliveries.find(x=>x.id===selected.id)||selected)}/>}
   </div>;
@@ -328,7 +393,7 @@ export default function Dashboard(){
 function PageHead({tag,title,text,action}:{tag:string;title:string;text:string;action?:React.ReactNode}){return <div className="pageHead"><div><small>{tag}</small><h2>{title}</h2><p>{text}</p></div>{action}</div>}
 function Empty({title,text}:{title:string;text:string}){return <div className="empty"><PackageCheck size={28}/><b>{title}</b><span>{text}</span></div>}
 function DeliveryList({list,onOpen}:{list:Delivery[];onOpen:(d:Delivery)=>void}){return <div className="list">{list.length?list.map(d=>{const done=Object.values(d.checklist).filter(Boolean).length;const item=d.items[0];return <button className="row deliveryRow" key={d.id} onClick={()=>onOpen(d)}><div className="customerCell"><div className="badges"><span className={"status s-"+d.status}>{labels[d.status]}</span>{d.priority!=="normal"?<span className={"prio p-"+d.priority}>{d.priority==="critical"?"Acil":"Öncelikli"}</span>:null}<small>{d.orderNo}</small></div><h3>{d.customerName}</h3><p><span><MapPin size={14}/>{d.district||"İlçe yok"}</span><span><Clock3 size={14}/>{d.timeWindow}</span><span><UserRound size={14}/>{d.assignee}</span></p></div><div className="product deliveryProduct"><span className="productIcon"><WebIcon product={item?.product||""} size={30}/></span><p><small>ÜRÜN</small><b>{item?.brand+" • "+item?.product}</b><span>{item?.model||"Model yok"}</span></p></div><div className="progress deliveryProgress"><p><span>Hazırlık</span><b>{done}/6</b></p><i><em style={{width:(done/6*100)+"%"}}/></i><small>{done===6?"Hazır":"Kontroller sürüyor"}</small></div><span className="rowArrow">›</span></button>}):<Empty title="Kayıt yok" text="Henüz teslimat oluşturulmadı."/>}</div>}
-function StaffPage({staff,deliveries,onAdd}:{staff:Staff[];deliveries:Delivery[];onAdd:()=>void}){return <section className="card page"><PageHead tag="SEVKİYAT EKİBİ" title="Personeller" text="Dükkandan görev atayacağın personeller." action={<button className="primary" onClick={onAdd}><UserPlus size={16}/>Personel ekle</button>}/>{staff.length?<div className="staffGrid">{staff.map(s=>{const a=deliveries.filter(d=>d.assignee===s.name&&!["completed","issue"].includes(d.status)).length;return <div className="staffCard" key={s.id}><div>{initials(s.name)}</div><h3>{s.name}</h3><a href={tel(s.phone)}>{s.phone||"Telefon yok"}</a><p><b>{a}</b><span>aktif teslimat</span></p></div>})}</div>:<Empty title="Personel eklenmedi" text="Önce sevkiyat personelini ekle."/>}</section>}
+function StaffPage({staff,deliveries,onAdd}:{staff:Staff[];deliveries:Delivery[];onAdd:()=>void}){return <section className="card page"><PageHead tag="SEVKİYAT EKİBİ" title="Personeller" text="Dükkandan görev atayacağın personeller." action={<button className="primary" onClick={onAdd}><UserPlus size={16}/>Personel ekle</button>}/>{staff.length?<div className="staffGrid">{staff.map(s=>{const a=deliveries.filter(d=>d.assignee===s.name&&!["completed","issue"].includes(d.status)).length;return <div className="staffCard" key={s.id}><div>{initials(s.name)}</div><h3>{s.name}</h3><a href={tel(s.phone)}>{s.phone||"Telefon yok"}</a><div className={"staffNotify "+(s.userId?"ready":"waiting")}><Bell size={13}/>{s.userId?"Bildirim hesabı bağlı":"Bildirim hesabı bağlı değil"}</div><p><b>{a}</b><span>aktif teslimat</span></p></div>})}</div>:<Empty title="Personel eklenmedi" text="Önce sevkiyat personelini ekle."/>}</section>}
 function CustomersPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Delivery)=>void}){const groups=Array.from(new Map(deliveries.map(d=>[d.customerName+"|"+d.phone,d])).values());return <section className="card page"><PageHead tag="MÜŞTERİLER" title="Müşteri rehberi" text="Teslimatlardan otomatik oluşur."/>{groups.length?<div className="customerList">{groups.map(d=><button key={d.id} onClick={()=>onOpen(d)}><span>{initials(d.customerName)}</span><p><b>{d.customerName}</b><small>{d.address+" • "+d.district}</small></p><em><Phone size={14}/>{d.phone}</em></button>)}</div>:<Empty title="Müşteri yok" text="Teslimat oluşturdukça rehber oluşur."/>}</section>}
 function ChecklistPage({deliveries}:{deliveries:Delivery[]}){return <section className="card page"><PageHead tag="ZORUNLU KONTROLLER" title="Kontrol listeleri" text="Personel teslimatı kapatmadan önce bu adımları işaretler."/><div className="checkDefs">{checks.map(([k,l])=>{const n=deliveries.filter(d=>d.checklist[k]).length;return <div key={k}><span><Check/></span><p><b>{l}</b><small>{n+" / "+deliveries.length+" kayıtta tamamlandı"}</small></p></div>})}</div></section>}
 function PlanningPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Delivery)=>void}){const [date,setDate]=useState(today());const list=deliveries.filter(d=>d.date===date).sort((a,b)=>a.timeWindow.localeCompare(b.timeWindow));return <section className="card page"><PageHead tag="GÜNLÜK PLAN" title="Planlama" text="Tarih seçip günün sevkiyat sırasını gör." action={<input className="dateInput" type="date" value={date} onChange={e=>setDate(e.target.value)}/>} /><DeliveryList list={list} onOpen={onOpen}/></section>}
@@ -379,7 +444,7 @@ function CourierList({list,courier,onOpen,onStatus,onToggle,requireChecks}:{list
   </div>
 }
 
-function NewDelivery({staff,onClose,onSave}:{staff:string[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){
+function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){
   type DraftItem={id:string;brand:string;product:string;model:string;quantity:number;service:boolean;install:boolean;old:boolean};
   const [f,setF]=useState({
     name:"",phone:"",secondaryPhone:"",address:"",district:"",city:"İstanbul",
@@ -466,7 +531,13 @@ function NewDelivery({staff,onClose,onSave}:{staff:string[];onClose:()=>void;onS
     <section className="entrySection">
       <div className="entrySectionTitle"><span><Truck/></span><div><b>Planlama ve personel</b><small>Kimin götüreceği ve mağazanın özel notu</small></div></div>
       <div className="form">
-        <Select label="Servis / sevkiyat personeli" v={f.assignee} set={v=>set("assignee",v)} opts={["Atanmamış"].concat(staff)}/>
+        <div className="assigneeField wide">
+          <span>Servis / sevkiyat personeli *</span>
+          <div className="assigneePicker">
+            <button type="button" className={f.assignee==="Atanmamış"?"on unassigned":""} onClick={()=>set("assignee","Atanmamış")}><i>—</i><p><b>Atanmamış</b><small>Bildirim gönderilmez</small></p></button>
+            {staff.map(person=><button type="button" key={person.id} className={f.assignee===person.name?"on":""} onClick={()=>set("assignee",person.name)}><i>{initials(person.name)}</i><p><b>{person.name}</b><small>{person.phone||"Telefon yok"}</small><em className={person.userId?"ready":"waiting"}>{person.userId?"Bildirim hesabı bağlı":"Hesap bağlantısı bekliyor"}</em></p></button>)}
+          </div>
+        </div>
         <Field label="Teslim tarihi" v={f.date} set={v=>set("date",v)} type="date"/>
         <Select label="Saat aralığı" v={f.time} set={v=>set("time",v)} opts={["09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"]}/>
         <Select label="Öncelik" v={f.priority} set={v=>set("priority",v)} opts={["normal","high","critical"]}/>
