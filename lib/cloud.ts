@@ -1,6 +1,6 @@
 import { RealtimeChannel, User } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "./supabase";
-import type { ActivityEvent, Delivery, DeliveryStatus, Priority } from "./types";
+import type { ActivityEvent, Delivery, DeliveryProof, DeliveryProofType, DeliveryStatus, Priority } from "./types";
 
 export type StaffRecord = { id: string; name: string; phone: string; userId?: string | null };
 export type Profile = { id: string; fullName: string; role: "admin" | "office" | "courier" | "viewer"; phone?: string | null; active: boolean };
@@ -48,6 +48,22 @@ function eventFromRow(row: any): ActivityEvent {
     title: row.title,
     detail: row.detail || undefined,
     createdAt: row.created_at
+  };
+}
+
+
+function proofFromRow(row:any, signedUrl:string): DeliveryProof {
+  return {
+    id: row.id,
+    deliveryId: row.delivery_id,
+    proofType: row.proof_type as DeliveryProofType,
+    storagePath: row.storage_path,
+    fileName: row.file_name || undefined,
+    mimeType: row.mime_type || undefined,
+    sizeBytes: row.size_bytes == null ? undefined : Number(row.size_bytes),
+    createdBy: row.created_by || undefined,
+    createdAt: row.created_at,
+    signedUrl
   };
 }
 
@@ -154,6 +170,70 @@ export async function removeCloudDelivery(id: string) {
   if (!supabase) return;
   const { error } = await supabase.from("deliveries").delete().eq("id",id);
   if (error) throw error;
+}
+
+export async function loadDeliveryProofs(deliveryId:string): Promise<DeliveryProof[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("delivery_proofs")
+    .select("id,delivery_id,proof_type,storage_path,file_name,mime_type,size_bytes,created_by,created_at")
+    .eq("delivery_id", deliveryId)
+    .order("created_at", { ascending:false });
+  if (error) throw error;
+
+  const rows=data || [];
+  const urls=await Promise.all(rows.map(async(row:any)=>{
+    const { data:signed, error:signedError } = await supabase.storage
+      .from("delivery-proofs")
+      .createSignedUrl(row.storage_path, 60*60);
+    if (signedError) throw signedError;
+    return proofFromRow(row, signed?.signedUrl || "");
+  }));
+  return urls;
+}
+
+export async function uploadDeliveryProof(deliveryId:string, file:File, proofType:DeliveryProofType): Promise<DeliveryProof> {
+  if (!supabase) throw new Error("Teslimat kanıtı için Supabase bağlantısı gerekli.");
+  if (!file.type.startsWith("image/")) throw new Error("Yalnızca fotoğraf veya imza görseli yüklenebilir.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Dosya boyutu 10 MB sınırını aşıyor.");
+
+  const { data:{ user }, error:userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) throw new Error("Teslimat kanıtı yüklemek için oturum açmalısın.");
+
+  const ext=(file.type.split("/")[1] || "jpg").replace(/[^a-z0-9]/gi,"").toLowerCase() || "jpg";
+  const token=typeof crypto!=="undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  const path=`${deliveryId}/${user.id}/${Date.now()}-${token}.${ext}`;
+
+  const { error:uploadError } = await supabase.storage
+    .from("delivery-proofs")
+    .upload(path, file, { contentType:file.type, cacheControl:"3600", upsert:false });
+  if (uploadError) throw uploadError;
+
+  const { data:row, error:insertError } = await supabase
+    .from("delivery_proofs")
+    .insert({
+      delivery_id: deliveryId,
+      proof_type: proofType,
+      storage_path: path,
+      file_name: file.name || (proofType==="signature" ? "signature.png" : "photo"),
+      mime_type: file.type,
+      size_bytes: file.size,
+      created_by: user.id
+    })
+    .select("id,delivery_id,proof_type,storage_path,file_name,mime_type,size_bytes,created_by,created_at")
+    .single();
+
+  if (insertError) {
+    await supabase.storage.from("delivery-proofs").remove([path]).catch(()=>undefined);
+    throw insertError;
+  }
+
+  const { data:signed, error:signedError } = await supabase.storage
+    .from("delivery-proofs")
+    .createSignedUrl(path, 60*60);
+  if (signedError) throw signedError;
+  return proofFromRow(row, signed?.signedUrl || "");
 }
 
 export async function insertEvent(event: Omit<ActivityEvent,"id"|"createdAt">) {
