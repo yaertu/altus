@@ -186,7 +186,10 @@ export default function Dashboard(){
     const q=query.toLocaleLowerCase("tr-TR"), h=(d.customerName+" "+d.phone+" "+d.orderNo+" "+d.address+" "+d.assignee+" "+d.items.map(i=>i.brand+" "+i.product+" "+(i.model||"")).join(" ")).toLocaleLowerCase("tr-TR");
     return (!q||h.includes(q))&&(filter==="all"||d.status===filter);
   });
-  const my=deliveries.filter(d=>d.assignee===courier&&d.date<=day&&!["completed","issue"].includes(d.status));
+  const my=deliveries.filter(d=>d.assignee===courier&&(
+    (d.date<day&&!["completed","issue"].includes(d.status)) ||
+    (d.date===day&&d.status!=="issue")
+  ));
   function log(title:string,d?:Delivery,detail?:string,type:ActivityEvent["type"]="status"){
     const event:ActivityEvent={id:id("e"),deliveryId:d?.id,orderNo:d?.orderNo,actor:mode==="courier"?(courier||profile?.fullName||"Sevkiyatçı"):(profile?.fullName||"Dükkan"),type,title,detail,createdAt:new Date().toISOString()};
     setEvents(p=>[event,...p]);
@@ -341,7 +344,7 @@ export default function Dashboard(){
                   ? "Operasyondaki durum ve kontrol değişikliklerini incele."
                   : "Uygulama, bildirim ve cihaz ayarlarını yönet.";
 
-  return <div className="app">
+  return <div className={"app "+(mode==="courier"?"courierMode":"officeMode")}>
     {actionNotice?<div className={"actionNotice "+actionNotice.tone}>{actionNotice.tone==="ok"?<CheckCircle2/>:<AlertTriangle/>}<span>{actionNotice.text}</span><button onClick={()=>setActionNotice(null)}><X/></button></div>:null}
     {splash&&<div className="splash"><div className="splashLogo"><Truck/></div><b>yaaTeslimat</b><span>Teslimat Takip</span><DeveloperBadge compact/></div>}
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
@@ -663,7 +666,10 @@ function CourierList({
 }){
   if(!courier)return <div className="courierEmpty"><WebIcon name="truck-fast-outline" size={52}/><h2>Personel seçilmedi</h2><p>Servis personelini seçince yalnız ona atanmış bugünkü teslimatlar görünür.</p></div>;
 
-  const ordered=[...list].sort((a,b)=>(a.timeWindow||"").localeCompare(b.timeWindow||""));
+  const ordered=[...list].sort((a,b)=>{
+    const byDate=a.date.localeCompare(b.date);
+    return byDate!==0?byDate:(a.timeWindow||"").localeCompare(b.timeWindow||"");
+  });
   const active=ordered.filter(d=>!["completed","issue"].includes(d.status));
   const finished=ordered.filter(d=>d.status==="completed");
   const next=active[0];
@@ -686,7 +692,7 @@ function CourierList({
   return <div className="driverFocus">
     <section className="driverHeader">
       <div className="driverHeaderTop">
-        <div><span className="driverEyebrow">SIRADAKİ DURAK</span><h1>{next.customerName}</h1><p><Clock3/>{next.timeWindow||"Saat belirtilmedi"} <b>•</b> {next.district}</p></div>
+        <div><span className="driverEyebrow">{next.date<today()?"DÜNDEN KALAN • SIRADAKİ DURAK":"SIRADAKİ DURAK"}</span><h1>{next.customerName}</h1><p><Clock3/>{next.timeWindow||"Saat belirtilmedi"} <b>•</b> {next.district}</p></div>
         <span className={"driverStatus s-"+next.status}>{labels[next.status]}</span>
       </div>
       <div className={"driverNotifyMini "+(notify?"ready":"waiting")} onClick={!notify?onNotify:undefined}>
