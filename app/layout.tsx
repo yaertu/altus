@@ -17,7 +17,7 @@ const mono = Roboto_Mono({
 const themeBoot = `
 (function(){
   try{
-    var key="yaateslimat:theme:v6";
+    var key="yaateslimat:theme:v7";
     var saved=localStorage.getItem(key);
     var theme="light";
     var root=document.documentElement;
