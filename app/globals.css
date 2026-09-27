@@ -6005,3 +6005,73 @@ button.sheetCell{cursor:pointer}
     margin:-17px -17px 0;
   }
 }
+
+
+.serviceNotifyBanner{
+  min-height:82px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  margin-bottom:12px;
+  border:1px solid #fed7aa;
+  border-radius:14px;
+  background:#fff7ed;
+}
+.serviceNotifyBanner>span{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  color:#b45309;
+  border-radius:12px;
+  background:#ffedd5;
+}
+.serviceNotifyBanner>span svg{width:21px;height:21px}
+.serviceNotifyBanner b,.serviceNotifyBanner small{display:block}
+.serviceNotifyBanner b{
+  color:#7c2d12;
+  font-size:14px;
+}
+.serviceNotifyBanner small{
+  margin-top:3px;
+  color:#9a5b1a;
+  font-size:12px;
+  line-height:1.45;
+}
+.serviceNotifyBanner.ready{
+  border-color:#bbf7d0;
+  background:#ecfdf5;
+}
+.serviceNotifyBanner.ready>span{
+  color:#047857;
+  background:#d1fae5;
+}
+.serviceNotifyBanner.ready b{color:#065f46}
+.serviceNotifyBanner.ready small{color:#52756a}
+.serviceNotifyBanner>strong{
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:0 10px;
+  color:#047857;
+  border-radius:999px;
+  background:#d1fae5;
+  font-size:10px;
+  font-weight:900;
+}
+.serviceNotifyBanner>strong svg{width:15px;height:15px}
+
+@media(max-width:700px){
+  .serviceNotifyBanner{
+    grid-template-columns:auto 1fr;
+  }
+  .serviceNotifyBanner>button,
+  .serviceNotifyBanner>strong{
+    grid-column:1/-1;
+    width:100%;
+    justify-content:center;
+  }
+}
