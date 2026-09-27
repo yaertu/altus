@@ -1,6 +1,6 @@
 {
-  "name": "yaateslimat",
-  "version": "2.2.0",
+  "name": "altus-teslimat",
+  "version": "2.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -1,5 +1,5 @@
-const CACHE = "altus-teslimat-v12";
-const CORE = ["/", "/manifest.webmanifest", "/icon.svg"];
+const CACHE = "altus-teslimat-v13";
+const CORE = ["/", "/manifest.webmanifest", "/icon.svg", "/altus-logo.png"];
 const ICON_HOSTS = ["api.iconify.design", "api.simplesvg.com", "api.unisvg.com"];
 
 self.addEventListener("install", (event) => {

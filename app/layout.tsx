@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import "./product-ui.css";
 
 const dmSans = DM_Sans({
   subsets: ["latin","latin-ext"],

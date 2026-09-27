@@ -1,4 +1,4 @@
-# yaaTeslimat
+# ALTUS Teslimat
 
 Dükkan ve sevkiyat personeli için responsive teslimat operasyon uygulaması.
 
@@ -35,7 +35,6 @@ Dükkan ve sevkiyat personeli için responsive teslimat operasyon uygulaması.
 - PWA service worker + kurulum rehberi
 - Web Push abonelik ve görev bildirimi
 - Telefonla arama + Google Maps yol tarifi
-- `yaaertu codeR` geliştirici kimliği
 - Supabase yoksa güvenli yerel çalışma modu
 
 ## Kurulum
@@ -54,7 +53,7 @@ npm run start
 
 ## Supabase canlı bağlantı
 
-yaaTeslimat için **ayrı bir Supabase projesi** kullanılması önerilir.
+ALTUS Teslimat için **ayrı bir Supabase projesi** kullanılması önerilir.
 
 SQL dosyalarını sırasıyla uygula:
 
@@ -109,11 +108,6 @@ SUPABASE_SERVICE_ROLE_KEY=
 - Gerçek müşteri adı, telefon ve adresleri kaynak koda/demo fixture'larına yazılmaz.
 - Push endpoint'i Bearer token ve `admin/office` rolü doğrular.
 - Push bildiriminin kilit ekranı metninde müşteri adı/adres/telefon gösterilmez.
-
-## Geliştirici
-
-**yaaertu codeR**
-
 
 ## Tasarım / UX audit
 

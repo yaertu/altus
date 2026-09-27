@@ -23,7 +23,7 @@ export default function InstallPwaCard(){
     return()=>window.removeEventListener("beforeinstallprompt",handler);
   },[]);
 
-  if(installed) return <div className="installCard installed"><span><CheckCircle2/></span><div><b>Uygulama bu cihazda kurulu</b><small>Ana ekrandan yaaTeslimat gibi normal bir uygulama olarak açabilirsin.</small></div></div>;
+  if(installed) return <div className="installCard installed"><span><CheckCircle2/></span><div><b>Uygulama bu cihazda kurulu</b><small>Ana ekrandan ALTUS Teslimat uygulaması olarak açabilirsin.</small></div></div>;
 
   async function install(){
     if(!prompt)return;

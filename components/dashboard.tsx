@@ -3,12 +3,12 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Bell, Building2, CalendarDays, Check, CheckCircle2, ChevronDown,
-  ChevronLeft, ChevronRight, ClipboardCheck, Clock3, ExternalLink, History, Image,
+  ChevronLeft, ChevronRight, ClipboardCheck, Clock3, ExternalLink, History,
   LayoutDashboard, MapPin, Menu, Navigation, PackageCheck, PackageSearch, Phone, Plus,
   Save, Search, Settings, ShieldCheck, Store, Trash2, Truck, Upload, UserPlus, MessageCircle,
   UserRound, Users, X
 } from "lucide-react";
-import DeveloperBadge from "./developer-badge";
+import NextImage, { type ImageLoaderProps } from "next/image";
 import LoginScreen from "./login-screen";
 import WebIcon from "./web-icon";
 import InstallPwaCard from "./install-pwa-card";
@@ -50,8 +50,13 @@ function addressText(address:string,district:string,city:string){ return [addres
 function map(d:Delivery){ return "https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(addressText(d.address,d.district,d.city)); }
 function mapSearch(address:string,district:string,city:string){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addressText(address,district,city)); }
 function mapEmbed(address:string,district:string,city:string){ return "https://www.google.com/maps?q="+encodeURIComponent(addressText(address,district,city))+"&output=embed"; }
-const ALTUS_LOGO_URL="https://www.arcelikglobal.com/media/zl5aashl/altus_logo_pink.png";
+const ALTUS_LOGO_URL="/altus-logo.png";
 const DEFAULT_APP_SETTINGS:AppSettings={storeName:"ALTUS Mağazası",storeSubtitle:"Teslimat & Servis",storePhone:"",storeAddress:"",storeCity:"İstanbul",logoUrl:""};
+const passthroughImageLoader=({src}:ImageLoaderProps)=>src;
+function BrandLogo({url}:{url?:string}){
+  if(!url)return <NextImage className="officialAltusLogo" src={ALTUS_LOGO_URL} alt="ALTUS" width={1000} height={1000} priority/>;
+  return <NextImage className="customBrandLogo" loader={passthroughImageLoader} unoptimized fill sizes="120px" src={url} alt="Mağaza logosu"/>;
+}
 
 export default function Dashboard(){
   const [view,setView]=useState<View>("dashboard"), [mode,setMode]=useState<"office"|"courier">("office"), [side,setSide]=useState(false);
@@ -344,25 +349,24 @@ export default function Dashboard(){
                   ? "Operasyondaki durum ve kontrol değişikliklerini incele."
                   : "Uygulama, bildirim ve cihaz ayarlarını yönet.";
 
-  return <div className={"app "+(mode==="courier"?"courierMode":"officeMode")}>
+  return <div className={"app productUi "+(mode==="courier"?"courierMode":"officeMode")}>
     {actionNotice?<div className={"actionNotice "+actionNotice.tone}>{actionNotice.tone==="ok"?<CheckCircle2/>:<AlertTriangle/>}<span>{actionNotice.text}</span><button onClick={()=>setActionNotice(null)}><X/></button></div>:null}
-    {splash&&<div className="splash"><div className="splashLogo"><Truck/></div><b>yaaTeslimat</b><span>Teslimat Takip</span><DeveloperBadge compact/></div>}
+    {splash&&<div className="splash"><div className="splashBrand officialLogoFrame"><BrandLogo/></div><b>ALTUS Teslimat</b><span>Mağaza &amp; servis operasyonu</span></div>}
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
 
     <aside className={"side "+(side?"open":"")} aria-label="Mobil menü">
-      <div className="brand"><div className="hasBrandLogo"><img src={appSettings.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div><p><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle}</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
+      <div className="brand"><div className="hasBrandLogo"><BrandLogo url={appSettings.logoUrl}/></div><p><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle}</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
       {profile?.role==="courier"?<div className="roleChip"><Truck size={15}/><span>Servis personeli</span><i>CANLI</i></div>:<div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Mağaza</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Servis</button></div>}
       {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={18}/><span>Mağazaya dön</span></button>:null}</nav>}
       <div className="grow"/>
       <div className="online"><i/><p><b>Sistem hazır</b><span>Mobil • Tablet • PC</span></p></div>
-      <DeveloperBadge/>
     </aside>
 
     <main>
       <header className="appTopbar">
         <div className="topBrand">
           <button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button>
-          <div className="topBrandMark storeBrandMark hasBrandLogo"><img src={appSettings.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div>
+          <div className="topBrandMark storeBrandMark hasBrandLogo"><BrandLogo url={appSettings.logoUrl}/></div>
           <div className="topBrandCopy"><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle.toLocaleUpperCase("tr-TR")}</span></div>
         </div>
 
@@ -439,7 +443,7 @@ export default function Dashboard(){
         {view==="logs"&&<LogsPage events={events}/>}
         {view==="settings"&&<SettingsPage settings={appSettings} catalogCount={catalog.length} requireChecks={requireChecks} setRequireChecks={v=>{setRequireChecks(v);log("Teslimat kuralı değiştirildi",undefined,v?"Kontrol listesi zorunlu":"Kontrol listesi isteğe bağlı","system")}} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSaveSettings={saveStoreSettings} onUploadLogo={uploadBrandLogo} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([]);log("Yerel önbellek temizlendi",undefined,"Bu cihaz","system")}}}/>} 
       </>}
-      <footer><span>ALTUS Teslimat • v2.2</span><DeveloperBadge compact/></footer>
+      <footer><span>ALTUS Teslimat • v2.3</span></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
     {newOpen&&<NewDelivery staff={operationalStaff} deliveries={deliveries} catalog={catalog} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>} 
@@ -593,7 +597,7 @@ function SettingsPage({
   return <div className="settingsHub">
     <section className="settingsIdentity">
       <div className="settingsIdentityPreview">
-        <div className="settingsLogo hasImage"><img src={draft.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div>
+        <div className="settingsLogo hasImage"><BrandLogo url={draft.logoUrl}/></div>
         <div><small>MAĞAZA KİMLİĞİ</small><h2>{draft.storeName||"Mağaza adı"}</h2><p>{draft.storeSubtitle||"Teslimat & Servis"}</p></div>
       </div>
       <div className="settingsIdentityActions">
@@ -928,7 +932,7 @@ function NewStaff({onClose,onSave}:{onClose:()=>void;onSave:(s:{name:string;phon
   const valid=name.trim().length>=3&&phone.replace(/\D/g,"").length>=10&&email.includes("@")&&password.length>=8;
 
   return <Modal onClose={onClose}><form className="staffCreate" onSubmit={e=>{e.preventDefault();if(valid)onSave({name:name.trim(),phone:phone.trim(),email:email.trim(),password})}}>
-    <PageHead tag="SERVİS PERSONELİ" title="Personel + telefon hesabını birlikte oluştur" text="Bu hesap personelin telefonunda yaaTeslimat'a giriş yapması ve yeni görev bildirimlerini alması için kullanılacak."/>
+    <PageHead tag="SERVİS PERSONELİ" title="Personel + telefon hesabını birlikte oluştur" text="Bu hesap personelin telefonunda ALTUS Teslimat'a giriş yapması ve yeni görev bildirimlerini alması için kullanılacak."/>
     <div className="staffCreateGrid">
       <section>
         <div className="staffCreateTitle"><span>1</span><div><b>Personel bilgileri</b><small>Mağazada göreceğin ad ve telefon</small></div></div>
