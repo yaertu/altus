@@ -3,7 +3,8 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 import type { ActivityEvent, Delivery, DeliveryProof, DeliveryProofType, DeliveryStatus, Priority } from "./types";
 
 export type StaffRecord = { id: string; name: string; phone: string; userId?: string | null };
-export type Profile = { id: string; fullName: string; role: "admin" | "office" | "courier" | "viewer"; phone?: string | null; active: boolean };\nexport type AppNotification = { id:string; deliveryId?:string; kind:"assignment"|"reassignment"|"system"; title:string; body:string; readAt?:string; createdAt:string };
+export type Profile = { id: string; fullName: string; role: "admin" | "office" | "courier" | "viewer"; phone?: string | null; active: boolean };
+export type AppNotification = { id:string; deliveryId?:string; kind:"assignment"|"reassignment"|"system"; title:string; body:string; readAt?:string; createdAt:string };
 
 const blankChecklist = {
   addressVerified: false,
