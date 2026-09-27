@@ -3756,3 +3756,6 @@ main{max-width:none;padding:0 24px 34px}
   .serviceActions{flex-direction:column}
   .serviceActions .primary,.serviceActions .issue{width:100%}
 }
+
+.storeFilters button.danger.on{color:#b42318;border-color:#fecaca;background:#fef2f2}
+.deliveryStatusCell .overdueFlag{color:#b42318;background:#fef2f2}
