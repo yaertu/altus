@@ -40,19 +40,33 @@ export async function enablePushNotifications() {
   return true;
 }
 
-export async function sendAssignmentPush(deliveryId: string) {
-  if (!supabase) return false;
+export type PushSendResult = {
+  sent:boolean;
+  count:number;
+  reason?:string;
+};
+
+export async function sendAssignmentPush(deliveryId: string): Promise<PushSendResult> {
+  if (!supabase) return {sent:false,count:0,reason:"cloud_unavailable"};
   const { data:{ session } } = await supabase.auth.getSession();
-  if (!session?.access_token) return false;
-  const res = await fetch("/api/push/send", {
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":"Bearer "+session.access_token
-    },
-    body:JSON.stringify({deliveryId})
-  });
-  if (!res.ok) return false;
-  const data = await res.json();
-  return Boolean(data.sent);
+  if (!session?.access_token) return {sent:false,count:0,reason:"login_required"};
+
+  try{
+    const res = await fetch("/api/push/send", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+session.access_token
+      },
+      body:JSON.stringify({deliveryId})
+    });
+    const data = await res.json().catch(()=>({}));
+    return {
+      sent:Boolean(data?.sent),
+      count:Number(data?.count||0),
+      reason:typeof data?.reason==="string"?data.reason:(!res.ok?"request_failed":undefined)
+    };
+  }catch{
+    return {sent:false,count:0,reason:"network_error"};
+  }
 }
