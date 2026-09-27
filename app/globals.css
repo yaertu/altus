@@ -3759,3 +3759,1086 @@ main{max-width:none;padding:0 24px 34px}
 
 .storeFilters button.danger.on{color:#b42318;border-color:#fecaca;background:#fef2f2}
 .deliveryStatusCell .overdueFlag{color:#b42318;background:#fef2f2}
+
+
+/* =========================================================
+   yaaTeslimat v1.6 — LARGE READABLE PREMIUM SERVICE DESK
+   Büyük tipografi, geniş dokunma alanları, okunabilir mağaza/servis akışı.
+   ========================================================= */
+
+body{
+  font-size:16px;
+  line-height:1.6;
+  color:#172033;
+}
+
+main{
+  padding-left:32px;
+  padding-right:32px;
+}
+
+/* App chrome */
+.appTopbar{
+  min-height:84px;
+  padding-top:14px;
+  padding-bottom:14px;
+}
+.topBrand{min-width:270px}
+.topBrandMark{
+  width:50px;
+  height:50px;
+  border-radius:14px;
+}
+.topBrandMark svg{width:23px;height:23px}
+.topBrandCopy b{font-size:19px}
+.topBrandCopy span{
+  margin-top:3px;
+  font-size:10px;
+  font-weight:800;
+}
+.globalSearch{
+  min-height:52px;
+  padding:0 15px;
+  border-radius:12px;
+}
+.globalSearch svg{width:20px;height:20px}
+.globalSearch input{font-size:15px}
+.globalSearch kbd{font-size:11px;padding:4px 8px}
+.syncState{
+  height:38px;
+  padding:0 12px;
+  font-size:11px;
+}
+.iconButton{
+  width:48px;
+  height:48px;
+  border-radius:12px;
+}
+.userChip{
+  min-height:50px;
+  padding:5px 12px 5px 6px;
+}
+.userChip>span{
+  width:38px;
+  height:38px;
+  font-size:11px;
+}
+.userChip b{font-size:13px}
+.userChip small{font-size:11px}
+
+.desktopNav{
+  min-height:68px;
+  padding-top:10px;
+  padding-bottom:10px;
+}
+.navMode button,.navMode>span{
+  min-height:40px;
+  padding:0 14px;
+  font-size:13px;
+}
+.desktopNav>nav button{
+  min-height:44px;
+  padding:0 13px;
+  font-size:13px;
+}
+.desktopNav>nav button svg{width:18px;height:18px}
+.desktopNav>nav button>b{
+  min-width:24px;
+  height:24px;
+  font-size:10px;
+}
+
+/* Buttons */
+.primary,.soft,.issue{
+  min-height:50px;
+  padding:0 18px;
+  border-radius:11px;
+  font-size:14px;
+  font-weight:800;
+}
+.primary svg,.soft svg,.issue svg{
+  width:18px;
+  height:18px;
+}
+
+/* Page heading */
+.pageIntro{
+  max-width:1600px;
+  min-height:132px;
+  padding-top:28px;
+  padding-bottom:20px;
+}
+.pageIntro small{
+  font-size:11px;
+  letter-spacing:.09em;
+}
+.pageIntro h1{
+  margin-top:7px;
+  margin-bottom:7px;
+  font-size:clamp(34px,3vw,46px);
+  letter-spacing:-.04em;
+}
+.pageIntro p{
+  max-width:900px;
+  font-size:15px;
+  line-height:1.65;
+}
+.pageIntroMeta>span{
+  min-height:42px;
+  padding:0 12px;
+  font-size:12px;
+}
+
+/* Main store surface */
+.storeDesk{
+  max-width:1600px;
+  gap:18px;
+}
+.storeWelcome{
+  padding:32px 34px;
+  border-radius:22px;
+  box-shadow:0 10px 28px rgba(37,99,235,.06);
+}
+.storeWelcome .eyebrow{
+  font-size:11px;
+  letter-spacing:.11em;
+}
+.storeWelcome h2{
+  margin:8px 0 8px;
+  font-size:38px;
+  line-height:1.08;
+}
+.storeWelcome p{
+  max-width:900px;
+  font-size:16px;
+  line-height:1.7;
+}
+.storeWelcomeActions{gap:10px}
+.storeWelcomeActions .primary,
+.storeWelcomeActions .soft{
+  min-height:54px;
+  padding-inline:20px;
+  font-size:15px;
+}
+
+/* Stats */
+.storeStats{gap:14px}
+.storeStat{
+  min-height:122px;
+  gap:16px;
+  padding:20px;
+  border-radius:17px;
+}
+.storeStat>span{
+  width:54px;
+  height:54px;
+  flex-basis:54px;
+  border-radius:14px;
+}
+.storeStat>span svg{width:24px;height:24px}
+.storeStat b{
+  font-size:32px;
+  line-height:1;
+}
+.storeStat small{
+  margin-top:8px;
+  font-size:13px;
+  font-weight:750;
+}
+
+/* Daily board */
+.storeBoard{border-radius:20px}
+.storeBoardHead{
+  min-height:88px;
+  padding:18px 22px;
+}
+.storeBoardHead span{font-size:10px}
+.storeBoardHead h3{
+  margin-top:5px;
+  font-size:22px;
+}
+.storeSync{
+  min-height:38px;
+  padding:0 12px;
+  font-size:12px;
+}
+.storeBoardTools{
+  gap:16px;
+  padding:14px 18px;
+}
+.storeBoardTools>label{
+  min-width:320px;
+  max-width:580px;
+  min-height:50px;
+  padding:0 13px;
+  border-radius:11px;
+}
+.storeBoardTools input{font-size:14px}
+.storeFilters{gap:8px}
+.storeFilters button{
+  min-height:42px;
+  padding:0 12px;
+  border-radius:9px;
+  font-size:12px;
+}
+.storeFilters button b{
+  min-width:24px;
+  height:24px;
+  font-size:10px;
+}
+
+.deliveryTableHeader{
+  grid-template-columns:155px minmax(220px,1fr) minmax(290px,1.5fr) minmax(270px,1.25fr) 220px 48px;
+  gap:16px;
+  padding:12px 18px;
+  font-size:11px;
+}
+.deliveryLine{
+  grid-template-columns:155px minmax(220px,1fr) minmax(290px,1.5fr) minmax(270px,1.25fr) 220px 48px;
+  gap:16px;
+  min-height:152px;
+  padding:18px;
+}
+.deliveryLine.needsAttention{box-shadow:inset 5px 0 #f59e0b}
+.deliveryStatusCell{gap:8px}
+.status,.prio{
+  min-height:30px;
+  padding:0 11px;
+  font-size:11px;
+}
+.deliveryStatusCell small{
+  color:#667085;
+  font-size:12px;
+}
+.deliveryStatusCell .deliveryOrder{
+  color:#344054;
+  font-weight:800;
+}
+.deliveryStatusCell i{
+  padding:5px 8px;
+  font-size:10px;
+}
+.missingFieldList{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.missingFieldList span{
+  display:inline-flex;
+  min-height:25px;
+  align-items:center;
+  padding:0 8px;
+  color:#b45309;
+  border:1px solid #fed7aa;
+  border-radius:999px;
+  background:#fff7ed;
+  font-size:10px;
+  font-weight:800;
+}
+.deliveryCustomerCell b{
+  font-size:18px;
+  line-height:1.35;
+}
+.deliveryCustomerCell span{
+  margin-top:9px;
+  font-size:14px;
+}
+.deliveryCustomerCell span svg{width:16px;height:16px}
+.deliveryCustomerCell small{
+  margin-top:6px;
+  font-size:12px;
+}
+.deliveryProductCell>b{
+  font-size:15px;
+  line-height:1.55;
+}
+.deliveryProductCell>div{
+  gap:6px;
+  margin-top:9px;
+}
+.deliveryProductCell>div span{
+  padding:5px 9px;
+  font-size:10px;
+}
+.deliveryProductCell small{
+  margin-top:8px;
+  font-size:12px;
+  line-height:1.45;
+  white-space:normal;
+}
+.deliveryAddressCell>b{
+  font-size:15px;
+  line-height:1.55;
+}
+.deliveryAddressCell>span{
+  margin-top:8px;
+  font-size:12px;
+}
+.deliveryAddressCell>span svg{width:16px;height:16px}
+.deliveryAssigneeCell select{
+  min-height:46px;
+  padding:0 11px;
+  border-radius:10px;
+  font-size:13px;
+}
+.deliveryAssigneeCell>span{
+  margin-top:8px;
+  font-size:12px;
+}
+.deliveryAssigneeCell>span svg{width:16px;height:16px}
+.deliveryOpen{
+  width:44px;
+  height:44px;
+  border-radius:10px!important;
+}
+.deliveryOpen svg{width:22px;height:22px}
+.storeEmpty{
+  min-height:280px;
+}
+.storeEmpty svg{width:44px;height:44px}
+.storeEmpty b{font-size:16px}
+.storeEmpty span{font-size:13px}
+
+/* Crew */
+.storeCrew{
+  grid-template-columns:230px 1fr;
+  gap:20px;
+  padding:22px;
+  border-radius:20px;
+}
+.storeCrew>div:first-child>span{font-size:10px}
+.storeCrew>div:first-child h3{
+  margin-top:5px;
+  font-size:18px;
+}
+.crewCards{
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:10px;
+}
+.crewCards button{
+  min-height:78px;
+  gap:12px;
+  padding:11px 13px;
+  border-radius:12px;
+}
+.crewCards button>span{
+  width:44px;
+  height:44px;
+  font-size:11px;
+}
+.crewCards b{font-size:14px}
+.crewCards small{
+  margin-top:3px;
+  font-size:11px;
+}
+.crewCards em{font-size:9px}
+
+/* New delivery modal */
+.modal{
+  width:min(1180px,96vw);
+  padding:28px;
+  border-radius:20px;
+}
+.modalX{
+  width:44px;
+  height:44px;
+  top:16px;
+  right:16px;
+  border-radius:10px;
+}
+.pageHead{
+  gap:18px;
+  padding-bottom:18px;
+}
+.pageHead small{font-size:10px}
+.pageHead h2{
+  margin:6px 0 5px;
+  font-size:30px;
+}
+.pageHead p{
+  font-size:14px;
+  line-height:1.6;
+}
+.entryCompleteness{
+  gap:10px;
+  margin:18px 0;
+}
+.entryCompleteness span{
+  min-height:58px;
+  gap:10px;
+  padding:0 14px;
+  border-radius:11px;
+  font-size:13px;
+}
+.entryCompleteness i{
+  width:30px;
+  height:30px;
+  flex-basis:30px;
+  font-size:11px;
+}
+.entrySection{
+  padding:20px;
+  margin-top:14px;
+  border-radius:15px;
+}
+.entrySectionTitle{
+  gap:12px;
+  margin-bottom:16px;
+}
+.entrySectionTitle>span{
+  width:46px;
+  height:46px;
+  flex-basis:46px;
+  border-radius:12px;
+}
+.entrySectionTitle>span svg{width:21px;height:21px}
+.entrySectionTitle b{font-size:17px}
+.entrySectionTitle small{
+  margin-top:3px;
+  font-size:13px;
+}
+.entryItem{
+  padding:16px;
+  border-radius:13px;
+}
+.entryItemHead{margin-bottom:12px}
+.entryItemHead b{font-size:14px}
+.entryItemHead button{font-size:12px}
+
+.form{gap:13px}
+.form label{gap:7px}
+.form label>span,
+.deliveryEntry .form label>span{
+  font-size:13px;
+  font-weight:800;
+}
+.form input,.form select,
+.deliveryEntry .form input,.deliveryEntry .form select{
+  min-height:52px;
+  padding:0 13px;
+  border-radius:10px;
+  font-size:15px;
+}
+.form input::placeholder{font-size:14px}
+.deliveryEntry .quickProducts{
+  gap:8px;
+  margin-bottom:13px;
+}
+.deliveryEntry .quickProducts button{
+  min-height:42px;
+  padding:0 12px;
+  border-radius:9px;
+  font-size:12px;
+}
+.options{
+  gap:9px;
+  margin-top:13px;
+}
+.options button,
+.deliveryEntry .options button{
+  min-height:46px;
+  padding:8px 12px;
+  border-radius:9px;
+  font-size:13px;
+}
+.options button i{
+  width:22px;
+  height:22px;
+}
+.entryReview{
+  padding:16px 18px;
+  margin-top:14px;
+  border-radius:13px;
+}
+.entryReview small{font-size:10px}
+.entryReview b{
+  margin-top:4px;
+  font-size:15px;
+}
+.entryReview span{
+  margin-top:4px;
+  font-size:13px;
+}
+.entryReview>strong{
+  min-width:90px;
+  padding:9px 10px;
+  font-size:12px;
+}
+.error{
+  padding:12px 14px;
+  margin-top:12px;
+  font-size:13px;
+}
+.modalActions{
+  gap:10px;
+  margin-top:18px;
+}
+
+/* Service-personnel workspace */
+.serviceWorkspace{max-width:1080px}
+.serviceHero{
+  padding:26px;
+  margin-bottom:14px;
+  border-radius:20px;
+}
+.serviceHero small{font-size:10px}
+.serviceHero h2{
+  margin:7px 0;
+  font-size:30px;
+}
+.serviceHero p{
+  max-width:760px;
+  font-size:14px;
+  line-height:1.6;
+}
+.serviceHero>b{
+  min-width:100px;
+  padding:14px;
+  border-radius:14px;
+  font-size:34px;
+}
+.serviceHero>b span{font-size:11px}
+.serviceTask{
+  padding:22px;
+  margin-bottom:14px;
+  border-radius:18px;
+}
+.serviceTaskHead{
+  gap:12px;
+  padding-bottom:14px;
+}
+.serviceTaskHead small{font-size:12px}
+.serviceCustomer{
+  gap:14px;
+  padding:18px 0;
+}
+.serviceCustomer>span{
+  width:58px;
+  height:58px;
+  font-size:13px;
+  border-radius:14px;
+}
+.serviceCustomer small{font-size:10px}
+.serviceCustomer h3{
+  margin:4px 0;
+  font-size:24px;
+}
+.serviceCustomer a{font-size:15px}
+.serviceCustomer a svg{width:17px;height:17px}
+.serviceFacts{
+  gap:12px;
+}
+.serviceFact{
+  gap:12px;
+  padding:16px;
+  border-radius:12px;
+}
+.serviceFact>svg{width:22px;height:22px;flex-basis:22px}
+.serviceFact small{font-size:10px}
+.serviceFact b{
+  margin-top:5px;
+  font-size:15px;
+}
+.serviceFact span{
+  margin-top:5px;
+  font-size:13px;
+}
+.serviceNote{
+  gap:10px;
+  padding:14px;
+  margin-top:12px;
+  border-radius:12px;
+}
+.serviceNote>svg{width:20px;height:20px;flex-basis:20px}
+.serviceNote b{font-size:13px}
+.serviceNote span{
+  margin-top:4px;
+  font-size:14px;
+  line-height:1.5;
+}
+.serviceQuick{
+  gap:10px;
+  margin-top:12px;
+}
+.serviceQuick a{
+  min-height:52px;
+  border-radius:11px;
+  font-size:14px;
+}
+.serviceQuick a svg{width:19px;height:19px}
+.serviceChecklist{
+  padding-top:18px;
+  margin-top:18px;
+}
+.serviceChecklistHead b{font-size:15px}
+.serviceChecklistHead span{
+  margin-top:4px;
+  font-size:12px;
+}
+.serviceChecklistHead strong{font-size:16px}
+.serviceProgress{
+  gap:10px;
+  margin:12px 0;
+}
+.serviceProgress>i{height:9px}
+.serviceProgress>span{font-size:12px}
+.serviceChecks{gap:9px}
+.serviceChecks button{
+  min-height:52px;
+  gap:9px;
+  padding:9px 12px;
+  border-radius:10px;
+  font-size:13px;
+}
+.serviceChecks button i{
+  width:23px;
+  height:23px;
+  flex-basis:23px;
+}
+.serviceActions{
+  gap:10px;
+  margin-top:16px;
+}
+
+/* Detail drawer — make everything readable */
+.drawerBg>.deliveryDetail{
+  width:min(860px,100vw);
+}
+.deliveryDetail>.modalX{
+  width:44px;
+  height:44px;
+}
+.detailHero{
+  padding:30px 84px 26px 28px;
+}
+.detailDate{font-size:12px}
+.detailCustomer{
+  gap:17px;
+  margin-top:24px;
+}
+.detailCustomer>span{
+  width:66px;
+  height:66px;
+  flex-basis:66px;
+  border-radius:15px;
+  font-size:15px;
+}
+.detailCustomer small{font-size:10px}
+.detailCustomer h2{
+  margin-top:5px;
+  font-size:32px;
+}
+.detailCustomer p{font-size:14px}
+.detailQuick{
+  gap:10px;
+  margin-top:22px;
+}
+.detailQuick a{
+  min-height:54px;
+  border-radius:11px;
+  font-size:14px;
+}
+.detailQuick a svg{width:19px;height:19px}
+.detailBody{
+  gap:13px;
+  padding:16px;
+}
+.detailSection{
+  padding:20px;
+  border-radius:15px;
+}
+.detailSectionHead{
+  gap:12px;
+  padding-bottom:14px;
+  margin-bottom:14px;
+}
+.detailSectionHead>span{
+  width:44px;
+  height:44px;
+  flex-basis:44px;
+  border-radius:11px;
+}
+.detailSectionHead>span svg{width:20px;height:20px}
+.detailSectionHead small{font-size:9px}
+.detailSectionHead b{
+  margin-top:3px;
+  font-size:16px;
+}
+.detailInfoGrid{gap:10px}
+.detailInfoGrid p{
+  padding:14px;
+  border-radius:11px;
+}
+.detailInfoGrid small{font-size:11px}
+.detailInfoGrid b{
+  margin-top:5px;
+  font-size:14px;
+}
+.detailAddress{
+  padding:16px;
+  border-radius:11px;
+}
+.detailAddress b{
+  font-size:15px;
+  line-height:1.6;
+}
+.detailAddress span{
+  margin-top:5px;
+  font-size:13px;
+}
+.detailAddress a{
+  top:14px;
+  right:14px;
+  min-height:40px;
+  padding:0 11px;
+  font-size:12px;
+}
+.detailProducts{gap:10px}
+.detailProduct{
+  gap:12px;
+  padding:14px;
+  border-radius:11px;
+}
+.detailProduct>span{
+  width:56px;
+  height:56px;
+  border-radius:11px;
+}
+.detailProduct small{font-size:10px}
+.detailProduct b{
+  margin-top:4px;
+  font-size:15px;
+}
+.detailProduct em{
+  margin-top:3px;
+  font-size:12px;
+}
+.detailProduct>strong{
+  min-width:42px;
+  height:36px;
+  font-size:12px;
+}
+.productFlags{gap:6px}
+.productFlags i{
+  min-height:28px;
+  padding:0 9px;
+  font-size:10px;
+}
+.detailAssignee{
+  margin-top:11px;
+  padding:12px 13px;
+  border-radius:10px;
+}
+.detailAssignee>span{font-size:12px}
+.detailAssignee select{
+  min-width:220px;
+  min-height:42px;
+  padding:0 10px;
+  font-size:13px;
+}
+.detailNote>p{
+  font-size:14px;
+  line-height:1.7;
+}
+.detailProgress>i{height:9px}
+.detailProgress>span{font-size:12px}
+.detailChecklist{gap:9px}
+.detailChecklist button{
+  min-height:52px;
+  gap:9px;
+  padding:9px 12px;
+  border-radius:10px;
+  font-size:13px;
+}
+.detailChecklist button>i{
+  width:23px;
+  height:23px;
+  flex-basis:23px;
+}
+.timelineItem{
+  min-height:72px;
+  grid-template-columns:22px 1fr;
+  gap:10px;
+  padding:10px 0;
+}
+.timelineItem b{font-size:14px}
+.timelineItem span{
+  margin-top:4px;
+  font-size:12px;
+}
+.timelineItem small{
+  margin-top:5px;
+  font-size:11px;
+}
+.timelineEmpty{font-size:12px}
+
+/* Proof / photo / signature */
+.proofActions{gap:10px;margin-top:12px}
+.proofAction{
+  min-height:82px;
+  gap:11px;
+  padding:12px 14px;
+  border-radius:11px;
+}
+.proofAction>svg{width:22px;height:22px}
+.proofAction span b{font-size:13px}
+.proofAction span small{
+  margin-top:3px;
+  font-size:11px;
+}
+.signaturePad{padding:14px;border-radius:12px}
+.signaturePadHead b{font-size:14px}
+.signaturePadHead small{font-size:11px}
+.signaturePadHead button{min-height:40px;font-size:11px}
+.proofError,.proofLoading{font-size:12px}
+.proofEmpty b{font-size:13px}
+.proofEmpty span{font-size:11px}
+.proofCard>p{padding:11px}
+.proofCard>p b{font-size:12px}
+.proofCard>p small{font-size:10px}
+.proofPreview>span{font-size:9px}
+.proofSummary span{
+  min-height:30px;
+  padding:0 10px;
+  font-size:10px;
+}
+.detailFooter{
+  min-height:80px;
+  padding:13px 18px;
+}
+
+/* Secondary screens: no microscopic text anywhere */
+.card{border-radius:16px}
+.deliveryRow,.row{
+  min-height:118px;
+  padding:16px 12px;
+}
+.deliveryRow h3,.row h3{font-size:17px}
+.customerCell>p{font-size:13px}
+.product small{font-size:10px}
+.product b{font-size:14px}
+.product span{font-size:12px}
+.deliveryProgress p,.progress>p{font-size:12px}
+.deliveryProgress small{font-size:11px}
+.filters input{font-size:14px}
+.empty b{font-size:15px}
+.empty span{font-size:13px}
+.staffCard{padding:18px}
+.staffCard>div{width:48px;height:48px;font-size:11px}
+.staffCard h3{font-size:16px}
+.staffCard>a{font-size:13px}
+.staffCard p b{font-size:24px}
+.staffCard p span{font-size:11px}
+.customerList>button{min-height:86px}
+.customerList>button>span{width:46px;height:46px;font-size:11px}
+.customerList p b{font-size:14px}
+.customerList p small{font-size:12px}
+.setting p b{font-size:14px}
+.setting p small{font-size:12px}
+.installCopy>small{font-size:10px}
+.installCopy>b{font-size:14px}
+.installCopy p{font-size:12px}
+.online b{font-size:13px}
+.online span{font-size:11px}
+.brand p span{font-size:11px}
+.side nav button{min-height:50px;font-size:14px}
+.roleChip{min-height:48px;font-size:13px}
+.roleChip i{font-size:10px}
+
+/* Mobile: still large enough for real field use */
+@media(max-width:1180px){
+  .deliveryLine{
+    grid-template-columns:150px 1fr 1.3fr 46px;
+    gap:14px;
+  }
+}
+@media(max-width:980px){
+  main{
+    padding-left:16px;
+    padding-right:16px;
+    padding-bottom:104px;
+  }
+  .appTopbar,.desktopNav{
+    margin-left:-16px;
+    margin-right:-16px;
+    padding-left:16px;
+    padding-right:16px;
+  }
+  .side{
+    width:300px;
+    left:-324px;
+  }
+  .side.open{left:10px}
+  .mobileBottom{
+    height:72px;
+    grid-template-columns:1fr 1fr 72px 1fr 1fr;
+  }
+  .mobileBottom button{
+    height:56px;
+    font-size:11px;
+  }
+  .mobileBottom button svg{width:21px;height:21px}
+  .mobileBottom .mobileCreate{
+    width:58px;
+    height:58px;
+  }
+}
+@media(max-width:760px){
+  .appTopbar{
+    min-height:68px;
+    padding-top:9px;
+    padding-bottom:9px;
+  }
+  .globalSearch{
+    min-height:46px;
+  }
+  .globalSearch input{font-size:13px}
+  .pageIntro{
+    min-height:auto;
+    padding:22px 0 16px;
+  }
+  .pageIntro h1{font-size:32px}
+  .pageIntro p{font-size:14px}
+
+  .storeWelcome{
+    padding:22px;
+    border-radius:17px;
+  }
+  .storeWelcome h2{font-size:29px}
+  .storeWelcome p{font-size:14px}
+  .storeWelcomeActions button{
+    min-height:50px;
+    font-size:13px;
+  }
+
+  .storeStats{gap:9px}
+  .storeStat{
+    min-height:98px;
+    padding:14px;
+  }
+  .storeStat>span{
+    width:44px;
+    height:44px;
+    flex-basis:44px;
+  }
+  .storeStat b{font-size:26px}
+  .storeStat small{font-size:11px}
+
+  .storeBoardHead{
+    min-height:76px;
+    padding:14px;
+  }
+  .storeBoardHead h3{font-size:18px}
+  .storeBoardTools{padding:12px}
+  .storeBoardTools>label{min-height:48px}
+  .storeBoardTools input{font-size:13px}
+  .storeFilters button{
+    min-height:42px;
+    font-size:11px;
+  }
+
+  .deliveryLine{
+    grid-template-columns:1fr 42px;
+    gap:11px;
+    min-height:0;
+    padding:16px;
+  }
+  .deliveryStatusCell{gap:7px}
+  .deliveryCustomerCell b{font-size:18px}
+  .deliveryCustomerCell span{font-size:14px}
+  .deliveryProductCell>b{font-size:15px}
+  .deliveryAddressCell>b{font-size:15px}
+  .deliveryAssigneeCell select{
+    min-height:46px;
+    font-size:13px;
+  }
+
+  .storeCrew{
+    gap:14px;
+    padding:16px;
+  }
+
+  .modal{
+    width:100vw;
+    max-height:100dvh;
+    min-height:100dvh;
+    padding:20px 16px 100px;
+    border-radius:0;
+  }
+  .modalBg{padding:0}
+  .pageHead h2{font-size:25px}
+  .pageHead p{font-size:13px}
+  .entryCompleteness span{
+    min-height:52px;
+    font-size:12px;
+  }
+  .entrySection{padding:15px}
+  .entrySectionTitle b{font-size:15px}
+  .entrySectionTitle small{font-size:12px}
+  .form label>span,
+  .deliveryEntry .form label>span{font-size:13px}
+  .form input,.form select,
+  .deliveryEntry .form input,.deliveryEntry .form select{
+    min-height:52px;
+    font-size:16px; /* prevents iOS zoom and stays readable */
+  }
+  .deliveryEntry .quickProducts button{
+    min-height:44px;
+    font-size:12px;
+  }
+  .options button,
+  .deliveryEntry .options button{
+    min-height:48px;
+    font-size:12px;
+  }
+
+  .serviceHero{padding:20px}
+  .serviceHero h2{font-size:25px}
+  .serviceHero p{font-size:13px}
+  .serviceTask{padding:17px}
+  .serviceCustomer h3{font-size:22px}
+  .serviceCustomer a{font-size:14px}
+  .serviceFact b{font-size:14px}
+  .serviceFact span{font-size:12px}
+  .serviceNote span{font-size:13px}
+  .serviceQuick a{font-size:13px}
+  .serviceChecks button{font-size:13px}
+  .serviceActions .primary,.serviceActions .issue{min-height:52px}
+
+  .drawerBg>.deliveryDetail{width:100%}
+  .detailHero{padding:24px 62px 20px 18px}
+  .detailCustomer h2{font-size:27px}
+  .detailQuick a{font-size:13px}
+  .detailBody{padding:10px}
+  .detailSection{padding:16px}
+  .detailInfoWide{grid-template-columns:1fr 1fr}
+  .detailInfoGrid b{font-size:13px}
+  .detailAddress b{font-size:14px}
+  .detailProduct b{font-size:14px}
+  .detailChecklist button{font-size:12px}
+}
+@media(max-width:520px){
+  .storeStats{grid-template-columns:1fr}
+  .storeStat{
+    min-height:86px;
+  }
+  .storeWelcomeActions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  .storeWelcomeActions button{width:100%}
+  .storeFilters{grid-template-columns:1fr 1fr}
+  .crewCards{grid-template-columns:1fr}
+  .entryCompleteness{grid-template-columns:1fr 1fr}
+  .entrySectionTitle.productTitle>button{
+    width:100%;
+    margin:8px 0 0;
+  }
+  .serviceQuick{grid-template-columns:1fr}
+  .serviceFacts{grid-template-columns:1fr}
+  .serviceChecks{grid-template-columns:1fr}
+  .detailInfoGrid,.detailInfoWide{grid-template-columns:1fr}
+  .detailQuick{grid-template-columns:1fr}
+  .detailQuick a:last-child{grid-column:auto}
+  .proofGallery{grid-template-columns:1fr}
+}
