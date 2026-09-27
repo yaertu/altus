@@ -155,9 +155,10 @@ function DeliveryLine({delivery,staff,onOpen,onAssign}:{delivery:Delivery;staff:
   return <article className={"deliveryLine "+(missing.length?"needsAttention":"")}>
     <button className="deliveryStatusCell" onClick={()=>onOpen(delivery)}>
       <span className={"status s-"+delivery.status}>{statusLabel(delivery.status)}</span>
+      <small className="deliveryOrder">{delivery.orderNo}</small>
       <small>{overdue?delivery.date+" • ":""}{delivery.timeWindow||"Saat yok"}</small>
       {overdue?<i className="overdueFlag">Dünden kaldı</i>:null}
-      {missing.length?<i>{missing.length} eksik</i>:null}
+      {missing.length?<div className="missingFieldList">{missing.map(field=><span key={field}>{field} eksik</span>)}</div>:null}
     </button>
 
     <button className="deliveryCustomerCell" onClick={()=>onOpen(delivery)}>
