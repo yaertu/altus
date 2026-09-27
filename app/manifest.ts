@@ -3,14 +3,14 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "yaaTeslimat",
-    short_name: "yaaTeslimat",
+    name: "ALTUS Teslimat",
+    short_name: "ALTUS",
     description: "Dükkan ve sevkiyat ekibi için canlı teslimat operasyon yönetimi",
     start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",
-    background_color: "#f7fbfc",
-    theme_color: "#f7fbfc",
+    background_color: "#ffffff",
+    theme_color: "#f00088",
     orientation: "any",
     categories: ["business","productivity","utilities"],
     icons: [
