@@ -174,7 +174,8 @@ export async function removeCloudDelivery(id: string) {
 
 export async function loadDeliveryProofs(deliveryId:string): Promise<DeliveryProof[]> {
   if (!supabase) return [];
-  const { data, error } = await supabase
+  const client = supabase;
+  const { data, error } = await client
     .from("delivery_proofs")
     .select("id,delivery_id,proof_type,storage_path,file_name,mime_type,size_bytes,created_by,created_at")
     .eq("delivery_id", deliveryId)
@@ -183,7 +184,7 @@ export async function loadDeliveryProofs(deliveryId:string): Promise<DeliveryPro
 
   const rows=data || [];
   const urls=await Promise.all(rows.map(async(row:any)=>{
-    const { data:signed, error:signedError } = await supabase.storage
+    const { data:signed, error:signedError } = await client.storage
       .from("delivery-proofs")
       .createSignedUrl(row.storage_path, 60*60);
     if (signedError) throw signedError;
