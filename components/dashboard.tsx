@@ -50,6 +50,7 @@ function addressText(address:string,district:string,city:string){ return [addres
 function map(d:Delivery){ return "https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(addressText(d.address,d.district,d.city)); }
 function mapSearch(address:string,district:string,city:string){ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addressText(address,district,city)); }
 function mapEmbed(address:string,district:string,city:string){ return "https://www.google.com/maps?q="+encodeURIComponent(addressText(address,district,city))+"&output=embed"; }
+const ALTUS_LOGO_URL="https://www.arcelikglobal.com/media/zl5aashl/altus_logo_pink.png";
 const DEFAULT_APP_SETTINGS:AppSettings={storeName:"ALTUS Mağazası",storeSubtitle:"Teslimat & Servis",storePhone:"",storeAddress:"",storeCity:"İstanbul",logoUrl:""};
 
 export default function Dashboard(){
@@ -358,7 +359,7 @@ export default function Dashboard(){
       <header className="appTopbar">
         <div className="topBrand">
           <button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button>
-          <div className={"topBrandMark storeBrandMark "+(appSettings.logoUrl?"hasBrandLogo":"altusFallback")}>{appSettings.logoUrl?<img src={appSettings.logoUrl} alt={appSettings.storeName}/>:<b>ALTUS</b>}</div>
+          <div className="topBrandMark storeBrandMark hasBrandLogo"><img src={appSettings.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div>
           <div className="topBrandCopy"><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle.toLocaleUpperCase("tr-TR")}</span></div>
         </div>
 
@@ -589,7 +590,7 @@ function SettingsPage({
   return <div className="settingsHub">
     <section className="settingsIdentity">
       <div className="settingsIdentityPreview">
-        <div className={"settingsLogo "+(draft.logoUrl?"hasImage":"altusFallback")}>{draft.logoUrl?<img src={draft.logoUrl} alt={draft.storeName}/>:<b>ALTUS</b>}</div>
+        <div className="settingsLogo hasImage"><img src={draft.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div>
         <div><small>MAĞAZA KİMLİĞİ</small><h2>{draft.storeName||"Mağaza adı"}</h2><p>{draft.storeSubtitle||"Teslimat & Servis"}</p></div>
       </div>
       <div className="settingsIdentityActions">
