@@ -347,7 +347,7 @@ export default function Dashboard(){
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
 
     <aside className={"side "+(side?"open":"")} aria-label="Mobil menü">
-      <div className="brand"><div className={appSettings.logoUrl?"hasBrandLogo":"altusFallback"}>{appSettings.logoUrl?<img src={appSettings.logoUrl} alt={appSettings.storeName}/>:<b>ALTUS</b>}</div><p><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle}</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
+      <div className="brand"><div className="hasBrandLogo"><img src={appSettings.logoUrl||ALTUS_LOGO_URL} alt="ALTUS"/></div><p><b>{appSettings.storeName}</b><span>{appSettings.storeSubtitle}</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
       {profile?.role==="courier"?<div className="roleChip"><Truck size={15}/><span>Servis personeli</span><i>CANLI</i></div>:<div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Mağaza</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Servis</button></div>}
       {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={18}/><span>Mağazaya dön</span></button>:null}</nav>}
       <div className="grow"/>
