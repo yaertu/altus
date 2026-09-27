@@ -17,9 +17,9 @@ const mono = Roboto_Mono({
 const themeBoot = `
 (function(){
   try{
-    var key="yaateslimat:theme:v4";
+    var key="yaateslimat:theme:v5";
     var saved=localStorage.getItem(key);
-    var theme=(saved==="dark"||saved==="light") ? saved : "dark";
+    var theme="light";
     var root=document.documentElement;
     root.dataset.theme=theme;
     root.classList.toggle("dark",theme==="dark");
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0a",
+  themeColor: "#f6f8fb",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"
