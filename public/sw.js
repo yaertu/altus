@@ -1,4 +1,4 @@
-const CACHE = "yaateslimat-v4";
+const CACHE = "yaateslimat-v6";
 const CORE = ["/", "/manifest.webmanifest", "/icon.svg"];
 const ICON_HOSTS = ["api.iconify.design", "api.simplesvg.com", "api.unisvg.com"];
 
