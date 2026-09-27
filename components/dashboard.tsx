@@ -16,7 +16,7 @@ import OperationsCenter from "./operations-center";
 import DeliveryProofPanel from "./delivery-proof-panel";
 import { ActivityEvent, Delivery, DeliveryStatus, Priority } from "@/lib/types";
 import {
-  cloudAvailable, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
+  cloudAvailable, createCourierStaff, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
   loadCloudData, loadMyNotifications, markNotificationRead, patchDelivery, removeCloudDelivery,
   signOut, subscribeCloud, subscribeMyNotifications, unsubscribeCloud,
   type AppNotification, type Profile
@@ -224,11 +224,15 @@ export default function Dashboard(){
       }
     }catch(err:any){ setCloudError(err?.message||"Teslimat kaydedilemedi."); }
   }
-  async function addStaff(s:{name:string;phone:string}){
+  async function addStaff(s:{name:string;phone:string;email:string;password:string}){
     try{
-      const rec=cloud ? await insertStaff(s.name,s.phone) : {...s,id:id("s")};
-      setStaff(p=>[...p.filter(x=>x.id!==rec.id),rec]); setStaffOpen(false);
-    }catch(err:any){ setCloudError(err?.message||"Personel kaydedilemedi."); }
+      const rec=cloud
+        ? await createCourierStaff({name:s.name,phone:s.phone,email:s.email,password:s.password})
+        : await insertStaff(s.name,s.phone);
+      setStaff(p=>[...p.filter(x=>x.id!==rec.id),rec]);
+      setStaffOpen(false);
+      setActionNotice({text:cloud?s.name+" için servis hesabı oluşturuldu. Telefonda giriş yapıp bildirimleri açabilir.":s.name+" personel listesine eklendi.",tone:"ok"});
+    }catch(err:any){ setCloudError(err?.message||"Personel hesabı oluşturulamadı."); }
   }
   async function assignDelivery(d:Delivery,person:Staff|null){
     const assignee=person?.name||"Atanmamış";
@@ -559,7 +563,37 @@ function NewDelivery({staff,onClose,onSave}:{staff:Staff[];onClose:()=>void;onSa
   </form></Modal>
 }
 
-function NewStaff({onClose,onSave}:{onClose:()=>void;onSave:(s:{name:string;phone:string})=>void}){const [name,setName]=useState(""),[phone,setPhone]=useState("");return <Modal onClose={onClose}><form onSubmit={e=>{e.preventDefault();if(name)onSave({name,phone})}}><PageHead tag="PERSONEL" title="Sevkiyatçı ekle" text="Teslimat atayacağın personeli kaydet."/><div className="form one"><Field label="Ad soyad" v={name} set={setName}/><Field label="Telefon" v={phone} set={setPhone}/></div><div className="modalActions"><button type="button" className="soft" onClick={onClose}>Vazgeç</button><button className="primary"><UserPlus size={16}/>Personeli ekle</button></div></form></Modal>}
+function NewStaff({onClose,onSave}:{onClose:()=>void;onSave:(s:{name:string;phone:string;email:string;password:string})=>void}){
+  const [name,setName]=useState("");
+  const [phone,setPhone]=useState("");
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [show,setShow]=useState(false);
+  const valid=name.trim().length>=3&&phone.replace(/\D/g,"").length>=10&&email.includes("@")&&password.length>=8;
+
+  return <Modal onClose={onClose}><form className="staffCreate" onSubmit={e=>{e.preventDefault();if(valid)onSave({name:name.trim(),phone:phone.trim(),email:email.trim(),password})}}>
+    <PageHead tag="SERVİS PERSONELİ" title="Personel + telefon hesabını birlikte oluştur" text="Bu hesap personelin telefonunda yaaTeslimat'a giriş yapması ve yeni görev bildirimlerini alması için kullanılacak."/>
+    <div className="staffCreateGrid">
+      <section>
+        <div className="staffCreateTitle"><span>1</span><div><b>Personel bilgileri</b><small>Mağazada göreceğin ad ve telefon</small></div></div>
+        <div className="form one">
+          <Field label="Ad soyad *" v={name} set={setName} placeholder="Örn. Ahmet Yılmaz"/>
+          <Field label="Telefon *" v={phone} set={setPhone} placeholder="05xx xxx xx xx" inputMode="tel"/>
+        </div>
+      </section>
+      <section>
+        <div className="staffCreateTitle"><span>2</span><div><b>Telefon giriş hesabı</b><small>Personel bu bilgilerle telefondan giriş yapacak</small></div></div>
+        <div className="form one">
+          <Field label="E-posta *" v={email} set={setEmail} placeholder="personel@magaza.com"/>
+          <label><span>Geçici şifre *</span><div className="passwordField"><input type={show?"text":"password"} value={password} placeholder="En az 8 karakter" onChange={e=>setPassword(e.target.value)}/><button type="button" onClick={()=>setShow(v=>!v)}>{show?"Gizle":"Göster"}</button></div></label>
+        </div>
+      </section>
+    </div>
+    <div className="staffCreateInfo"><Bell/><div><b>Bildirim akışı</b><span>Hesap oluşturulur → personel telefonda giriş yapar → “Bildirimleri aç”a bir kez basar → mağazadan atanan yeni teslimatlar anında o telefona gönderilir.</span></div></div>
+    <div className="modalActions"><button type="button" className="soft" onClick={onClose}>Vazgeç</button><button className="primary" disabled={!valid}><UserPlus/>Personeli ve hesabı oluştur</button></div>
+  </form></Modal>
+}
+
 function Modal({children,onClose}:{children:React.ReactNode;onClose:()=>void}){return <div className="modalBg" onMouseDown={onClose}><div className="modal" onMouseDown={e=>e.stopPropagation()}><button className="modalX" aria-label="Pencereyi kapat" onClick={onClose}><X size={18}/></button>{children}</div></div>}
 function Field({label,v,set,wide,type="text",placeholder="",inputMode}:{label:string;v:string;set:(v:string)=>void;wide?:boolean;type?:string;placeholder?:string;inputMode?:React.HTMLAttributes<HTMLInputElement>["inputMode"]}){return <label className={wide?"wide":""}><span>{label}</span><input type={type} value={v} placeholder={placeholder} inputMode={inputMode} onChange={e=>set(e.target.value)}/></label>}
 function Select({label,v,set,opts}:{label:string;v:string;set:(v:string)=>void;opts:string[]}){return <label><span>{label}</span><select value={v} onChange={e=>set(e.target.value)}>{opts.map(o=><option key={o} value={o}>{o==="normal"?"Normal":o==="high"?"Öncelikli":o==="critical"?"Acil":o}</option>)}</select></label>}
