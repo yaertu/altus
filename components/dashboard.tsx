@@ -243,17 +243,26 @@ export default function Dashboard(){
                   : "Uygulama, bildirim ve cihaz ayarlarını yönet.";
 
   return <div className="app">
-    {splash&&<div className="splash"><div className="splashLogo"><Truck/></div><b>yaaTeslimat</b><span>Teslimat Operasyon Sistemi</span><DeveloperBadge compact/></div>}
+    {splash&&<div className="splash"><div className="splashLogo"><Truck/></div><b>yaaTeslimat</b><span>Dispatch Workspace</span><DeveloperBadge compact/></div>}
     {side?<button className="sideBackdrop" aria-label="Menüyü kapat" onClick={()=>setSide(false)}/>:null}
-    <aside className={"side "+(side?"open":"")} aria-label="Ana menü">
-      <div className="brand"><div><Truck size={21}/></div><p><b>yaaTeslimat</b><span>Sevkiyat Yönetimi</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
+
+    <aside className={"side "+(side?"open":"")} aria-label="Mobil menü">
+      <div className="brand"><div><Truck size={21}/></div><p><b>yaaTeslimat</b><span>Dispatch Workspace</span></p><button aria-label="Menüyü kapat" onClick={()=>setSide(false)}><X size={18}/></button></div>
       {profile?.role==="courier"?<div className="roleChip"><Truck size={15}/><span>Sevkiyatçı modu</span><i>CANLI</i></div>:<div className="modes"><button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={15}/>Dükkan</button><button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={15}/>Sevkiyatçı</button></div>}
       {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>{setView(v);setSide(false)}}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={18}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={18}/><span>Dükkana dön</span></button>:null}</nav>}
-      <div className="grow"/><div className="online"><i/><p><b>Sistem hazır</b><span>Mobil • Tablet • PC</span></p></div><DeveloperBadge/>
+      <div className="grow"/>
+      <div className="online"><i/><p><b>Sistem hazır</b><span>Mobil • Tablet • PC</span></p></div>
+      <DeveloperBadge/>
     </aside>
+
     <main>
       <header className="appTopbar">
-        <button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button>
+        <div className="topBrand">
+          <button className="hamb" aria-label="Menüyü aç" onClick={()=>setSide(true)}><Menu size={20}/></button>
+          <div className="topBrandMark"><Truck size={19}/></div>
+          <div className="topBrandCopy"><b>yaaTeslimat</b><span>DISPATCH WORKSPACE</span></div>
+        </div>
+
         <label className="globalSearch">
           <Search size={18}/>
           <input
@@ -261,22 +270,34 @@ export default function Dashboard(){
             value={mode==="office"?query:""}
             readOnly={mode!=="office"}
             onChange={e=>{setQuery(e.target.value);if(e.target.value)setView("deliveries")}}
-            placeholder={mode==="office"?"Müşteri, telefon, adres, ürün veya sipariş no ara...":"Sevkiyatçı modunda görevlerin aşağıda"}
+            placeholder={mode==="office"?"Sipariş, müşteri, ürün, telefon veya adres ara":"Sevkiyatçı görevlerinde ara"}
           />
-          <kbd>⌘ K</kbd>
+          <kbd>⌘K</kbd>
         </label>
+
         <div className="topbarRight">
+          <span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"Offline":cloud?"Canlı":"Yerel"}</span>
           <ThemeToggle/>
-          <span className={"syncState "+(!online?"offline":cloud?"live":"local")}><i/>{!online?"İnternet yok":cloud?"Canlı":"Yerel"}</span>
           {mode==="courier"&&profile?.role!=="courier"?<label className="select courierSelect"><UserRound size={15}/><select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Personel seç</option>{names.map(n=><option key={n}>{n}</option>)}</select><ChevronDown size={13}/></label>:null}
           <button className="iconButton notifyButton" aria-label={notify?"Bildirimler açık":"Bildirimleri aç"} onClick={notifications}><Bell size={18}/>{notify?<i/>:null}</button>
           <div className="userChip"><span>{initials(profile?.fullName||courier||"Dükkan")}</span><p><b>{profile?.fullName||courier||"Dükkan"}</b><small>{profile?.role==="courier"?"Sevkiyatçı":"Operasyon"}</small></p></div>
-          {mode==="office"?<button className="primary topNew" onClick={()=>setNewOpen(true)}><Plus size={18}/><span>Yeni teslimat</span></button>:null}
         </div>
       </header>
+
+      <div className="desktopNav">
+        <div className="navMode">
+          {profile?.role==="courier"?<span><Truck size={14}/>Sevkiyatçı</span>:<>
+            <button className={mode==="office"?"on":""} onClick={()=>{setMode("office");setView("dashboard")}}><Store size={14}/>Dükkan</button>
+            <button className={mode==="courier"?"on":""} onClick={()=>setMode("courier")}><Truck size={14}/>Saha</button>
+          </>}
+        </div>
+        {mode==="office"?<nav>{nav.map(([v,l,i])=><button key={v} className={view===v?"on":""} onClick={()=>setView(v)}>{i}<span>{l}</span>{v==="deliveries"&&active>0?<b>{active}</b>:null}</button>)}</nav>:<nav><button className="on"><Truck size={17}/><span>Görevlerim</span></button>{profile?.role!=="courier"?<button onClick={()=>setMode("office")}><Store size={17}/><span>Dükkana dön</span></button>:null}</nav>}
+        {mode==="office"?<button className="primary navCreate" onClick={()=>setNewOpen(true)}><Plus size={17}/>Yeni teslimat</button>:null}
+      </div>
+
       <section className="pageIntro">
         <div>
-          <small>{mode==="office"?"DÜKKAN OPERASYONU":"SEVKİYATÇI EKRANI"}</small>
+          <small>{mode==="office"?"OPERASYON / "+pageTitle.toLocaleUpperCase("tr-TR"):"SAHA / GÖREVLER"}</small>
           <h1>{pageTitle}</h1>
           <p>{pageDescription}</p>
         </div>
@@ -295,7 +316,7 @@ export default function Dashboard(){
         {view==="logs"&&<LogsPage events={events}/>}
         {view==="settings"&&<SettingsPage requireChecks={requireChecks} setRequireChecks={setRequireChecks} notify={notify} onNotify={notifications} cloud={cloud} profile={profile} onSignOut={async()=>{await signOut();window.location.reload()}} onClear={()=>{if(confirm("Bu cihazdaki yerel kayıtlar silinsin mi?")){setDeliveries([]);setStaff([]);setEvents([])}}}/>} 
       </>}
-      <footer><span>yaaTeslimat • v0.9</span><DeveloperBadge compact/></footer>
+      <footer><span>yaaTeslimat • v1.0</span><DeveloperBadge compact/></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
     {newOpen&&<NewDelivery staff={names} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>}
