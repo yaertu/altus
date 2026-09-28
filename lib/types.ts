@@ -1,5 +1,12 @@
 export type DeliveryStatus = "new" | "assigned" | "seen" | "on_route" | "completed" | "issue";
 export type Priority = "normal" | "high" | "critical";
+export type DeliveryOutcome = "delivered" | "installed" | "left_for_service";
+
+export interface DeliveryCompletion {
+  outcome: DeliveryOutcome;
+  note?: string;
+  completedAt: string;
+}
 
 export interface DeliveryItem {
   id: string;
@@ -19,6 +26,7 @@ export interface DeliveryChecklist {
   modelChecked: boolean;
   accessoriesChecked: boolean;
   returnChecked: boolean;
+  completion?: DeliveryCompletion;
 }
 
 export interface Delivery {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle, ArrowUpDown, BellRing, CalendarDays, CheckCircle2,
   ChevronLeft, ChevronRight, Clock3, Download, MapPin, PackageCheck,
-  Phone, Plus, Printer, Search, SlidersHorizontal, Truck, UserPlus, Wifi
+  Phone, Plus, Printer, Search, SlidersHorizontal, Truck, UserPlus
 } from "lucide-react";
 import type { Delivery } from "@/lib/types";
 
@@ -72,11 +72,10 @@ function csvCell(value:unknown){
 }
 
 export default function OperationsCenter({
-  deliveries,staff,cloud,onNew,onStaff,onOpen,onAssign
+  deliveries,staff,onNew,onStaff,onOpen,onAssign
 }:{
   deliveries:Delivery[];
   staff:StaffLite[];
-  cloud:boolean;
   onNew:()=>void;
   onStaff:()=>void;
   onOpen:(delivery:Delivery)=>void;
@@ -158,7 +157,7 @@ export default function OperationsCenter({
           <span className="opsSun">{selectedIsToday?"☀":"◷"}</span>
           <div>
             <h1>{selectedIsToday?"Bugün":new Intl.DateTimeFormat("tr-TR",{day:"2-digit",month:"long"}).format(selectedDate)}</h1>
-            <p>Teslimatları kaydet, personele ata, eksikleri gör ve tamamlanana kadar tek çizelgeden takip et.</p>
+            <p>Siparişi gir, personeli seç, teslimatı canlı takip et.</p>
           </div>
         </div>
       </div>
@@ -184,7 +183,6 @@ export default function OperationsCenter({
         <div><span>Tamamlanma</span><b>%{completion}</b></div>
         <i><em style={{width:completion+"%"}}/></i>
       </div>
-      <div className={"opsLivePill "+(cloud?"online":"local")}><i/><Wifi/><span>{cloud?"Canlı senkron":"Yerel mod"}</span></div>
     </section>
 
     <section className="opsAttentionStrip">
@@ -192,14 +190,13 @@ export default function OperationsCenter({
       <button className={overdue.length?"violet":"quiet"} onClick={()=>setFocus("overdue")}><Clock3/><b>{overdue.length}</b><span>dünden kalan</span></button>
       <button className={missing.length?"warn":"quiet"} onClick={()=>setFocus("missing")}><CheckCircle2/><b>{missing.length}</b><span>eksik kayıt</span></button>
       <button className={staff.length&&linkedStaff===staff.length?"ok":"warn"} onClick={onStaff}><BellRing/><b>{linkedStaff}/{staff.length}</b><span>bildirim hesabı</span></button>
-      <p>{late.length||overdue.length||missing.length||linkedStaff<staff.length?"Kontrol gereken başlıklar burada toplanır.":"Operasyon temiz görünüyor; kritik uyarı yok."}</p>
     </section>
 
     <section className="opsTableCard opsTableCardV3">
       <div className="opsTableTitle opsTableTitleV3">
         <div className="opsTableIdentity">
           <span><PackageCheck/></span>
-          <div><h2>Mağaza teslimat çizelgesi</h2><p>{prettyDate} • {visible.length} kayıt</p></div>
+          <div><h2>Teslimatlar</h2><p>{prettyDate} • {visible.length} kayıt</p></div>
         </div>
         <div className="opsTableActions">
           <button className="soft compactAction" onClick={onStaff}><UserPlus/>Personel</button>
@@ -212,7 +209,7 @@ export default function OperationsCenter({
       <div className="opsToolbar opsToolbarV3">
         <label className="opsSearch">
           <Search/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Müşteri, telefon, ürün, adres, personel veya not ara..."/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Müşteri, telefon, ürün veya adres ara"/>
         </label>
         <div className="opsFilters">
           <Filter on={focus==="all"} onClick={()=>setFocus("all")} label="Tümü" count={queue.length}/>

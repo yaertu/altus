@@ -8164,11 +8164,11 @@ button.sheetCell{cursor:pointer}
    ========================================================= */
 
 :root{
-  --altus:#f00088;
+  --altus:#ec008c;
   --altus-dark:#b60067;
   --altus-soft:#fff0f8;
   --altus-soft-2:#ffe3f2;
-  --altus-ink:#202027;
+  --altus-ink:#1e2e3f;
   --altus-muted:#6f6f78;
   --altus-line:#e7e2e6;
 }
@@ -8631,11 +8631,11 @@ html[data-theme="light"] body{background:#f7f7f8}
    ========================================================= */
 
 :root{
-  --altus:#f00088;
+  --altus:#ec008c;
   --altus-dark:#b60067;
   --altus-soft:#fff0f8;
   --altus-soft-2:#ffe3f2;
-  --altus-ink:#202027;
+  --altus-ink:#1e2e3f;
   --altus-muted:#6f6f78;
   --altus-line:#e7e2e6;
 }
@@ -9379,7 +9379,7 @@ html[data-theme="light"]{
   --panel-4:#fff0f8;
   --glass:rgba(255,255,255,.96);
 
-  --text:#202027;
+  --text:#1e2e3f;
   --text-2:#42424a;
   --muted:#73737d;
   --muted-2:#a0a0aa;
@@ -9388,12 +9388,12 @@ html[data-theme="light"]{
   --line-2:#d8d2d7;
   --line-3:#c7bec5;
 
-  --accent:#f00088;
-  --accent-2:#202027;
+  --accent:#ec008c;
+  --accent-2:#1e2e3f;
   --accent-soft:rgba(240,0,136,.075);
   --accent-border:rgba(240,0,136,.24);
 
-  --blue:#f00088;
+  --blue:#ec008c;
   --blue-soft:rgba(240,0,136,.07);
   --violet:#b60067;
   --violet-soft:rgba(182,0,103,.07);

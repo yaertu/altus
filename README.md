@@ -1,75 +1,40 @@
 # ALTUS Teslimat
 
-Dükkan ve sevkiyat personeli için responsive teslimat operasyon uygulaması.
+Mağaza personeli ve sevkiyatçı için canlı teslimat operasyon sistemi. Aynı ürün web, Android ve iOS kabuğunda çalışır.
 
-## v0.9 — Obsidian Operations
+## v2.4
 
-- Baştan yazılmış Obsidian koyu tema
-- Plus Jakarta Sans + JetBrains Mono tipografi sistemi
-- Yeni operasyon hero/pulse alanı
-- Dört KPI kartı ve filtrelenebilir risk görünümü
-- Yeniden tasarlanmış teslimat kuyruğu ve kontrol rail'i
-- 1024px altında drawer sidebar, mobil bottom navigation
-- Light mode desteği korunur, varsayılan dark
+- Mağaza için dört adımlı sipariş girişi: müşteri, adres, ürün, personel
+- Sevkiyatçı için sıradaki-durak odaklı mobil ekran
+- Müşteri, telefon, açık adres, kısa tarif, ürün/model ve büyük işlem tuşları
+- Google Maps rota ve isteğe bağlı uygulama içi canlı konum
+- Teslim edildi, kurulum yapıldı veya servis kuracak sonuçları
+- Kurye notu, zorunlu kontrol listesi ve mağazaya anlık Supabase senkronu
+- ALTUS renkleri, sade responsive arayüz ve animasyonlu `yaaertu codeR` imzası
 
-- Sıfırdan yazılmış semantic token tabanlı responsive tema
-- Gerçek Gündüz / Gece tema anahtarı
-- Tema tercihi localStorage + cross-tab senkron
-- İlk paint öncesi theme bootstrap ile düşük flash
-- Floating sidebar + global arama + Cmd/Ctrl+K
-- Mission-control tipi yeni Kontrol Merkezi
-- Geciken teslimat uyarıları
-- 15 dakikadan uzun süredir görülmeyen görev uyarıları
-- Eksik adres / telefon / ilçe / ürün / personel kontrolü
-- Bekliyor / Yolda / Tamamlandı / Sorun akış panosu
-- Completion ring + geciken/görülmedi/eksik bilgi metrikleri
-- Ayrı hızlı işlem / personel atama / operasyon sağlık rail'i
-- Masaüstünde sürükle-bırak personel atama
-- Mobilde kart içinden personel seçimi
-- Yerel modda eski teslimat kayıtlarındaki personelleri otomatik toparlama
-- Supabase Auth + rol tabanlı RLS
-- Supabase Realtime canlı yenileme
-- Optimistic UI rollback: bulut yazımı başarısızsa ekran eski değere döner
-- İşlem kayıtları / denetim izi
-- Zorunlu 6 adımlı teslimat checklist'i
-- PWA service worker + kurulum rehberi
-- Web Push abonelik ve görev bildirimi
-- Telefonla arama + Google Maps yol tarifi
-- Supabase yoksa güvenli yerel çalışma modu
-
-## Kurulum
+## Web
 
 ```bash
 npm install
 npm run dev
+npm run typecheck
+npm run build
 ```
 
-Production:
+Canlı adres: <https://altuss.vercel.app>
+
+## Android ve iOS
+
+Capacitor projeleri `android/` ve `ios/` klasörlerindedir.
 
 ```bash
-npm run build
-npm run start
+npm run mobile:sync
+npm run android:apk
 ```
 
-## Supabase canlı bağlantı
+Detaylı mobil derleme notu: [`docs/MOBILE-BUILD.md`](docs/MOBILE-BUILD.md)
 
-ALTUS Teslimat için **ayrı bir Supabase projesi** kullanılması önerilir.
-
-SQL dosyalarını sırasıyla uygula:
-
-1. `supabase/schema.sql`
-2. `supabase/migrations/20260926_realtime_auth_push.sql`
-3. `supabase/migrations/20260927_v06_hardening.sql`
-4. `supabase/migrations/20260927_v06_courier_guard.sql`
-
-Sonra:
-
-1. Supabase Auth içinden dükkan kullanıcı hesabını oluştur.
-2. `profiles` tablosuna kullanıcıyı `admin` veya `office` rolüyle ekle.
-3. Sevkiyatçı kullanıcılarını Auth içinde oluştur.
-4. Sevkiyatçıları `profiles.role = 'courier'` olarak tanımla.
-5. `staff.user_id` ile ilgili Auth/Profile kullanıcısını eşleştir.
-6. Vercel Environment Variables alanına aşağıdaki değerleri ekle.
+## Ortam değişkenleri
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
@@ -80,35 +45,27 @@ NEXT_PUBLIC_VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:admin@example.com
 SUPABASE_SERVICE_ROLE_KEY=
+
+# Uygulama içi canlı rota için; domain kısıtlı tarayıcı anahtarı kullanın.
+NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY=
 ```
 
-> `SUPABASE_SERVICE_ROLE_KEY` ve `VAPID_PRIVATE_KEY` yalnız server environment değişkenidir. Asla `NEXT_PUBLIC_` ile başlamamalıdır.
+`SUPABASE_SERVICE_ROLE_KEY` ve `VAPID_PRIVATE_KEY` yalnız sunucu ortamında tutulmalıdır.
 
-## Roller
+## Supabase
 
-- `admin`: tam yönetim
-- `office`: dükkan operasyonu, teslimat/personel yönetimi
-- `courier`: yalnız kendisine atanmış sevkiyatları görür/günceller
-- `viewer`: operasyonu salt okunur izler
+SQL dosyalarını sırasıyla uygulayın:
 
-## Canlı operasyon davranışı
+1. `supabase/schema.sql`
+2. `supabase/migrations/20260926_realtime_auth_push.sql`
+3. `supabase/migrations/20260927_v06_hardening.sql`
+4. `supabase/migrations/20260927_v06_courier_guard.sql`
 
-- Dükkan teslimat oluşturur.
-- Personel atanınca durum `assigned` olur.
-- Web Push yapılandırılmışsa personelin kayıtlı cihazına bildirim gider.
-- Personel `Gördüm`, `Yola çıktım`, checklist ve `Teslim edildi` işlemlerini günceller.
-- Realtime açık cihazlara yeni veriyi yayınlar.
-- Bulut güncellemesi başarısız olursa istemci yanlış durumu ekranda bırakmaz; değişikliği geri alır.
+Roller: `admin`, `office`, `courier`, `viewer`. RLS politikaları sevkiyatçının yalnız kendisine atanmış işleri görmesini ve izinli alanları güncellemesini sağlar.
 
 ## Güvenlik
 
-- Temel şema RLS açık ve **deny-by-default** gelir.
-- Eski geniş authenticated politikaları v0.6 migration'ında kaldırılır.
-- `created_by` ve `actor_id` varsayılan olarak `auth.uid()` kullanır.
-- Gerçek müşteri adı, telefon ve adresleri kaynak koda/demo fixture'larına yazılmaz.
-- Push endpoint'i Bearer token ve `admin/office` rolü doğrular.
-- Push bildiriminin kilit ekranı metninde müşteri adı/adres/telefon gösterilmez.
-
-## Tasarım / UX audit
-
-Güncel redesign notları: `docs/AUDIT-v0.7.md`
+- Müşteri bilgileri kaynak koda veya demo verisine yazılmaz.
+- Push bildiriminde müşteri adı, adresi ve telefonu gösterilmez.
+- Bulut güncellemesi başarısızsa arayüz değişikliği geri alınır.
+- Müşteri adresi açık topluluk geocoder servislerine gönderilmez.

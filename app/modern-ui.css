@@ -1,0 +1,191 @@
+/* ALTUS Delivery OS — clean interaction layer */
+:root{
+  --ui-pink:#ec008c;
+  --ui-pink-dark:#b00068;
+  --ui-navy:#1e2e3f;
+  --ui-muted:#617080;
+  --ui-line:#dce2e8;
+  --ui-canvas:#f4f6f8;
+  --ui-card:#fff;
+  --ui-green:#0a9b72;
+  --ui-shadow:0 10px 30px rgba(30,46,63,.07);
+}
+
+html,body{background:var(--ui-canvas)}
+body{color:var(--ui-navy)}
+.app.productUi{background:var(--ui-canvas)}
+.app.productUi main{width:100%;max-width:1920px;margin:0 auto;padding:0 clamp(14px,2vw,28px) 20px}
+
+/* One brand, one context, one main action. */
+.productUi .appTopbar{
+  min-height:72px;
+  margin:10px 0 8px;
+  padding:8px 12px;
+  border:1px solid var(--ui-line);
+  border-top:3px solid var(--ui-pink);
+  border-radius:16px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 6px 22px rgba(30,46,63,.06);
+}
+.productUi .topBrand{min-width:118px;gap:8px}
+.productUi .storeBrandMark.hasBrandLogo{width:100px!important;height:45px!important;padding:0!important;border:0!important;background:#fff!important}
+.productUi .topbarContext{min-width:0;padding-left:14px;border-left:1px solid var(--ui-line)}
+.productUi .topbarContext b{font-size:15px;letter-spacing:-.02em}
+.productUi .globalSearch{max-width:620px;min-height:46px;border-color:var(--ui-line);border-radius:12px;background:#f8fafb}
+.productUi .globalSearch input{font-size:14px}
+.productUi .syncState{min-height:36px;border-radius:999px}
+.productUi .userChip{min-height:46px;border-radius:12px}
+
+.productUi .desktopNav{
+  min-height:62px;
+  margin:0;
+  padding:7px;
+  border:1px solid var(--ui-line);
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 4px 16px rgba(30,46,63,.04);
+}
+.productUi .navMode{padding:3px;border-radius:11px;background:#f1f4f6}
+.productUi .navMode button,.productUi .desktopNav>nav button,.productUi .moreNavButton{min-height:44px;border-radius:10px}
+.productUi .navMode button.on,.productUi .desktopNav>nav button.on{color:var(--ui-pink);background:#fff;box-shadow:0 3px 12px rgba(30,46,63,.07)}
+.productUi .navCreate{min-height:46px;padding-inline:18px;border-radius:12px!important}
+
+/* Dashboard: dense enough for work, simple enough to scan. */
+.productUi .opsV3{max-width:none;padding:20px 4px 8px;gap:12px}
+.productUi .opsCommandV3{min-height:76px;padding:0 4px}
+.productUi .opsBreadcrumb{font-size:11px;letter-spacing:.11em}
+.productUi .opsTitleLine{gap:9px}
+.productUi .opsSun{width:38px;height:38px;font-size:24px}
+.productUi .opsTitleLine h1{font-size:38px;line-height:1}
+.productUi .opsTitleLine p{margin-top:7px;color:var(--ui-muted);font-size:14px}
+.productUi .opsDateSwitch{min-height:46px;border-color:var(--ui-line);border-radius:12px}
+.productUi .opsDateSwitch>button{height:46px}
+
+.productUi .opsSummaryStrip{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(112px,1fr)) minmax(170px,1.25fr);
+  overflow:hidden;
+  border:1px solid var(--ui-line);
+  border-radius:16px;
+  background:#fff;
+  box-shadow:var(--ui-shadow);
+}
+.productUi .opsMetric{min-height:88px;padding:13px 14px;gap:11px;border-right:1px solid var(--ui-line)}
+.productUi .opsMetric>span{width:40px;height:40px;flex:0 0 40px;border-radius:12px}
+.productUi .opsMetric>span svg{width:20px;height:20px}
+.productUi .opsMetric b{font-size:25px}
+.productUi .opsMetric small{margin-top:4px;font-size:11px}
+.productUi .opsCompletion{min-height:88px;padding:14px;border:0}
+.productUi .opsCompletion span{font-size:11px}
+.productUi .opsCompletion>i{height:7px}
+
+.productUi .opsAttentionStrip{min-height:54px;padding:6px;border-color:var(--ui-line);border-radius:13px;background:#fff}
+.productUi .opsAttentionStrip button{min-height:40px;padding-inline:11px;border-radius:9px;font-size:12px}
+
+.productUi .opsTableCardV3{min-height:0;border:1px solid var(--ui-line);border-radius:16px;box-shadow:var(--ui-shadow)}
+.productUi .opsTableTitleV3{min-height:68px;padding:11px 13px}
+.productUi .opsTableIdentity>span{width:40px;height:40px;border-radius:11px}
+.productUi .opsTableIdentity h2{font-size:17px}
+.productUi .opsTableIdentity p{font-size:11px}
+.productUi .compactAction{min-height:42px;padding-inline:12px;border-radius:10px;font-size:12px}
+.productUi .opsToolbarV3{grid-template-columns:minmax(260px,1fr) minmax(0,2fr) auto;padding:9px;gap:8px}
+.productUi .opsSearch{min-height:44px;border-radius:10px}
+.productUi .opsSearch input{font-size:14px}
+.productUi .opsFilters button{min-height:38px;font-size:11px}
+.productUi .opsSort{min-height:38px}
+.productUi .opsGridScrollV3{min-height:0;background:#fff}
+.productUi .opsGrid .sheetRow{min-height:82px}
+.productUi .opsGrid .sheetCell{padding:9px}
+.productUi .opsEmptyV3{min-height:260px}
+
+/* Interior screens */
+.productUi .pageIntro{min-height:92px;padding:18px 4px 12px}
+.productUi .pageIntro small{font-size:10px}
+.productUi .pageIntro h1{margin-top:5px;font-size:32px}
+.productUi .pageIntroMeta>span{min-height:40px;border-radius:10px}
+.productUi .card.page,.productUi .settingsIdentity,.productUi .settingsPanel{border-color:var(--ui-line);box-shadow:var(--ui-shadow)}
+.productUi .settingsHub{gap:12px}
+.productUi .settingsIdentity{padding:14px 16px;border-radius:16px}
+.productUi .settingsIdentityPreview{gap:12px}
+.productUi .settingsLogo.hasImage{position:relative;isolation:isolate;width:72px;height:58px;padding:4px;overflow:hidden;border:1px solid var(--ui-line);border-radius:12px;background:#fff!important}
+.productUi .settingsLogo.hasImage img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:100%!important;object-fit:contain!important;transform:none!important}
+.productUi .settingsIdentityPreview h2{font-size:20px}
+.productUi .settingsIdentityPreview p{font-size:11px}
+.productUi .settingsGridV5{gap:12px}
+.productUi .settingsPanel{padding:16px;border-radius:16px}
+.productUi .settingsPanelHead h3{font-size:17px}
+.productUi .settingsPanelHead p,.productUi .settingsHelp{font-size:12px;line-height:1.45}
+
+/* Signature is visible but never competes with the task. */
+.productUi footer{min-height:50px;justify-content:center}
+.productUi .developerSignature{position:relative;display:inline-flex;align-items:center;gap:6px;padding:8px 13px;overflow:hidden;color:var(--ui-navy);border:1px solid var(--ui-line);border-radius:999px;background:#fff;font:800 11px/1 var(--font-mono),monospace;box-shadow:0 5px 16px rgba(30,46,63,.06)}
+.productUi .developerSignature svg{width:15px;height:15px;color:var(--ui-pink);animation:signatureCode 2.6s ease-in-out infinite}
+.productUi .developerSignature i,.productUi .developerSignature b{position:relative;z-index:1;font-style:normal}
+.productUi .developerSignature i{color:var(--ui-muted)}
+.productUi .developerSignature b{color:var(--ui-pink);font-weight:950}
+.productUi .developerSignature em{position:absolute;inset:-30% auto -30% -35%;width:28%;transform:skewX(-18deg);background:linear-gradient(90deg,transparent,rgba(236,0,140,.20),transparent);animation:signatureShine 3.2s ease-in-out infinite}
+@keyframes signatureCode{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-2px) rotate(-5deg)}}
+@keyframes signatureShine{0%,45%{left:-35%}75%,100%{left:120%}}
+
+@media(max-width:1180px){
+  .productUi .opsSummaryStrip{grid-template-columns:repeat(3,1fr)}
+  .productUi .opsCompletion{grid-column:span 2}
+  .productUi .opsToolbarV3{grid-template-columns:1fr}
+}
+
+@media(max-width:760px){
+  .app.productUi main{padding:0 10px 94px}
+  .productUi .appTopbar{position:sticky;top:6px;z-index:90;min-height:64px;margin:6px 0;padding:7px 9px;border-radius:15px}
+  .productUi .topBrand{flex:1;justify-content:flex-start;min-width:0}
+  .productUi .hamb{width:44px;height:44px;border-radius:11px}
+  .productUi .storeBrandMark.hasBrandLogo{width:92px!important;height:42px!important}
+  .productUi .topbarContext,.productUi .syncState,.productUi .userChip{display:none!important}
+  .productUi .iconButton{width:44px;height:44px}
+  .productUi .desktopNav{display:none}
+
+  .productUi .opsV3{padding:10px 2px 0;gap:10px}
+  .productUi .opsCommandV3{min-height:0;padding:3px 3px 0;gap:10px}
+  .productUi .opsBreadcrumb{font-size:10px}
+  .productUi .opsSun{width:32px;height:32px;font-size:21px}
+  .productUi .opsTitleLine h1{font-size:31px}
+  .productUi .opsTitleLine p{margin-top:5px;font-size:13px;line-height:1.35}
+  .productUi .opsCommandTools{width:100%;display:block}
+  .productUi .opsDateSwitch{width:100%}
+
+  .productUi .opsSummaryStrip{grid-template-columns:1fr 1fr;border-radius:15px}
+  .productUi .opsMetric{min-height:76px;padding:10px;gap:8px}
+  .productUi .opsMetric>span{width:36px;height:36px;flex-basis:36px}
+  .productUi .opsMetric b{font-size:22px}
+  .productUi .opsMetric:nth-child(5){grid-column:1/-1;border-right:0}
+  .productUi .opsCompletion{grid-column:1/-1;min-height:64px;padding:11px}
+
+  .productUi .opsAttentionStrip{display:flex;overflow-x:auto;scrollbar-width:none}
+  .productUi .opsAttentionStrip button{min-width:126px;flex:0 0 auto}
+  .productUi .opsTableTitleV3{align-items:center;min-height:0;padding:12px}
+  .productUi .opsTableIdentity h2{font-size:16px}
+  .productUi .opsTableActions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .productUi .opsTableActions .soft:nth-child(2),.productUi .opsTableActions .soft:nth-child(3){display:none}
+  .productUi .opsTableActions .primary{width:100%}
+  .productUi .opsToolbarV3{padding:8px}
+  .productUi .opsSearch{min-height:48px}
+  .productUi .opsGrid .sheetRow{margin:8px;border-radius:13px}
+
+  .productUi .pageIntro{min-height:70px;padding:13px 3px 8px}
+  .productUi .pageIntro h1{font-size:28px}
+  .productUi .pageIntroMeta{display:none}
+  .productUi .settingsIdentity{align-items:flex-start;padding:13px}
+  .productUi .settingsIdentityActions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .productUi .settingsLogo.hasImage{width:64px;height:54px}
+  .productUi footer{padding-bottom:6px}
+}
+
+@media(max-width:430px){
+  .productUi .opsTitleLine p{max-width:300px}
+  .productUi .opsMetric small{font-size:11px}
+  .productUi .opsTableActions{grid-template-columns:1fr}
+  .productUi .settingsIdentityActions{grid-template-columns:1fr}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .productUi .developerSignature svg,.productUi .developerSignature em{animation:none!important}
+}

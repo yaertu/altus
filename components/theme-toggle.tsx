@@ -18,7 +18,7 @@ function applyTheme(theme: Theme){
     meta.dataset.yaaTheme="true";
     document.head.appendChild(meta);
   }
-  meta.content=theme==="dark"?"#202027":"#f00088";
+  meta.content=theme==="dark"?"#1e2e3f":"#ec008c";
 }
 
 export default function ThemeToggle(){

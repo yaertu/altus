@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image, { type ImageLoaderProps } from "next/image";
 
 const ICONIFY = "https://api.iconify.design";
 
@@ -9,7 +10,7 @@ export type WebIconName =
   | "account-group-outline" | "clipboard-check-outline" | "map-marker-path"
   | "bell-ring-outline" | "washing-machine" | "dishwasher" | "fridge-outline"
   | "microwave" | "stove" | "television" | "vacuum-outline" | "air-conditioner"
-  | "tools" | "package-check";
+  | "fan" | "iron" | "coffee-maker-outline" | "water-pump" | "tools" | "package-check";
 
 export function iconUrl(name: string, color = "0b8f82", size = 28) {
   return `${ICONIFY}/mdi/${name}.svg?color=%23${color}&width=${size}&height=${size}`;
@@ -22,12 +23,18 @@ export function productIconName(text: string): WebIconName {
   if (value.includes("buzdol") || value.includes("soğut")) return "fridge-outline";
   if (value.includes("mikrodalga")) return "microwave";
   if (value.includes("fırın") || value.includes("ocak")) return "stove";
+  if (value.includes("sebili") || value.includes("su seb")) return "water-pump";
   if (value.includes("televizyon") || value.includes(" tv") || value.startsWith("tv")) return "television";
   if (value.includes("süpürge") || value.includes("vakum")) return "vacuum-outline";
   if (value.includes("klima")) return "air-conditioner";
+  if (value.includes("vantilatör")) return "fan";
+  if (value.includes("ütü")) return "iron";
+  if (value.includes("kahve")) return "coffee-maker-outline";
   if (value.includes("servis") || value.includes("tamir")) return "tools";
   return "package-variant-closed";
 }
+
+const iconLoader=({src}:ImageLoaderProps)=>src;
 
 export default function WebIcon({
   name,
@@ -46,13 +53,13 @@ export default function WebIcon({
 }) {
   const [fallback,setFallback]=useState(false);
   const resolved = useMemo(()=>fallback ? "package-variant-closed" : (name || productIconName(product || "")),[fallback,name,product]);
-  return <img
+  return <Image
     className={className}
+    loader={iconLoader}
+    unoptimized
     src={iconUrl(resolved,color,size)}
     width={size}
     height={size}
-    loading="lazy"
-    decoding="async"
     referrerPolicy="no-referrer"
     alt={alt}
     onError={()=>setFallback(true)}

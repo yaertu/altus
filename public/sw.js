@@ -1,4 +1,4 @@
-const CACHE = "altus-teslimat-v13";
+const CACHE = "altus-teslimat-v14";
 const CORE = ["/", "/manifest.webmanifest", "/icon.svg", "/altus-logo.png"];
 const ICON_HOSTS = ["api.iconify.design", "api.simplesvg.com", "api.unisvg.com"];
 

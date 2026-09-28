@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Roboto_Mono } from "next/font/google";
+import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import "./product-ui.css";
+import "./modern-ui.css";
 
-const dmSans = DM_Sans({
+const roboto = Roboto({
   subsets: ["latin","latin-ext"],
   display: "swap",
   variable: "--font-ui"
@@ -46,7 +47,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f00088",
+  themeColor: "#ec008c",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"
@@ -58,7 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
-      <body className={`${dmSans.variable} ${mono.variable}`}>{children}</body>
+      <body className={`${roboto.variable} ${mono.variable}`}>{children}</body>
     </html>
   );
 }
