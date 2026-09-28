@@ -279,6 +279,13 @@ export async function insertStaff(name: string, phone: string, userId?: string |
   return { id:data.id, name:data.name, phone:data.phone || "", userId:data.user_id } as StaffRecord;
 }
 
+// Keep delivery history intact while removing the person from future assignments.
+export async function deactivateStaff(id: string) {
+  if (!supabase) throw new Error("Supabase yapılandırılmamış.");
+  const { error } = await supabase.from("staff").update({ active: false }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function patchDelivery(id: string, patch: Partial<{ status:DeliveryStatus; checklist:Delivery["checklist"]; assigneeId:string|null; assigneeName:string|null; notes:string|null }>) {
   if (!supabase) throw new Error("Supabase yapılandırılmamış.");
   const row:any = { updated_at:new Date().toISOString() };

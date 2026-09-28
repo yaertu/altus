@@ -18,7 +18,7 @@ import DeliveryProofPanel from "./delivery-proof-panel";
 import LiveRouteMap from "./live-route-map";
 import { ActivityEvent, Delivery, DeliveryCompletion, DeliveryOutcome, DeliveryStatus, Priority } from "@/lib/types";
 import {
-  cloudAvailable, createCourierStaff, getCurrentUser, getMyProfile, insertDelivery, insertEvent, insertStaff,
+  cloudAvailable, createCourierStaff, deactivateStaff, getCurrentUser, getMyProfile, insertDelivery, insertEvent,
   loadAppSettings, loadCloudData, loadMyNotifications, loadProductCatalog, markNotificationRead,
   patchDelivery, removeCloudDelivery, signOut, subscribeCloud, subscribeMyNotifications, unsubscribeCloud,
   updateAppSettings, uploadStoreLogo,
@@ -69,6 +69,7 @@ export default function Dashboard(){
   const [view,setView]=useState<View>("dashboard"), [mode,setMode]=useState<"office"|"courier">("office"), [side,setSide]=useState(false);
   const [deliveries,setDeliveries]=useState<Delivery[]>([]), [staff,setStaff]=useState<Staff[]>([]), [events,setEvents]=useState<ActivityEvent[]>([]);
   const [selected,setSelected]=useState<Delivery|null>(null), [newOpen,setNewOpen]=useState(false), [staffOpen,setStaffOpen]=useState(false);
+  const [staffToRemove,setStaffToRemove]=useState<Staff|null>(null);
   const [courier,setCourier]=useState(""), [notify,setNotify]=useState(false), [splash,setSplash]=useState(true), [ready,setReady]=useState(false);
   const [requireChecks,setRequireChecks]=useState(true), [query,setQuery]=useState(""), [filter,setFilter]=useState<"all"|DeliveryStatus>("all");
   const [cloud,setCloud]=useState(false), [cloudError,setCloudError]=useState(""), [profile,setProfile]=useState<Profile|null>(null), [signedIn,setSignedIn]=useState(false), [authReady,setAuthReady]=useState(!cloudAvailable());
@@ -282,12 +283,31 @@ export default function Dashboard(){
     try{
       const rec=cloud
         ? await createCourierStaff({name:s.name,phone:s.phone,email:s.email,password:s.password})
-        : await insertStaff(s.name,s.phone);
+        : {id:id("staff"),name:s.name,phone:s.phone,userId:null};
       setStaff(p=>[...p.filter(x=>x.id!==rec.id),rec]);
       setStaffOpen(false);
       log("Servis personeli oluşturuldu",undefined,s.name+" • "+s.phone,"system");
       setActionNotice({text:cloud?s.name+" için servis hesabı oluşturuldu. Telefonda giriş yapıp bildirimleri açabilir.":s.name+" personel listesine eklendi.",tone:"ok"});
     }catch(err:any){ setCloudError(err?.message||"Personel hesabı oluşturulamadı."); }
+  }
+  async function removeStaff(person:Staff){
+    const activeTasks=deliveries.filter(d=>d.assignee===person.name&&!['completed','issue'].includes(d.status));
+    if(activeTasks.length){
+      setStaffToRemove(null);
+      setActionNotice({text:person.name+" üzerinde "+activeTasks.length+" aktif teslimat var. Önce görevleri başka personele ata.",tone:"warn"});
+      return;
+    }
+    const previous=staff;
+    setStaff(p=>p.filter(s=>s.id!==person.id));
+    setStaffToRemove(null);
+    try{
+      if(cloud)await deactivateStaff(person.id);
+      log("Personel aktif listeden kaldırıldı",undefined,person.name+" • geçmiş teslimatlar korundu","system");
+      setActionNotice({text:person.name+" aktif listeden kaldırıldı. Geçmiş teslimatlar korundu.",tone:"ok"});
+    }catch(err:any){
+      setStaff(previous);
+      setCloudError(err?.message||"Personel kaldırılamadı; liste eski haline alındı.");
+    }
   }
   async function assignDelivery(d:Delivery,person:Staff|null){
     const assignee=person?.name||"Atanmamış";
@@ -438,7 +458,7 @@ export default function Dashboard(){
       {mode==="courier"?<CourierList list={my} courier={courier} catalog={catalog} notify={notify} cloud={cloud} onNotify={notifications} onOpen={setSelected} onStatus={setStatus} onToggle={toggle} onComplete={completeDelivery} requireChecks={requireChecks}/>:<>
         {view==="dashboard"&&<OperationsCenter deliveries={deliveries} staff={operationalStaff} onNew={()=>setNewOpen(true)} onStaff={()=>setStaffOpen(true)} onOpen={setSelected} onAssign={assignDelivery}/>}
         {view==="deliveries"&&<section className="card page"><PageHead tag="DÜKKAN KAYITLARI" title="Tüm teslimatlar" text="Müşteri, adres, ürün ve personel bilgilerini tek yerden takip et." action={<button className="primary" onClick={()=>setNewOpen(true)}><Plus size={16}/>Yeni teslimat</button>}/><div className="filters"><label><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="İsim, telefon, ürün, sipariş no..."/></label><label className="select"><select value={filter} onChange={e=>setFilter(e.target.value as "all"|DeliveryStatus)}><option value="all">Tüm durumlar</option>{Object.keys(labels).map(k=><option key={k} value={k}>{labels[k as DeliveryStatus]}</option>)}</select><ChevronDown size={13}/></label></div><DeliveryList list={filtered} onOpen={setSelected}/></section>}
-        {view==="staff"&&<StaffPage staff={staff} deliveries={deliveries} onAdd={()=>setStaffOpen(true)}/>}
+        {view==="staff"&&<StaffPage staff={staff} deliveries={deliveries} onAdd={()=>setStaffOpen(true)} onRemove={setStaffToRemove} onInspect={person=>{setQuery(person.name);setView("deliveries")}}/>}
         {view==="customers"&&<CustomersPage deliveries={deliveries} onOpen={setSelected}/>}
         {view==="checklists"&&<ChecklistPage deliveries={deliveries}/>}
         {view==="planning"&&<PlanningPage deliveries={deliveries} staff={operationalStaff} onOpen={setSelected}/>}
@@ -461,8 +481,9 @@ export default function Dashboard(){
       <footer><span className="developerSignature" aria-label="Geliştirici: yaaertu codeR"><Code2/><i>yaaertu</i><b>codeR</b><em/></span></footer>
       {mode==="office"?<MobileBottomNav view={view} onView={v=>setView(v)} onNew={()=>setNewOpen(true)}/>:null}
     </main>
-    {newOpen&&<NewDelivery staff={operationalStaff} deliveries={deliveries} catalog={catalog} onClose={()=>setNewOpen(false)} onSave={addDelivery}/>} 
+    {newOpen&&<NewDelivery staff={operationalStaff} deliveries={deliveries} catalog={catalog} onClose={()=>setNewOpen(false)} onSave={addDelivery} onAddStaff={()=>setStaffOpen(true)}/>}
     {staffOpen&&<NewStaff onClose={()=>setStaffOpen(false)} onSave={addStaff}/>} 
+    {staffToRemove&&<RemoveStaffConfirm staff={staffToRemove} onClose={()=>setStaffToRemove(null)} onConfirm={()=>removeStaff(staffToRemove)}/>}
     {selected&&<Drawer d={deliveries.find(x=>x.id===selected.id)||selected} events={events} staff={operationalStaff} cloud={cloud} office={mode==="office"} requireChecks={requireChecks} onClose={()=>setSelected(null)} onStatus={s=>setStatus(deliveries.find(x=>x.id===selected.id)||selected,s)} onToggle={k=>toggle(deliveries.find(x=>x.id===selected.id)||selected,k)} onAssign={person=>assignDelivery(deliveries.find(x=>x.id===selected.id)||selected,person)} onProofSaved={kind=>log(kind==="photo"?"Teslimat fotoğrafı eklendi":"Müşteri imzası eklendi",deliveries.find(x=>x.id===selected.id)||selected,undefined,"system")} onDelete={()=>remove(deliveries.find(x=>x.id===selected.id)||selected)}/>}
   </div>;
 }
@@ -470,7 +491,26 @@ export default function Dashboard(){
 function PageHead({tag,title,text,action}:{tag:string;title:string;text:string;action?:React.ReactNode}){return <div className="pageHead"><div><small>{tag}</small><h2>{title}</h2><p>{text}</p></div>{action}</div>}
 function Empty({title,text}:{title:string;text:string}){return <div className="empty"><PackageCheck size={28}/><b>{title}</b><span>{text}</span></div>}
 function DeliveryList({list,onOpen}:{list:Delivery[];onOpen:(d:Delivery)=>void}){return <div className="list">{list.length?list.map(d=>{const done=checks.filter(([key])=>Boolean(d.checklist[key])).length;const item=d.items[0];return <button className="row deliveryRow" key={d.id} onClick={()=>onOpen(d)}><div className="customerCell"><div className="badges"><span className={"status s-"+d.status}>{labels[d.status]}</span>{d.priority!=="normal"?<span className={"prio p-"+d.priority}>{d.priority==="critical"?"Acil":"Öncelikli"}</span>:null}<small>{d.orderNo}</small></div><h3>{d.customerName}</h3><p><span><MapPin size={14}/>{d.district||"İlçe yok"}</span><span><Clock3 size={14}/>{d.timeWindow}</span><span><UserRound size={14}/>{d.assignee}</span></p></div><div className="product deliveryProduct"><span className="productIcon"><WebIcon product={item?.product||""} size={30}/></span><p><small>ÜRÜN</small><b>{item?.brand+" • "+item?.product}</b><span>{item?.model||"Model yok"}</span></p></div><div className="progress deliveryProgress"><p><span>Hazırlık</span><b>{done}/6</b></p><i><em style={{width:(done/6*100)+"%"}}/></i><small>{done===6?"Hazır":"Kontroller sürüyor"}</small></div><span className="rowArrow">›</span></button>}):<Empty title="Kayıt yok" text="Henüz teslimat oluşturulmadı."/>}</div>}
-function StaffPage({staff,deliveries,onAdd}:{staff:Staff[];deliveries:Delivery[];onAdd:()=>void}){return <section className="card page"><PageHead tag="SEVKİYAT EKİBİ" title="Personeller" text="Dükkandan görev atayacağın personeller." action={<button className="primary" onClick={onAdd}><UserPlus size={16}/>Personel ekle</button>}/>{staff.length?<div className="staffGrid">{staff.map(s=>{const a=deliveries.filter(d=>d.assignee===s.name&&!["completed","issue"].includes(d.status)).length;return <div className="staffCard" key={s.id}><div>{initials(s.name)}</div><h3>{s.name}</h3><a href={tel(s.phone)}>{s.phone||"Telefon yok"}</a><div className={"staffNotify "+(s.userId?"ready":"waiting")}><Bell size={13}/>{s.userId?"Bildirim hesabı bağlı":"Bildirim hesabı bağlı değil"}</div><p><b>{a}</b><span>aktif teslimat</span></p></div>})}</div>:<Empty title="Personel eklenmedi" text="Önce sevkiyat personelini ekle."/>}</section>}
+function StaffPage({staff,deliveries,onAdd,onRemove,onInspect}:{staff:Staff[];deliveries:Delivery[];onAdd:()=>void;onRemove:(staff:Staff)=>void;onInspect:(staff:Staff)=>void}){
+  const active=deliveries.filter(d=>!["completed","issue"].includes(d.status));
+  const unassigned=active.filter(d=>d.assignee==="Atanmamış").length;
+  const onRoute=active.filter(d=>d.status==="on_route").length;
+  return <section className="card page">
+    <PageHead tag="YÖNETİCİ • SEVKİYAT EKİBİ" title="Personeller" text="Personel ekle, iş yükünü gör ve güvenle listeden kaldır." action={<button className="primary" onClick={onAdd}><UserPlus size={16}/>Personel ekle</button>}/>
+    <section className="managerControl" aria-label="Yönetici kontrol özeti">
+      <div><small>YÖNETİCİ KONTROLÜ</small><b>Bugünkü sevkiyat durumu</b></div>
+      <span><Users/><b>{staff.length}</b><small>aktif personel</small></span>
+      <span className={unassigned?"warning":""}><PackageSearch/><b>{unassigned}</b><small>atama bekliyor</small></span>
+      <span><Truck/><b>{onRoute}</b><small>yolda</small></span>
+    </section>
+    {staff.length?<div className="staffGrid">{staff.map(s=>{const open=active.filter(d=>d.assignee===s.name);const completed=deliveries.filter(d=>d.assignee===s.name&&d.status==="completed").length;return <article className="staffCard" key={s.id}>
+      <div className="staffAvatar">{initials(s.name)}</div><div className="staffCardHead"><h3>{s.name}</h3><a href={tel(s.phone)}>{s.phone||"Telefon yok"}</a></div>
+      <div className={"staffNotify "+(s.userId?"ready":"waiting")}><Bell size={13}/>{s.userId?"Telefon hesabı hazır":"Telefon hesabı bekliyor"}</div>
+      <div className="staffStats"><p><b>{open.length}</b><span>aktif görev</span></p><p><b>{completed}</b><span>tamamlanan</span></p></div>
+      <div className="staffActions"><button className="soft" onClick={()=>onInspect(s)}><PackageSearch/>Görevleri gör</button><button className="staffRemove" onClick={()=>onRemove(s)}><Trash2/>Kaldır</button></div>
+    </article>})}</div>:<Empty title="Personel eklenmedi" text="Teslimat atamak için önce sevkiyat personelini ekle."/>}
+  </section>
+}
 function CustomersPage({deliveries,onOpen}:{deliveries:Delivery[];onOpen:(d:Delivery)=>void}){
   const [search,setSearch]=useState("");
   const customers=useMemo(()=>{
@@ -698,6 +738,7 @@ function CourierList({
   });
   const active=ordered.filter(d=>!["completed","issue"].includes(d.status));
   const finished=ordered.filter(d=>d.status==="completed");
+  const issues=ordered.filter(d=>d.status==="issue");
   const next=active[0];
   const others=active.slice(1);
 
@@ -716,6 +757,12 @@ function CourierList({
   });
 
   return <div className="driverFocus">
+    <section className="driverShiftPulse" aria-label="Bugünkü görev özeti">
+      <div><small>BUGÜNÜN ROTASI</small><b>{courier}</b></div>
+      <span><b>{active.length}</b><small>sırada</small></span>
+      <span><b>{finished.length}</b><small>bitti</small></span>
+      {issues.length?<span className="issue"><b>{issues.length}</b><small>sorun</small></span>:null}
+    </section>
     <section className="driverHeader">
       <div className="driverHeaderTop">
         <div><span className="driverEyebrow">{next.date<today()?"DÜNDEN KALAN • SIRADAKİ DURAK":"SIRADAKİ DURAK"}</span><h1>{next.customerName}</h1><p><Clock3/>{next.timeWindow||"Saat belirtilmedi"} <b>•</b> {next.district}</p></div>
@@ -799,7 +846,7 @@ function CourierList({
     </div>
   </div>
 }
-function NewDelivery({staff,deliveries,catalog,onClose,onSave}:{staff:Staff[];deliveries:Delivery[];catalog:ProductCatalogItem[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void}){
+function NewDelivery({staff,deliveries,catalog,onClose,onSave,onAddStaff}:{staff:Staff[];deliveries:Delivery[];catalog:ProductCatalogItem[];onClose:()=>void;onSave:(d:Omit<Delivery,"id"|"createdAt"|"updatedAt"|"checklist">)=>void;onAddStaff:()=>void}){
   type DraftItem={id:string;brand:string;product:string;model:string;quantity:number;service:boolean;install:boolean;old:boolean};
   const [step,setStep]=useState(1);
   const [f,setF]=useState({
@@ -926,11 +973,11 @@ function NewDelivery({staff,deliveries,catalog,onClose,onSave}:{staff:Staff[];de
       </section>:null}
 
       {step===4?<section className="wizardPanel">
-        <div className="wizardPanelTitle"><span>4</span><div><h3>Kim götürecek?</h3><p>Personeli seç. Kaydedince görev doğrudan telefonuna gönderilir.</p></div></div>
+        <div className="wizardPanelTitle"><span>4</span><div><h3>Kim götürecek?</h3><p>Personeli seç. Kaydedince görev doğrudan telefonuna gönderilir.</p></div><button type="button" className="soft wizardAddStaff" onClick={onAddStaff}><UserPlus/>Personel ekle</button></div>
         <div className="wizardAssignees">
-          {staff.length?staff.map(person=><button type="button" key={person.id} className={f.assignee===person.name?"on":""} onClick={()=>set("assignee",person.name)}>
-            <i>{initials(person.name)}</i><p><b>{person.name}</b><small>{person.phone||"Telefon yok"}</small><em className={person.userId?"ready":"waiting"}>{person.userId?"🔔 Bildirim hazır":"Hesap bağlantısı bekliyor"}</em></p>{f.assignee===person.name?<CheckCircle2/>:<ChevronRight/>}
-          </button>):<div className="wizardNoStaff"><UserPlus/><b>Önce personel ekle</b><span>Servis personeli olmadan bildirim gönderilemez.</span></div>}
+          {staff.length?staff.map(person=>{const load=deliveries.filter(d=>d.assignee===person.name&&!["completed","issue"].includes(d.status)).length;return <button type="button" key={person.id} className={f.assignee===person.name?"on":""} onClick={()=>set("assignee",person.name)}>
+            <i>{initials(person.name)}</i><p><b>{person.name}</b><small>{person.phone||"Telefon yok"}</small><em className={person.userId?"ready":"waiting"}>{person.userId?"🔔 Bildirim hazır":"Telefon hesabı henüz açılmadı"}</em><span className="assigneeWorkload"><Truck/>{load===0?"Müsait":load+" aktif görev"}</span></p>{f.assignee===person.name?<CheckCircle2/>:<ChevronRight/>}
+          </button>}):<div className="wizardNoStaff"><UserPlus/><b>Önce personel ekle</b><span>Hemen eklemek için aşağıdaki düğmeye dokun.</span><button type="button" className="primary" onClick={onAddStaff}><UserPlus/>Personel ekle</button></div>}
         </div>
         <div className="wizardFields three">
           <Field label="Teslim tarihi" v={f.date} set={v=>set("date",v)} type="date"/>
@@ -953,6 +1000,16 @@ function NewDelivery({staff,deliveries,catalog,onClose,onSave}:{staff:Staff[];de
       {step<4?<button type="submit" className="primary wizardNext">Devam et <ChevronRight/></button>:<button type="submit" className="primary wizardSave" disabled={!complete.assignment}><Bell/><span><b>KAYDET VE PERSONELE GÖNDER</b><small>Görev bildirimi anında iletilir</small></span></button>}
     </div>
   </form></Modal>
+}
+function RemoveStaffConfirm({staff,onClose,onConfirm}:{staff:Staff;onClose:()=>void;onConfirm:()=>void}){
+  return <Modal onClose={onClose}><section className="staffRemoveDialog">
+    <span className="staffRemoveDialogIcon"><Trash2/></span>
+    <small>PERSONELİ LİSTEDEN KALDIR</small>
+    <h2>{staff.name} kaldırılsın mı?</h2>
+    <p>Bu kişi yeni teslimat seçiminden kaldırılır. Geçmiş teslimat ve müşteri kayıtları silinmez.</p>
+    <div className="staffRemoveDialogInfo"><ShieldCheck/><span>Aktif teslimatı olan personel kaldırılamaz; önce görevlerini devretmen gerekir.</span></div>
+    <div className="modalActions"><button className="soft" onClick={onClose}>Vazgeç</button><button className="staffRemoveConfirm" onClick={onConfirm}><Trash2/>Listeden kaldır</button></div>
+  </section></Modal>
 }
 function NewStaff({onClose,onSave}:{onClose:()=>void;onSave:(s:{name:string;phone:string;email:string;password:string})=>void}){
   const [name,setName]=useState("");
