@@ -12,6 +12,8 @@ export type OperationsCourierPoint={
   longitude:number|null
   heading_deg?:number|null
   speed_mps?:number|null
+  accuracy_m?:number|null
+  last_heartbeat_at?:string|null
 }
 
 export type RouteSummary={
@@ -39,6 +41,19 @@ type Props={
 
 const statusColor:Record<DeliveryStatus,string>={new:'#d60072',accepted:'#4169d8',en_route:'#f0a21a',arrived:'#7857c7',delivered:'#15936a',failed:'#c83f50',cancelled:'#8f8790'}
 const availabilityColor:Record<CourierAvailability,string>={offline:'#9a9399',available:'#12a56f',busy:'#f09a18',break:'#7456ba'}
+
+function heartbeatAge(value?:string|null){
+  if(!value)return null
+  const seconds=Math.max(0,Math.floor((Date.now()-new Date(value).getTime())/1000))
+  return seconds<60?`${seconds} sn önce`:`${Math.floor(seconds/60)} dk önce`
+}
+function gpsQuality(accuracy?:number|null){
+  if(accuracy===null||accuracy===undefined)return 'GPS belirsiz'
+  if(accuracy<=20)return 'GPS çok iyi'
+  if(accuracy<=50)return 'GPS iyi'
+  if(accuracy<=100)return 'GPS orta'
+  return 'GPS zayıf'
+}
 
 function tooltipNode(title:string,subtitle:string,meta?:string){
   const root=document.createElement('div');root.className='mapTooltipContent'
@@ -153,7 +168,9 @@ export default function OperationsMap({deliveries,routeDeliveries,couriers=[],or
         const marker=L.marker([c.latitude!,c.longitude!],{icon:vehicleIcon(L,c.heading_deg??0,selected),keyboard:true,title:`${c.full_name} • ${c.availability}`})
         const label=c.availability==='available'?'Müsait':c.availability==='busy'?'Görevde':c.availability==='break'?'Molada':'Çevrimdışı'
         const speed=c.speed_mps&&c.speed_mps>1?` • ${Math.round(c.speed_mps*3.6)} km/sa`:''
-        marker.bindTooltip(tooltipNode(c.full_name,`${label}${speed}`),{direction:'bottom',offset:[0,18],opacity:1,permanent:selected,className:'altusMapTooltip courierTip'})
+        const accuracy=c.accuracy_m!==null&&c.accuracy_m!==undefined?`±${Math.round(c.accuracy_m)} m`:'konum doğruluğu yok'
+        const age=heartbeatAge(c.last_heartbeat_at)
+        marker.bindTooltip(tooltipNode(c.full_name,`${label}${speed}`,`${gpsQuality(c.accuracy_m)} • ${accuracy}${age?` • ${age}`:''}`),{direction:'bottom',offset:[0,18],opacity:1,permanent:selected,className:'altusMapTooltip courierTip'})
         marker.on('click',()=>onSelectCourier?.(c.user_id));marker.addTo(group)
       }
 
