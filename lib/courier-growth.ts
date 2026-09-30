@@ -1,5 +1,3 @@
-'use client'
-
 export type RankDefinition={
   rankNo:number
   title:string
