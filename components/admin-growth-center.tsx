@@ -10,9 +10,11 @@ import type {Product} from '@/lib/types'
 type UserRow={user_id:string;full_name:string;phone:string|null;role:string|null;is_active:boolean;store_id:string|null}
 type ScoreRow={user_id:string;points:number;delivered_count:number;failed_count:number;courier_cancel_count:number;streak_days:number;suspended_reason?:string|null}
 type Settings={daily_cancel_limit:number;auto_suspend:boolean;accepted_points:number;arrived_points:number;delivered_points:number;courier_cancel_points:number}
-type Props={orgId:string;adminUserId:string;users:UserRow[];scores:ScoreRow[];promotions:CourierPromotion[];settings:Settings;products:Product[];schemaReady:boolean}
+type PenaltyRow={id:string;courier_id:string;reason:string;points_delta:number;suspended:boolean;status:string;created_at:string;lifted_at:string|null;lift_note:string|null}
+type ScoreEventRow={id:string;courier_id:string;points_delta:number;event_key:string;reason:string|null;created_at:string}
+type Props={orgId:string;adminUserId:string;users:UserRow[];scores:ScoreRow[];promotions:CourierPromotion[];settings:Settings;products:Product[];schemaReady:boolean;penalties:PenaltyRow[];scoreEvents:ScoreEventRow[]}
 
-export default function AdminGrowthCenter({orgId,adminUserId,users,scores,promotions,settings,products,schemaReady}:Props){
+export default function AdminGrowthCenter({orgId,adminUserId,users,scores,promotions,settings,products,schemaReady,penalties,scoreEvents}:Props){
   const router=useRouter()
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState('')
@@ -136,6 +138,8 @@ export default function AdminGrowthCenter({orgId,adminUserId,users,scores,promot
   const selected=couriers.find(x=>x.user_id===selectedCourier)
   const score=scoreMap.get(selectedCourier)
   const rank=getRank(score?.points||0)
+  const selectedPenalties=penalties.filter(x=>x.courier_id===selectedCourier).slice(0,8)
+  const selectedEvents=scoreEvents.filter(x=>x.courier_id===selectedCourier).slice(0,10)
 
   return <section className="panel adminGrowthCenter">
     <div className="panelHead premiumSectionTitle"><div className="titleIcon strong"><Trophy size={18}/></div><div><span className="eyebrow">KURYE GELİŞİM MERKEZİ</span><h2>Promosyon, rütbe, puan ve disiplin</h2><p>Ödülleri yayınla, performansı puanla, iptal sınırını ve hesap durumunu yönet.</p></div><span className="badge s-delivered">60 rütbe</span></div>
@@ -187,6 +191,10 @@ export default function AdminGrowthCenter({orgId,adminUserId,users,scores,promot
           {selected&&<div className="selectedCourierGrowth"><div className="rankMiniOrb" style={{background:rank.accent}}><Star size={17}/></div><div><strong>{selected.full_name}</strong><span>{rank.title} • {(score?.points||0).toLocaleString('tr-TR')} XP</span><small>{score?.delivered_count||0} teslim • {score?.courier_cancel_count||0} kurye iptali</small></div><b className={selected.is_active?'stateOk':'stateStop'}>{selected.is_active?'AKTİF':'DURDURULDU'}</b></div>}
           <div className="adminScoreButtons"><button disabled={!schemaReady||busy} onClick={()=>adjustPoints(100,'Yönetici performans bonusu')} className="btn btnSoft"><Zap size={14}/> +100 XP</button><button disabled={!schemaReady||busy} onClick={()=>adjustPoints(-50,'Yönetici performans kesintisi')} className="btn btnGhost">−50 XP</button><button disabled={!schemaReady||busy} onClick={confirmCancellation} className="btn btnGhost"><ShieldAlert size={14}/> Kurye iptali doğrula</button></div>
           <div className="adminAccountButtons"><button disabled={busy||!selected?.is_active} onClick={()=>setAccount(false)} className="btn btnDanger"><Ban size={14}/> Hesabı durdur</button><button disabled={busy||!!selected?.is_active} onClick={()=>setAccount(true,false)} className="btn btnSoft"><UserCheck size={14}/> Cezasız aç</button><button disabled={busy||!!selected?.is_active} onClick={()=>setAccount(true,true)} className="btn btnGhost"><RotateCcw size={14}/> −100 XP ile aç</button></div>
+          <div className="courierAuditGrid">
+            <div className="courierAuditPanel"><div className="auditHead"><strong>Son puan hareketleri</strong><small>{selectedEvents.length} kayıt</small></div>{selectedEvents.length?<div className="auditRows">{selectedEvents.map(e=><div key={e.id}><span className={e.points_delta>=0?'scorePlus':'scoreMinus'}>{e.points_delta>=0?'+':''}{e.points_delta}</span><div><b>{e.reason||e.event_key.replaceAll('_',' ')}</b><small>{new Date(e.created_at).toLocaleString('tr-TR')}</small></div></div>)}</div>:<div className="growthEmpty compact">Puan hareketi yok.</div>}</div>
+            <div className="courierAuditPanel"><div className="auditHead"><strong>Ceza / inceleme geçmişi</strong><small>{selectedPenalties.length} kayıt</small></div>{selectedPenalties.length?<div className="auditRows penaltyAuditRows">{selectedPenalties.map(p=><div key={p.id}><span className={p.status==='active'?'auditActive':'auditLifted'}>{p.status==='active'?'Aktif':'Kapandı'}</span><div><b>{p.reason}</b><small>{new Date(p.created_at).toLocaleString('tr-TR')}{p.lifted_at?' • '+new Date(p.lifted_at).toLocaleString('tr-TR'):''}</small>{p.lift_note&&<em>{p.lift_note}</em>}</div></div>)}</div>:<div className="growthEmpty compact">Ceza kaydı yok.</div>}</div>
+          </div>
         </div>
 
         <div className="growthAdminCard">
