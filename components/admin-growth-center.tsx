@@ -2,7 +2,7 @@
 
 import {useMemo,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {Ban,Gift,Medal,Plus,RotateCcw,Save,ShieldAlert,Sparkles,Star,Trophy,UserCheck,Zap} from 'lucide-react'
+import {Activity,Ban,Gift,Medal,PackageCheck,Plus,RotateCcw,Save,ShieldAlert,Sparkles,Star,Trophy,UserCheck,Users,Zap} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {COURIER_RANKS,getRank,type CourierPromotion} from '@/lib/courier-growth'
 import type {Product} from '@/lib/types'
@@ -19,6 +19,10 @@ export default function AdminGrowthCenter({orgId,adminUserId,users,scores,promot
   const couriers=useMemo(()=>users.filter(x=>x.role==='courier'),[users])
   const scoreMap=useMemo(()=>new Map(scores.map(x=>[x.user_id,x])),[scores])
   const [selectedCourier,setSelectedCourier]=useState(couriers[0]?.user_id||'')
+  const leaderboard=useMemo(()=>[...scores].sort((a,b)=>b.points-a.points).slice(0,5),[scores])
+  const totalDelivered=useMemo(()=>scores.reduce((sum,x)=>sum+x.delivered_count,0),[scores])
+  const suspendedCount=useMemo(()=>couriers.filter(x=>!x.is_active).length,[couriers])
+  const activePromotionCount=useMemo(()=>{const now=Date.now();return promotions.filter(p=>p.is_active&&new Date(p.starts_at).getTime()<=now&&new Date(p.ends_at).getTime()>=now).length},[promotions])
 
   async function createPromotion(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault()
@@ -132,6 +136,18 @@ export default function AdminGrowthCenter({orgId,adminUserId,users,scores,promot
 
     {!schemaReady&&<div className="adminMigrationNotice"><ShieldAlert size={18}/><div><strong>v6 veritabanı migration'ı bekliyor</strong><span>Arayüz hazır. Production Supabase'e v6 migration uygulanınca kayıt işlemleri aktif olur.</span></div></div>}
     {message&&<div className="fieldNotice modernNotice">{message}</div>}
+
+    <div className="adminGrowthKpis">
+      <div><span><Users size={17}/></span><strong>{couriers.length}</strong><small>Kurye hesabı</small></div>
+      <div><span><PackageCheck size={17}/></span><strong>{totalDelivered}</strong><small>Başarılı teslimat</small></div>
+      <div><span><Sparkles size={17}/></span><strong>{activePromotionCount}</strong><small>Aktif promosyon</small></div>
+      <div className={suspendedCount?'attention':''}><span><ShieldAlert size={17}/></span><strong>{suspendedCount}</strong><small>İncelemede hesap</small></div>
+    </div>
+
+    <div className="adminLeaderboard">
+      <div className="growthAdminHead"><Activity size={17}/><div><strong>Performans liderliği</strong><small>XP bazında ilk 5 kurye • karar desteği için, otomatik ödül/ceza vermez.</small></div></div>
+      <div className="leaderboardRows">{leaderboard.length?leaderboard.map((row,index)=>{const user=couriers.find(x=>x.user_id===row.user_id);const r=getRank(row.points);return <div key={row.user_id}><b>{index+1}</b><span className="rankMiniOrb" style={{background:r.accent}}><Star size={13}/></span><div><strong>{user?.full_name||'Kurye'}</strong><small>{r.title} • {row.delivered_count} teslimat • {row.streak_days} gün seri</small></div><em>{row.points.toLocaleString('tr-TR')} XP</em></div>}):<div className="growthEmpty compact">Puan verisi oluştuğunda liderlik burada görünecek.</div>}</div>
+    </div>
 
     <div className="adminGrowthGrid">
       <div className="adminGrowthColumn">
