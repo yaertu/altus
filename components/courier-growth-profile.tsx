@@ -14,12 +14,13 @@ type Props={
   deliveries:DeliveredLite[]
   events:CourierScoreEvent[]
   active:boolean
+  schemaReady?:boolean
   children?:ReactNode
 }
 
 function rewardText(p:CourierPromotion){return p.reward_label||((p.reward_amount||0)>0?`${p.reward_amount} ₺ ek ödül`:'Özel ödül')}
 
-export default function CourierGrowthProfile({userId,name,phone,avatarUrl,score,promotions,deliveries,events,active,children}:Props){
+export default function CourierGrowthProfile({userId,name,phone,avatarUrl,score,promotions,deliveries,events,active,schemaReady=true,children}:Props){
   const rp=getRankProgress(score.points)
   const stars=performanceStars(rp.current.rankNo)
   const roadmap=COURIER_RANKS.slice(Math.max(0,rp.current.rankNo-2),Math.min(COURIER_RANKS.length,rp.current.rankNo+5))
@@ -27,7 +28,7 @@ export default function CourierGrowthProfile({userId,name,phone,avatarUrl,score,
   return <div className="growthProfile">
     <section className={`courierProfileHero rankAnim-${rp.current.animationKey} rankFrame-${rp.current.frameStyle}`} style={style}>
       <div className="profileHeroIdentity">
-        <AvatarCropper userId={userId} currentUrl={avatarUrl} name={name}/>
+        <AvatarCropper userId={userId} currentUrl={avatarUrl} name={name} enabled={schemaReady}/>
         <div className="profileHeroCopy"><span className="eyebrow">SEVKİYAT PERSONELİ • RÜTBE {rp.current.rankNo}/60</span><h1>{name}</h1><p>{phone||'Telefon bilgisi eklenmemiş'}</p><div className="rankTitleChip"><Medal size={15}/>{rp.current.title}</div></div>
       </div>
       <div className="profileHeroLevel">
@@ -52,7 +53,7 @@ export default function CourierGrowthProfile({userId,name,phone,avatarUrl,score,
 
     <section className="panel growthSection promotionSection">
       <div className="panelHead"><div><span className="eyebrow">EK KAZANÇ & HEDEFLER</span><h2>Aktif promosyonlar</h2><p>Yönetimin tanımladığı hedefleri tamamla, ödülünü aç.</p></div><Sparkles size={20}/></div>
-      {promotions.length?<div className="promotionRail">{promotions.map(p=>{const current=promotionProgress(p,deliveries,score.points);const pct=Math.min(100,Math.round(current/Math.max(1,p.target_count)*100));return <article key={p.id} className={`promotionCard theme-${p.theme||'magenta'}`}>
+      {!schemaReady?<div className="growthEmpty">Promosyon ve gerçek XP altyapısı production veritabanında henüz etkin değil. Mevcut teslimat verilerin korunuyor.</div>:promotions.length?<div className="promotionRail">{promotions.map(p=>{const current=promotionProgress(p,deliveries,score.points);const pct=Math.min(100,Math.round(current/Math.max(1,p.target_count)*100));return <article key={p.id} className={`promotionCard theme-${p.theme||'magenta'}`}>
         <div className="promoTop"><span>{p.target_type==='deliveries'?'TESLİMAT':p.target_type==='selected_products'?'SEÇİLİ ÜRÜN':'PUAN HEDEFİ'}</span><b>{rewardText(p)}</b></div>
         <h3>{p.title}</h3><p>{p.description}</p>
         <div className="promoProgress"><i style={{width:`${pct}%`}}/></div>
