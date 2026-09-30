@@ -14,7 +14,7 @@ import OperationsMap, { type RouteSummary } from './operations-map'
 import ProductVisual from './product-visual'
 import DeliveryStatusSteps from './delivery-status-steps'
 import CourierNavigationMap from './courier-navigation-map'
-import { Navigation, Phone, MapPinned, Volume2, VolumeX, X, ChevronUp, ClipboardList, History, UserRound, CirclePlus, Route as RouteIcon, CircleCheckBig, Coffee, Power, LocateFixed, MapPin } from 'lucide-react'
+import { Navigation, Phone, MapPinned, Volume2, VolumeX, X, ChevronUp, ClipboardList, History, UserRound, CirclePlus, Route as RouteIcon, CircleCheckBig, Coffee, Power, LocateFixed, MapPin, Trophy, Sparkles, Star } from 'lucide-react'
 
 const FAILS=['Müşteriye ulaşılamadı','Müşteri adreste yok','Adres bulunamadı','Ürün hasarlı / eksik','Araç kaynaklı sorun','Teslimat müşteri tarafından ertelendi','Güvenli teslimat yapılamıyor']
 
@@ -23,7 +23,9 @@ function distanceLabel(m:number){return m>=1000?`${(m/1000).toFixed(m>=10000?0:1
 function etaLabel(s:number){const m=Math.max(1,Math.round(s/60));return m>=60?`${Math.floor(m/60)} sa ${m%60} dk`:`${m} dk`}
 function metersBetween(a:{lat:number;lng:number},b:{lat:number;lng:number}){const r=6371000;const p1=a.lat*Math.PI/180,p2=b.lat*Math.PI/180,dp=(b.lat-a.lat)*Math.PI/180,dl=(b.lng-a.lng)*Math.PI/180;const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*r*Math.asin(Math.sqrt(h))}
 
-export default function CourierDashboard({initial,userId,orgId,name,preview=false}:{initial:Delivery[];userId:string;orgId:string;name:string;preview?:boolean}){
+type GrowthSummary={points:number;rankNo:number;rankTitle:string;rankColor:string;stars:number;avatarUrl:string|null;promotion:{title:string;rewardLabel:string;target:number}|null}
+
+export default function CourierDashboard({initial,userId,orgId,name,preview=false,growth}:{initial:Delivery[];userId:string;orgId:string;name:string;preview?:boolean;growth?:GrowthSummary}){
   const [items,setItems]=useState(initial)
   const [busy,setBusy]=useState<string|null>(null)
   const [failure,setFailure]=useState<Delivery|null>(null)
@@ -158,8 +160,9 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
 
   return <div className="courierShell courierShellModern fadeIn">
     <OfflineSyncStatus/>
-    <header className="courierTop courierTopModern"><div className="courierTopRow"><div className="courierIdentity"><div className="avatar">{name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div><div><strong>İyi çalışmalar, {name.split(' ')[0]}</strong><div className="meta">Saha operasyonu</div></div></div><div className="courierHeaderActions">{current&&<button className="btn btnPrimary navLaunchButton" onClick={()=>showOnMap(current,true)}><Navigation size={16}/> Navigasyon</button>}{!preview&&<NotificationCenter userId={userId} compact/>}</div></div></header>
+    <header className="courierTop courierTopModern"><div className="courierTopRow"><div className="courierIdentity">{growth?.avatarUrl?<div className="avatar avatarImage"><img src={growth.avatarUrl} alt="Kurye avatarı"/></div>:<div className="avatar">{name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div>}<div><strong>İyi çalışmalar, {name.split(' ')[0]}</strong><div className="meta">{growth?(growth.rankTitle+' • '+growth.points.toLocaleString('tr-TR')+' XP'):'Saha operasyonu'}</div></div></div><div className="courierHeaderActions">{current&&<button className="btn btnPrimary navLaunchButton" onClick={()=>showOnMap(current,true)}><Navigation size={16}/> Navigasyon</button>}{!preview&&<NotificationCenter userId={userId} compact/>}</div></div></header>
     <main className="courierContent courierContentModern">
+      {growth&&<section className="courierGrowthStrip" style={{'--rank':growth.rankColor} as React.CSSProperties}><div className="growthStripRank"><span><Trophy size={16}/></span><div><small>RÜTBE {growth.rankNo}/60</small><strong>{growth.rankTitle}</strong></div></div><div className="growthStripPoints"><b>{growth.points.toLocaleString('tr-TR')} XP</b><span>{Array.from({length:6},(_,i)=><Star key={i} size={13} fill={i<growth.stars?'currentColor':'none'}/>)}</span></div>{growth.promotion?<div className="growthStripPromo"><Sparkles size={16}/><span><small>AKTİF HEDEF</small><strong>{growth.promotion.title}</strong></span><b>{growth.promotion.rewardLabel}</b></div>:<div className="growthStripPromo muted"><Sparkles size={16}/><span><small>HEDEFLER</small><strong>Yeni promosyon bekleniyor</strong></span></div>}<Link className="btn btnGhost compact" href="/courier/profile">Profil & ödüller →</Link></section>}
       {notice&&<div className="fieldNotice modernNotice">{notice}</div>}
       {err&&<div className="error modernNotice">{err}</div>}
       <div className="courierWorkspace">
