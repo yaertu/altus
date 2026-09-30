@@ -1,9 +1,46 @@
 -- Altus Sevkiyat v6.0 - courier growth, promotions, avatar and fair discipline
 -- Safe to rerun. New public tables use RLS. Trigger helpers stay in private schema.
 
+do $
+begin
+  if to_regclass('public.profiles') is null then
+    raise exception 'v6 preflight: public.profiles bulunamadı';
+  end if;
+  if to_regclass('public.deliveries') is null then
+    raise exception 'v6 preflight: public.deliveries bulunamadı';
+  end if;
+  if to_regclass('public.organizations') is null then
+    raise exception 'v6 preflight: public.organizations bulunamadı';
+  end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='user_id') then
+    raise exception 'v6 preflight: profiles.user_id bulunamadı';
+  end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='org_id') then
+    raise exception 'v6 preflight: profiles.org_id bulunamadı';
+  end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='role') then
+    raise exception 'v6 preflight: profiles.role bulunamadı';
+  end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='is_active') then
+    raise exception 'v6 preflight: profiles.is_active bulunamadı';
+  end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='deliveries' and column_name='assigned_courier_id') then
+    raise exception 'v6 preflight: deliveries.assigned_courier_id bulunamadı; eski assignee_id şemasına migration uygulanamaz';
+  end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='deliveries' and column_name='status') then
+    raise exception 'v6 preflight: deliveries.status bulunamadı';
+  end if;
+end $;
+
 create schema if not exists private;
 revoke all on schema private from public, anon;
 grant usage on schema private to authenticated, service_role;
+
+create or replace function private.current_role()
+returns text language sql stable security definer set search_path=''
+as $ select role::text from public.profiles where user_id=auth.uid() limit 1 $;
+revoke all on function private.current_role() from public,anon;
+grant execute on function private.current_role() to authenticated,service_role;
 
 create table if not exists public.courier_profile_media(
   user_id uuid primary key references public.profiles(user_id) on delete cascade,
@@ -115,7 +152,7 @@ grant execute on function private.current_org_id() to authenticated,service_role
 
 drop policy if exists "courier_profile_media_read" on public.courier_profile_media;
 create policy "courier_profile_media_read" on public.courier_profile_media for select to authenticated
-using(user_id=auth.uid() or private.current_role() in ('admin','store_manager','store_staff'));
+using(user_id=auth.uid() or private.current_role() in ('admin','store_manager','store_staff','office','viewer'));
 
 drop policy if exists "courier_profile_media_own_insert" on public.courier_profile_media;
 create policy "courier_profile_media_own_insert" on public.courier_profile_media for insert to authenticated
@@ -127,7 +164,7 @@ using(user_id=auth.uid()) with check(user_id=auth.uid());
 
 drop policy if exists "courier_scores_read" on public.courier_scores;
 create policy "courier_scores_read" on public.courier_scores for select to authenticated
-using(user_id=auth.uid() or (org_id=private.current_org_id() and private.current_role() in ('admin','store_manager')));
+using(user_id=auth.uid() or (org_id=private.current_org_id() and private.current_role() in ('admin','store_manager','store_staff','office')));
 
 drop policy if exists "courier_score_events_read" on public.courier_score_events;
 create policy "courier_score_events_read" on public.courier_score_events for select to authenticated
