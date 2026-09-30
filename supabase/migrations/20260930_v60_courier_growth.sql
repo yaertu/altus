@@ -256,3 +256,13 @@ select id from public.organizations on conflict(org_id) do nothing;
 insert into public.courier_scores(user_id,org_id)
 select user_id,org_id from public.profiles where role='courier' and org_id is not null
 on conflict(user_id) do nothing;
+
+
+-- Explicit Data API grants. RLS remains the authorization boundary.
+grant select,insert,update on public.courier_profile_media to authenticated;
+grant select on public.courier_scores to authenticated;
+grant select,insert on public.courier_score_events to authenticated;
+grant select,insert,update,delete on public.courier_promotions to authenticated;
+grant select,insert,update on public.gamification_settings to authenticated;
+grant select,insert on public.courier_cancel_events to authenticated;
+grant select,insert,update on public.courier_penalties to authenticated;
