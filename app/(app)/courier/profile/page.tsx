@@ -18,6 +18,7 @@ export default async function CourierProfilePage(){
     supabase.from('courier_promotions').select('*').eq('org_id',profile.org_id!).eq('is_active',true).lte('starts_at',now).gte('ends_at',now).order('ends_at'),
     supabase.from('courier_score_events').select('id,points_delta,event_key,reason,created_at').eq('courier_id',userId).order('created_at',{ascending:false}).limit(12),
   ])
+  const schemaReady=!scoreRes.error&&!mediaRes.error&&!promoRes.error&&!eventRes.error
   const history=historyRes.data||[]
   const delivered=history.filter(x=>x.status==='delivered').length
   const failed=history.filter(x=>x.status==='failed').length
@@ -31,7 +32,7 @@ export default async function CourierProfilePage(){
     <OfflineSyncStatus/>
     <header className="courierTop courierTopModern"><div className="courierTopRow"><div className="courierIdentity">{avatarUrl?<div className="avatar avatarImage"><img src={avatarUrl} alt="Kurye avatarı"/></div>:<div className="avatar">{profile.full_name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div>}<div><strong>Profil, seviye ve ödüller</strong><div className="meta">Performans merkezi</div></div></div><Link className="btn btnGhost compact" href="/courier"><ArrowLeft size={16}/> Görevler</Link></div></header>
     <main className="courierContent courierContentModern profilePageModern">
-      <CourierGrowthProfile userId={userId} name={profile.full_name} phone={profile.phone} avatarUrl={avatarUrl} score={score} promotions={promotions} deliveries={deliveredLite} events={events} active={profile.is_active}>
+      <CourierGrowthProfile userId={userId} name={profile.full_name} phone={profile.phone} avatarUrl={avatarUrl} score={score} promotions={promotions} deliveries={deliveredLite} events={events} active={profile.is_active} schemaReady={schemaReady}>
         <div className="profileSettingsGrid growthSettingsGrid">
           <section className="panel mobileProfileCard"><div className="panelHead"><div className="titleIcon"><Smartphone size={18}/></div><div><span className="eyebrow">CİHAZ</span><h2>Uygulama kurulumu</h2><p>Telefonunda uygulama gibi açmak için ana ekrana ekle.</p></div></div><InstallAppButton/></section>
           <section className="panel mobileProfileCard"><div className="panelHead"><div className="titleIcon"><Bell size={18}/></div><div><span className="eyebrow">BİLDİRİMLER</span><h2>Görev uyarıları</h2><p>Yeni görev, promosyon ve plan değişikliklerini anında al.</p></div></div><PushEnrollment orgId={profile.org_id!} userId={userId}/></section>
