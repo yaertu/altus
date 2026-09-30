@@ -54,14 +54,30 @@ NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY=
 
 ## Supabase
 
-SQL dosyalarını sırasıyla uygulayın:
+Production proje ref'i: `mfpecvflsludooresdlq`.
 
-1. `supabase/schema.sql`
-2. `supabase/migrations/20260926_realtime_auth_push.sql`
-3. `supabase/migrations/20260927_v06_hardening.sql`
-4. `supabase/migrations/20260927_v06_courier_guard.sql`
+Yeni/fresh bir Supabase projesinde migration sırası:
 
-Roller: `admin`, `office`, `courier`, `viewer`. RLS politikaları sevkiyatçının yalnız kendisine atanmış işleri görmesini ve izinli alanları güncellemesini sağlar.
+1. `supabase/migrations/20260930_v50_modern_core.sql`
+2. `supabase/migrations/20260930_v60_courier_growth.sql`
+3. `supabase/migrations/20260930_v61_advisor_hardening.sql`
+
+v50 modern çekirdeği oluşturur: organizasyon, mağaza, profil, ürün kataloğu, teslimat, kanıt, bildirim, presence, RLS, Storage ve private Realtime Broadcast yetkilendirmesi.
+
+v60 kurye gelişim katmanını ekler: avatar, XP/rütbe, promosyon, puan olayları, iptal/ceza ve otomatik askıya alma akışları.
+
+v61 FK indexlerini ve RLS performans/policy hardening ayarlarını uygular.
+
+Edge Functions kaynakları `supabase/functions/` altındadır:
+
+- `public-health`
+- `public-tracking`
+- `create-user`
+- `invite-user`
+
+`public-health` ve `public-tracking` public endpoint olarak deploy edilir; kullanıcı yönetim fonksiyonları JWT doğrulaması gerektirir.
+
+İlk Auth kullanıcısı oluşturulduğunda DB trigger otomatik olarak varsayılan organizasyon + merkez mağazayı oluşturur ve bu ilk kullanıcıyı `admin` yapar. Sonraki kullanıcılar Admin panelindeki create/invite akışından oluşturulur.
 
 ## Güvenlik
 

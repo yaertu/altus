@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import type { Profile } from '@/lib/types'
 import { logout } from '@/app/login/actions'
 import NotificationCenter from './notification-center'
-import { LayoutDashboard, Plus, ChartNoAxesCombined, Settings2, Truck, LogIn, LogOut, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Plus, ChartNoAxesCombined, Settings2, Truck, LogIn, LogOut } from 'lucide-react'
 
 const roleLabel:Record<string,string>={admin:'Yönetici',store_manager:'Mağaza Yöneticisi',store_staff:'Mağaza Personeli',courier:'Sevkiyat Personeli'}
 function initials(name:string){return name.split(' ').filter(Boolean).map(x=>x[0]).slice(0,2).join('').toUpperCase()}
@@ -49,12 +49,10 @@ export default function AppShell({profile,organization,children,preview=false}:{
 
     <div className="layout premiumLayout">
       <aside className="sidebar premiumSidebar">
-        <div className="sidebarBrandLine"><ShieldCheck size={15}/><span>Operasyon paneli</span></div>
-        <div className="navTitle">Operasyon</div>
         <Link className="navLink" href={dashboardHref}><span className="navGlyph"><LayoutDashboard size={18}/></span><span>Genel Bakış</span></Link>
         <Link className="navLink" href={newHref}><span className="navGlyph"><Plus size={18}/></span><span>Yeni Sevkiyat</span></Link>
         <Link className="navLink" href={reportsHref}><span className="navGlyph"><ChartNoAxesCombined size={18}/></span><span>Raporlar</span></Link>
-        {profile.role==='admin'&&<><div className="navTitle">Yönetim</div><Link className="navLink" href={adminHref}><span className="navGlyph"><Settings2 size={18}/></span><span>Admin Paneli</span></Link></>}
+        {profile.role==='admin'&&<Link className="navLink navLinkAdmin" href={adminHref}><span className="navGlyph"><Settings2 size={18}/></span><span>Admin Paneli</span></Link>}
         <div className="userBox premiumUserBox"><div className="userAvatar">{initials(profile.full_name)}</div><div><strong>{profile.full_name}</strong><small>{profile.role?roleLabel[profile.role]:''}</small></div></div>
       </aside>
       <main className="content premiumContent">{children}</main>

@@ -22,10 +22,7 @@ export default async function NewDeliveryPage(){
   const imageMap=new Map<string,string>(((media||[]) as ProductMediaRow[]).map(x=>[x.product_id,x.image_url]))
   const enrichedProducts=((products||[]) as Product[]).map(p=>({...p,image_url:imageMap.get(p.id)||p.image_url||null}))
 
-  return <div>
-    <div className="pageHead">
-      <div><div className="eyebrow">YENİ SEVKİYAT</div><h1>Teslimat oluştur</h1><p>Müşteri, konum, ürün ve plan.</p></div>
-    </div>
+  return <div className="newDeliveryPage">
     <NewDeliveryForm orgId={profile.org_id!} storeId={profile.store_id} userId={userId} products={enrichedProducts} couriers={enrichedCouriers}/>
   </div>
 }

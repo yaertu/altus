@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AddressMapPicker, { type LocationMeta } from './address-map-picker'
+import TurkeyAddressSelector from './turkey-address-selector'
 import ProductVisual from './product-visual'
 import { createClient } from '@/lib/supabase/client'
 import type { CourierAvailability, Product } from '@/lib/types'
@@ -10,6 +11,12 @@ import { MapPinned, PackageOpen, CalendarClock, ShieldCheck, Wrench, RotateCcw, 
 
 type Courier={user_id:string;full_name:string;phone:string|null;availability:CourierAvailability}
 const availabilityLabel:Record<CourierAvailability,string>={available:'Müsait',busy:'Görevde',break:'Molada',offline:'Çevrimdışı'}
+
+const ALTUS_FREE_INSTALL_CATEGORIES=['buzdolabı','derin dondurucu','bulaşık makinesi','çamaşır makinesi','fırın','aspiratör','ocak','su sebili','klima','termosifon','davlumbaz']
+function altusInstallHint(category?:string){
+  const value=(category||'').toLocaleLowerCase('tr-TR')
+  return ALTUS_FREE_INSTALL_CATEGORIES.some(x=>value.includes(x))
+}
 
 export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,preview=false}:{orgId:string;storeId:string;userId:string;products:Product[];couriers:Courier[];preview?:boolean}){
   const router=useRouter()
@@ -33,6 +40,9 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
   const product=useMemo(()=>products.find(p=>p.id===productId),[products,productId])
   const courier=useMemo(()=>couriers.find(c=>c.user_id===courierId),[couriers,courierId])
   const today=new Date().toISOString().slice(0,10)
+  const progress=[Boolean(customer.trim()&&phone.trim()),locationMeta.confirmed,Boolean(product||manualProduct.trim()),Boolean(date&&timeWindow)]
+  const firstOpen=progress.findIndex(done=>!done)
+  const activeStep=firstOpen===-1?3:firstOpen
 
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();setSaving(true);setErr('');setPreviewNotice('')
@@ -61,14 +71,12 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
   }
 
   return <form onSubmit={submit} className="deliveryBuilder fadeIn">
+    <h1 className="srOnly">Yeni sevkiyat oluştur</h1>
     {err&&<div className="error builderMessage">{err}</div>}
     {previewNotice&&<div className="success builderMessage">{previewNotice}</div>}
 
-    <div className="builderStatusStrip">
-      <div><span className={customer.trim()&&phone.trim()?'done':''}>1</span><b>Müşteri</b></div>
-      <i>→</i><div><span className={locationMeta.confirmed?'done':''}>2</span><b>Konum</b></div>
-      <i>→</i><div><span className={product||manualProduct.trim()?'done':''}>3</span><b>Ürün</b></div>
-      <i>→</i><div><span className={courierId?'done':''}>4</span><b>Plan</b></div>
+    <div className="builderStatusStrip" aria-label="Sevkiyat oluşturma ilerlemesi">
+      {['Müşteri','Konum','Ürün','Plan'].map((label,index)=><div className={activeStep===index?'current':''} key={label}><span className={progress[index]?'done':activeStep===index?'current':''}>{progress[index]?'✓':index+1}</span><b>{label}</b>{index<3&&<i>→</i>}</div>)}
     </div>
 
     <div className="deliveryBuilderGrid">
@@ -77,9 +85,8 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
         <div className="formGrid builderCustomerGrid">
           <div className="field"><label>Ad soyad</label><input className="input" name="customer_name" value={customer} onChange={e=>setCustomer(e.target.value)} required placeholder="Ahmet Yılmaz" autoComplete="name"/></div>
           <div className="field"><label>Telefon</label><input className="input" name="customer_phone" value={phone} onChange={e=>setPhone(e.target.value)} required inputMode="tel" autoComplete="tel" placeholder="05xx xxx xx xx" pattern="[0-9+() ]{10,20}"/></div>
-          <div className="field full"><label>Açık adres</label><textarea className="textarea compactAddress" value={address} onChange={e=>{setAddress(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} required placeholder="Mahalle, sokak, bina no, daire…"/></div>
-          <div className="field"><label>İlçe</label><input className="input" value={district} onChange={e=>{setDistrict(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} placeholder="Çorlu"/></div>
-          <div className="field"><label>Şehir</label><input className="input" value={city} onChange={e=>{setCity(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} placeholder="Tekirdağ"/></div>
+          <div className="field full"><TurkeyAddressSelector initialCity={city} initialDistrict={district} onChange={v=>{setCity(v.city);setDistrict(v.district);if(v.formattedAddress)setAddress(v.formattedAddress);setLocationMeta(m=>({...m,confirmed:false}))}}/></div>
+          <div className="field full"><label>Açık adres / tarif</label><textarea className="textarea compactAddress" value={address} onChange={e=>{setAddress(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} required placeholder="Mahalle, sokak, bina no, daire, kapı tarifi…"/></div>
         </div>
         <div className="mapPickerField premiumMapField">
           <AddressMapPicker latitude={latitude} longitude={longitude} addressText={address} districtText={district} cityText={city} onAddressSelect={setAddress} onMetaChange={setLocationMeta} onChange={(lat,lng)=>{setLatitude(lat);setLongitude(lng)}}/>
@@ -91,6 +98,7 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
           <div className="premiumSectionHead compact"><span className="sectionIcon"><PackageOpen size={18}/></span><div><span className="eyebrow">ÜRÜN</span><h2>Taşınacak ürün</h2></div></div>
           <div className="field"><label>Ürün</label><select className="select" value={productId} onChange={e=>setProductId(e.target.value)}>{products.map(p=><option key={p.id} value={p.id}>{p.model} • {p.title}</option>)}<option value="__manual__">+ Özel ürün</option></select></div>
           {product&&<div className="selectedProductPreview compact"><ProductVisual product={product} size="md"/><div><strong>{product.title}</strong><p>{product.model}</p><div className="productSpecChips">{Object.entries(product.specs||{}).slice(0,3).map(([k,v])=><span key={k}>{String(v)}</span>)}</div></div></div>}
+          {product&&altusInstallHint(product.category)&&<div className="altusInstallHint"><div><strong>Altus servis / montaj hatırlatması</strong><span>Bu ürün grubu Altus'un ücretsiz montaja tabi ürün listesinde yer alıyor. Sipariş ve servis uygunluğunu teslimat öncesi doğrula.</span></div><div><a href="tel:+908502100888">0850 210 0 888</a><a href="https://wa.me/905444440888" target="_blank" rel="noreferrer">WhatsApp</a></div></div>}
           {productId==='__manual__'&&<div className="miniFormGrid"><div className="field"><label>Ürün adı</label><input className="input" value={manualProduct} onChange={e=>setManualProduct(e.target.value)} required placeholder="Buzdolabı"/></div><div className="field"><label>Model</label><input className="input" value={manualModel} onChange={e=>setManualModel(e.target.value)} placeholder="Model"/></div></div>}
           <div className="miniFormGrid"><div className="field"><label>Adet</label><input className="input" name="quantity" type="number" min="1" max="20" defaultValue="1"/></div><div className="field"><label>Sipariş / fiş no</label><input className="input" name="order_no" placeholder="OPS-1042"/></div><div className="field"><label>Kat / daire</label><input className="input" name="floor_text" placeholder="3. kat / D:7"/></div><div className="field"><label>Asansör</label><select className="select" name="has_elevator" defaultValue="unknown"><option value="unknown">Bilinmiyor</option><option value="yes">Var</option><option value="no">Yok</option></select></div></div>
           <div className="compactToggleGrid">

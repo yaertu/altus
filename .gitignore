@@ -3,7 +3,12 @@ node_modules
 .env
 .env.local
 *.log
+*.tsbuildinfo
+public/maplibre-gl-worker.mjs
+public/maplibre-gl-shared.mjs
 .DS_Store
 
 VAPID-SECRETS.txt
 .env.production.local
+.vercel
+.env*

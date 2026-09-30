@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { notFound } from 'next/navigation'
 import StatusPill from '@/components/status-pill'
 import type { DeliveryStatus } from '@/lib/types'
+import { SUPABASE_URL } from '@/lib/supabase/config'
 
 export const metadata:Metadata={title:'Teslimat Takibi',robots:{index:false,follow:false}}
 const labels:Record<string,string>={created:'Sevkiyat oluşturuldu',assigned:'Sevkiyat ekibine aktarıldı',new:'Planlandı',accepted:'Görev kabul edildi',en_route:'Teslimat ekibi yola çıktı',arrived:'Teslimat ekibi adreste',delivered:'Teslim edildi',failed:'Teslimat yeniden planlanıyor',cancelled:'İptal edildi'}
@@ -16,8 +17,7 @@ type TrackingSnapshot={
 export default async function PublicTrackingPage({params}:{params:Promise<{token:string}>}){
   const {token}=await params
   if(!/^[0-9a-f-]{36}$/i.test(token))notFound()
-  const base=process.env.NEXT_PUBLIC_SUPABASE_URL
-  if(!base)notFound()
+  const base=SUPABASE_URL
   const res=await fetch(`${base}/functions/v1/public-tracking?token=${encodeURIComponent(token)}`,{cache:'no-store'})
   if(!res.ok)notFound()
   const snapshot=await res.json() as TrackingSnapshot
