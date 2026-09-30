@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AddressMapPicker, { type LocationMeta } from './address-map-picker'
+import TurkeyAddressSelector from './turkey-address-selector'
 import ProductVisual from './product-visual'
 import { createClient } from '@/lib/supabase/client'
 import type { CourierAvailability, Product } from '@/lib/types'
@@ -77,9 +78,8 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
         <div className="formGrid builderCustomerGrid">
           <div className="field"><label>Ad soyad</label><input className="input" name="customer_name" value={customer} onChange={e=>setCustomer(e.target.value)} required placeholder="Ahmet Yılmaz" autoComplete="name"/></div>
           <div className="field"><label>Telefon</label><input className="input" name="customer_phone" value={phone} onChange={e=>setPhone(e.target.value)} required inputMode="tel" autoComplete="tel" placeholder="05xx xxx xx xx" pattern="[0-9+() ]{10,20}"/></div>
-          <div className="field full"><label>Açık adres</label><textarea className="textarea compactAddress" value={address} onChange={e=>{setAddress(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} required placeholder="Mahalle, sokak, bina no, daire…"/></div>
-          <div className="field"><label>İlçe</label><input className="input" value={district} onChange={e=>{setDistrict(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} placeholder="Çorlu"/></div>
-          <div className="field"><label>Şehir</label><input className="input" value={city} onChange={e=>{setCity(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} placeholder="Tekirdağ"/></div>
+          <div className="field full"><TurkeyAddressSelector initialCity={city} initialDistrict={district} onChange={v=>{setCity(v.city);setDistrict(v.district);if(v.formattedAddress)setAddress(v.formattedAddress);setLocationMeta(m=>({...m,confirmed:false}))}}/></div>
+          <div className="field full"><label>Açık adres / tarif</label><textarea className="textarea compactAddress" value={address} onChange={e=>{setAddress(e.target.value);setLocationMeta(m=>({...m,confirmed:false}))}} required placeholder="Mahalle, sokak, bina no, daire, kapı tarifi…"/></div>
         </div>
         <div className="mapPickerField premiumMapField">
           <AddressMapPicker latitude={latitude} longitude={longitude} addressText={address} districtText={district} cityText={city} onAddressSelect={setAddress} onMetaChange={setLocationMeta} onChange={(lat,lng)=>{setLatitude(lat);setLongitude(lng)}}/>
