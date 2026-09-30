@@ -4,6 +4,7 @@ import ProductMediaManager from '@/components/product-media-manager'
 import AdminGrowthCenter from '@/components/admin-growth-center'
 import type {Product} from '@/lib/types'
 import type {CourierPromotion} from '@/lib/courier-growth'
+import { Building2, Package, Trophy, UsersRound } from 'lucide-react'
 
 type ProductMediaRow={product_id:string;image_url:string}
 type AdminUserRow={user_id:string;full_name:string;phone:string|null;role:string|null;is_active:boolean;store_id:string|null}
@@ -37,11 +38,17 @@ export default async function AdminPage(){
   ]):[{data:[]},{data:[]}]
 
   return <div className="fadeIn adminPage">
-    <div className="pageHead adminPageHead"><div><div className="eyebrow">YÖNETİM MERKEZİ</div><h1>Organizasyon, personel ve performans</h1><p>Hesaplar, mağazalar, promosyonlar, rütbeler, puan/ceza kuralları ve ürün yönetimi tek merkezde.</p></div><div className="adminPageMeta"><span>{deliveryRes.count||0} sevkiyat</span><span>{users.filter(x=>x.role==='courier').length} sevkiyatçı</span></div></div>
+    <div className="adminCommandBar"><h1>Yönetim</h1><div className="adminPageMeta"><span>{deliveryRes.count||0} sevkiyat</span><span>{users.filter(x=>x.role==='courier').length} sevkiyatçı</span></div></div>
+    <nav className="adminSectionNav" aria-label="Yönetim bölümleri">
+      <a href="#courier-growth"><Trophy size={16}/> Kurye gelişimi</a>
+      <a href="#team-access"><UsersRound size={16}/> Ekip ve yetkiler</a>
+      <a href="#products"><Package size={16}/> Ürünler</a>
+      <a href="#team-access"><Building2 size={16}/> Organizasyon</a>
+    </nav>
     <div className="stack">
-      <AdminGrowthCenter orgId={profile.org_id!} adminUserId={userId} users={users} scores={(scoresRes.data||[]) as ScoreRow[]} promotions={(promosRes.data||[]) as CourierPromotion[]} settings={{...defaultSettings,...(settingsRes.data||{})}} products={enrichedProducts} schemaReady={schemaReady} penalties={(penaltiesRes.data||[]) as PenaltyRow[]} scoreEvents={(scoreEventsRes.data||[]) as ScoreEventRow[]}/>
-      <AdminPanel users={users} stores={stores} orgId={profile.org_id!} organization={orgRes.data||{name:'Altus Sevkiyat',brand_color:'#d10072',support_phone:null}}/>
-      <ProductMediaManager orgId={profile.org_id!} products={enrichedProducts}/>
+      <section id="courier-growth" className="adminAnchorSection"><AdminGrowthCenter orgId={profile.org_id!} adminUserId={userId} users={users} scores={(scoresRes.data||[]) as ScoreRow[]} promotions={(promosRes.data||[]) as CourierPromotion[]} settings={{...defaultSettings,...(settingsRes.data||{})}} products={enrichedProducts} schemaReady={schemaReady} penalties={(penaltiesRes.data||[]) as PenaltyRow[]} scoreEvents={(scoreEventsRes.data||[]) as ScoreEventRow[]}/></section>
+      <section id="team-access" className="adminAnchorSection"><AdminPanel users={users} stores={stores} orgId={profile.org_id!} organization={orgRes.data||{name:'Altus Sevkiyat',brand_color:'#d10072',support_phone:null}}/></section>
+      <section id="products" className="adminAnchorSection"><ProductMediaManager orgId={profile.org_id!} products={enrichedProducts}/></section>
     </div>
   </div>
 }

@@ -6,7 +6,7 @@ const PUBLIC_ROUTES=['/login','/track/','/privacy','/terms','/auth/callback','/a
 function isPublicPath(pathname:string){
   const base=PUBLIC_ROUTES.some(p=>p.endsWith('/')?pathname.startsWith(p):pathname===p||pathname.startsWith(`${p}/`))
   if(base)return true
-  if(process.env.NEXT_PUBLIC_DESKTOP_PREVIEW==='1'&&(pathname==='/api/routing/route'||pathname==='/api/geocode'||pathname==='/api/geocode/reverse'||pathname==='/api/voice/navigation'))return true
+  if(process.env.NEXT_PUBLIC_DESKTOP_PREVIEW==='1'&&(pathname==='/api/routing/route'||pathname==='/api/routing/nearest'||pathname==='/api/geocode'||pathname==='/api/geocode/reverse'||pathname==='/api/voice/navigation'))return true
   return false
 }
 

@@ -17,7 +17,7 @@ export type OperationsCourierPoint={
 }
 
 export type RouteSummary={
-  provider:'graphhopper'|'osrm'|'none'
+  provider:'graphhopper'|'osrm'|'osrm-public'|'none'
   distance_m:number
   duration_s:number
   coordinates:[number,number][]
@@ -91,8 +91,8 @@ export default function OperationsMap({deliveries,routeDeliveries,couriers=[],or
   const [route,setRoute]=useState<RouteSummary|null>(null)
   const [routing,setRouting]=useState(false)
   const lastRouteFetchRef=useRef(0)
-  const mappedDeliveries=useMemo(()=>deliveries.filter(x=>x.latitude!==null&&x.longitude!==null),[deliveries])
-  const mappedCouriers=useMemo(()=>couriers.filter(x=>x.latitude!==null&&x.longitude!==null),[couriers])
+  const mappedDeliveries=useMemo(()=>deliveries.filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude)),[deliveries])
+  const mappedCouriers=useMemo(()=>couriers.filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude)),[couriers])
   const activeRoute=useMemo(()=>{const source=(routeDeliveries??deliveries).filter(x=>x.latitude!==null&&x.longitude!==null);return source.filter(x=>!['cancelled','failed','delivered'].includes(x.status)).sort((a,b)=>(a.route_position??999)-(b.route_position??999))},[deliveries,routeDeliveries])
   const tileUrl=process.env.NEXT_PUBLIC_MAP_TILE_URL||'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
   const tileAttribution=process.env.NEXT_PUBLIC_MAP_ATTRIBUTION||'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -100,7 +100,7 @@ export default function OperationsMap({deliveries,routeDeliveries,couriers=[],or
   const pointsKey=useMemo(()=>[origin?`${origin.latitude.toFixed(5)},${origin.longitude.toFixed(5)}`:'',...activeRoute.map(x=>`${x.latitude!.toFixed(5)},${x.longitude!.toFixed(5)}`)].join('|'),[activeRoute,origin])
 
   useEffect(()=>{
-    let cancelled=false
+    let cancelled=false;let resizeObserver:ResizeObserver|null=null
     void(async()=>{
       if(!nodeRef.current||mapRef.current)return
       const L=await import('leaflet');if(cancelled||!nodeRef.current)return
@@ -109,9 +109,11 @@ export default function OperationsMap({deliveries,routeDeliveries,couriers=[],or
       L.tileLayer(tileUrl,{attribution:tileAttribution,maxZoom:19}).addTo(map)
       layerRef.current=L.layerGroup().addTo(map)
       mapRef.current=map
+      resizeObserver=new ResizeObserver(entries=>{const rect=entries[0]?.contentRect;if(!rect)return;if(rect.width<10||rect.height<10){map.stop();return}map.invalidateSize({pan:false})})
+      resizeObserver.observe(nodeRef.current)
       window.setTimeout(()=>map.invalidateSize(),50)
     })()
-    return()=>{cancelled=true;if(mapRef.current){mapRef.current.remove();mapRef.current=null;layerRef.current=null;routeRef.current=null}}
+    return()=>{cancelled=true;resizeObserver?.disconnect();if(mapRef.current){mapRef.current.stop();mapRef.current.remove();mapRef.current=null;layerRef.current=null;routeRef.current=null}}
   },[compact,tileAttribution,tileUrl])
 
   useEffect(()=>{
@@ -176,6 +178,7 @@ export default function OperationsMap({deliveries,routeDeliveries,couriers=[],or
 
       const selectedDelivery=mappedDeliveries.find(x=>x.id===selectedDeliveryId)
       const selectedCourier=mappedCouriers.find(x=>x.user_id===selectedCourierId)
+      const container=map.getContainer();if(container.clientWidth<10||container.clientHeight<10){map.stop();return}
       if(selectedDelivery){map.flyTo([selectedDelivery.latitude!,selectedDelivery.longitude!],16,{duration:.45});return}
       if(selectedCourier){map.flyTo([selectedCourier.latitude!,selectedCourier.longitude!],15,{duration:.45});return}
       const routeCoords=route?.coordinates||[]

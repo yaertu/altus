@@ -40,6 +40,9 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
   const product=useMemo(()=>products.find(p=>p.id===productId),[products,productId])
   const courier=useMemo(()=>couriers.find(c=>c.user_id===courierId),[couriers,courierId])
   const today=new Date().toISOString().slice(0,10)
+  const progress=[Boolean(customer.trim()&&phone.trim()),locationMeta.confirmed,Boolean(product||manualProduct.trim()),Boolean(date&&timeWindow)]
+  const firstOpen=progress.findIndex(done=>!done)
+  const activeStep=firstOpen===-1?3:firstOpen
 
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();setSaving(true);setErr('');setPreviewNotice('')
@@ -68,14 +71,12 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
   }
 
   return <form onSubmit={submit} className="deliveryBuilder fadeIn">
+    <h1 className="srOnly">Yeni sevkiyat oluştur</h1>
     {err&&<div className="error builderMessage">{err}</div>}
     {previewNotice&&<div className="success builderMessage">{previewNotice}</div>}
 
-    <div className="builderStatusStrip">
-      <div><span className={customer.trim()&&phone.trim()?'done':''}>1</span><b>Müşteri</b></div>
-      <i>→</i><div><span className={locationMeta.confirmed?'done':''}>2</span><b>Konum</b></div>
-      <i>→</i><div><span className={product||manualProduct.trim()?'done':''}>3</span><b>Ürün</b></div>
-      <i>→</i><div><span className={courierId?'done':''}>4</span><b>Plan</b></div>
+    <div className="builderStatusStrip" aria-label="Sevkiyat oluşturma ilerlemesi">
+      {['Müşteri','Konum','Ürün','Plan'].map((label,index)=><div className={activeStep===index?'current':''} key={label}><span className={progress[index]?'done':activeStep===index?'current':''}>{progress[index]?'✓':index+1}</span><b>{label}</b>{index<3&&<i>→</i>}</div>)}
     </div>
 
     <div className="deliveryBuilderGrid">

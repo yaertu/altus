@@ -16,7 +16,7 @@ export async function POST(req:NextRequest){
 
   const profile=body?.profile==='bike'?'bike':body?.profile==='foot'?'foot':'car'
   const graphhopperKey=process.env.GRAPHHOPPER_API_KEY
-  const osrmBase=process.env.ROUTING_OSRM_BASE_URL?.replace(/\/$/,'')
+  const osrmBase=(process.env.ROUTING_OSRM_BASE_URL||'https://router.project-osrm.org').replace(/\/$/,'')
 
   try{
     if(graphhopperKey){
@@ -50,7 +50,7 @@ export async function POST(req:NextRequest){
       const instructions:RouteInstruction[]=(route?.legs||[]).flatMap((leg:any)=>leg.steps||[]).slice(0,40).map((x:any)=>({
         text:[x?.maneuver?.type,x?.name].filter(Boolean).join(' • '),distance:Number(x.distance||0),time:Number(x.duration||0)*1000,street_name:x?.name?String(x.name):undefined
       }))
-      return NextResponse.json({provider:'osrm',distance_m:Number(route?.distance||0),duration_s:Math.round(Number(route?.duration||0)),coordinates,instructions},{headers:{'Cache-Control':'private, max-age=30'}})
+      return NextResponse.json({provider:process.env.ROUTING_OSRM_BASE_URL?'osrm':'osrm-public',distance_m:Number(route?.distance||0),duration_s:Math.round(Number(route?.duration||0)),coordinates,instructions},{headers:{'Cache-Control':'private, max-age=30'}})
     }
 
     return NextResponse.json({provider:'none',configured:false,error:'Production routing provider yapılandırılmamış.'},{status:503})

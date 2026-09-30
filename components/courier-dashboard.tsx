@@ -14,7 +14,8 @@ import OperationsMap, { type RouteSummary } from './operations-map'
 import ProductVisual from './product-visual'
 import DeliveryStatusSteps from './delivery-status-steps'
 import CourierNavigationMap from './courier-navigation-map'
-import { Navigation, Phone, MapPinned, Volume2, VolumeX, X, ChevronUp, ClipboardList, History, UserRound, CirclePlus, Route as RouteIcon, CircleCheckBig, Coffee, Power, LocateFixed, MapPin, Trophy, Sparkles, Star } from 'lucide-react'
+import PushEnrollment from './push-enrollment'
+import { Navigation, Navigation2, Phone, MapPinned, Volume2, VolumeX, X, ChevronUp, ChevronDown, ClipboardList, History, UserRound, CirclePlus, Route as RouteIcon, CircleCheckBig, Coffee, Power, LocateFixed, MapPin, Trophy, Sparkles, Star, Wrench } from 'lucide-react'
 
 const FAILS=['Müşteriye ulaşılamadı','Müşteri adreste yok','Adres bulunamadı','Ürün hasarlı / eksik','Araç kaynaklı sorun','Teslimat müşteri tarafından ertelendi','Güvenli teslimat yapılamıyor']
 
@@ -38,13 +39,47 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
   const [routeSummary,setRouteSummary]=useState<RouteSummary|null>(null)
   const [navRouteSummary,setNavRouteSummary]=useState<RouteSummary|null>(null)
   const [voiceGuidance,setVoiceGuidance]=useState(false)
+  const [assignmentSound,setAssignmentSound]=useState(false)
+  const [routeRanking,setRouteRanking]=useState<Record<string,{rank:number;distance_m:number;duration_s:number|null;source:string}>>({})
   const [navSheet,setNavSheet]=useState<'peek'|'expanded'|'hidden'>('peek')
+  const [expandedTaskId,setExpandedTaskId]=useState<string|null>(null)
   const lastSpokenRef=useRef('')
   const voiceAudioRef=useRef<HTMLAudioElement|null>(null)
   const lastPresencePushRef=useRef(0)
+  const audioContextRef=useRef<AudioContext|null>(null)
+  const assignedIdsRef=useRef(new Set(initial.map(item=>item.id)))
   const [currentLocation,setCurrentLocation]=useState<{lat:number;lng:number;accuracy:number|null;heading:number|null;speed:number|null}|null>(preview?{lat:41.1578,lng:27.7972,accuracy:18,heading:72,speed:8.5}:null)
   const previousNewCount=useRef(initial.filter(x=>x.status==='new').length)
   const mapRef=useRef<HTMLDivElement|null>(null)
+
+  const playAssignmentAlert=useCallback(async()=>{
+    const AudioCtor=window.AudioContext||(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext
+    if(!AudioCtor)return
+    const context=audioContextRef.current||new AudioCtor();audioContextRef.current=context
+    if(context.state==='suspended')await context.resume().catch(()=>null)
+    if(context.state!=='running')return
+    const started=context.currentTime+.02
+    ;[0,.22,.44].forEach((offset,index)=>{
+      const oscillator=context.createOscillator();const gain=context.createGain()
+      oscillator.type=index===1?'square':'sine';oscillator.frequency.setValueAtTime(index===1?880:1175,started+offset)
+      gain.gain.setValueAtTime(.0001,started+offset);gain.gain.exponentialRampToValueAtTime(.82,started+offset+.025);gain.gain.exponentialRampToValueAtTime(.0001,started+offset+.17)
+      oscillator.connect(gain);gain.connect(context.destination);oscillator.start(started+offset);oscillator.stop(started+offset+.19)
+    })
+  },[])
+
+  async function toggleAssignmentSound(){
+    const next=!assignmentSound;setAssignmentSound(next);localStorage.setItem('altus-assignment-sound',next?'1':'0')
+    if(next){await playAssignmentAlert();setNotice('Yüksek sesli yeni iş uyarısı açıldı. Telefonun medya sesi açık olmalı.')}
+    else setNotice('Yeni iş sesi kapatıldı.')
+  }
+
+  useEffect(()=>{
+    const enabled=preview||localStorage.getItem('altus-assignment-sound')!=='0';setAssignmentSound(enabled)
+    if(!enabled)return
+    const unlock=()=>{const AudioCtor=window.AudioContext||(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;if(AudioCtor){const context=audioContextRef.current||new AudioCtor();audioContextRef.current=context;void context.resume()}window.removeEventListener('pointerdown',unlock,true)}
+    window.addEventListener('pointerdown',unlock,true)
+    return()=>window.removeEventListener('pointerdown',unlock,true)
+  },[preview])
 
   const load=useCallback(async()=>{
     if(preview)return
@@ -53,12 +88,13 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
     if(!error&&data){
       const next=data as Delivery[]
       const newCount=next.filter(x=>x.status==='new').length
-      if(newCount>previousNewCount.current){setNotice('Yeni sevkiyat sıraya eklendi • mevcut navigasyon bölünmedi');if(navigator.vibrate)navigator.vibrate([160,80,160]);window.setTimeout(()=>setNotice(''),3500)}
-      previousNewCount.current=newCount;setItems(next)
+      const newlyAssigned=next.filter(item=>!assignedIdsRef.current.has(item.id))
+      if(newlyAssigned.length){setNotice(`${newlyAssigned.length} yeni sevkiyat sıraya eklendi • mevcut navigasyon bölünmedi`);if(assignmentSound)void playAssignmentAlert();if(navigator.vibrate)navigator.vibrate([220,90,220,90,320]);window.setTimeout(()=>setNotice(''),5000)}
+      assignedIdsRef.current=new Set(next.map(item=>item.id));previousNewCount.current=newCount;setItems(next)
     }
-  },[userId,preview])
+  },[userId,preview,assignmentSound,playAssignmentAlert])
 
-  useEffect(()=>{if(preview)return;const supabase=createClient();let channel:ReturnType<typeof supabase.channel>|null=null;void(async()=>{await supabase.realtime.setAuth();channel=supabase.channel(`courier:${userId}:deliveries`,{config:{private:true}}).on('broadcast',{event:'*'},()=>{void load()}).subscribe()})();return()=>{if(channel)void supabase.removeChannel(channel)}},[load,userId,preview])
+  useEffect(()=>{if(preview)return;const supabase=createClient();let channel:ReturnType<typeof supabase.channel>|null=null;void(async()=>{await supabase.realtime.setAuth();channel=supabase.channel(`courier:${userId}:deliveries`,{config:{private:true}}).on('broadcast',{event:'*'},()=>{void load()}).on('postgres_changes',{event:'*',schema:'public',table:'deliveries',filter:`assigned_courier_id=eq.${userId}`},()=>{void load()}).subscribe()})();return()=>{if(channel)void supabase.removeChannel(channel)}},[load,userId,preview])
   useEffect(()=>{if(preview){setLocationSharing(true);return}setLocationSharing(localStorage.getItem('altus-location-sharing')==='1')},[preview])
   useEffect(()=>{
     if(preview){setAvailabilityState('available');return}
@@ -105,6 +141,22 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
     return()=>{cancelled=true}
   },[navRouteSummary,navigationMode,voiceGuidance])
 
+  const routingCandidates=useMemo(()=>items.filter(item=>!['delivered','cancelled','failed'].includes(item.status)&&item.latitude!==null&&item.longitude!==null),[items])
+  const routingCandidateKey=useMemo(()=>currentLocation?`${currentLocation.lat.toFixed(4)},${currentLocation.lng.toFixed(4)}|${routingCandidates.map(item=>item.id).sort().join(',')}`:'',[currentLocation?.lat,currentLocation?.lng,routingCandidates])
+  useEffect(()=>{
+    if(!currentLocation||!routingCandidates.length){setRouteRanking({});return}
+    const controller=new AbortController();const timer=window.setTimeout(()=>{void(async()=>{
+      try{
+        const response=await fetch('/api/routing/nearest',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({origin:{id:'courier',lat:currentLocation.lat,lng:currentLocation.lng},destinations:routingCandidates.map(item=>({id:item.id,lat:item.latitude,lng:item.longitude}))}),signal:controller.signal})
+        if(!response.ok)return
+        const data=await response.json() as {ranked?:Array<{id:string;distance_m:number;duration_s:number|null;source:string}>}
+        const next:Record<string,{rank:number;distance_m:number;duration_s:number|null;source:string}>={}
+        ;(data.ranked||[]).forEach((item,rank)=>{next[item.id]={...item,rank}});setRouteRanking(next)
+      }catch{}
+    })()},350)
+    return()=>{window.clearTimeout(timer);controller.abort()}
+  },[routingCandidateKey])
+
   async function toggleLocation(){
     if(preview){setLocationSharing(v=>!v);setNotice(locationSharing?'Konum paylaşımı kapatıldı.':'Konum paylaşımı önizlemede açıldı.');return}
     if(locationSharing){localStorage.removeItem('altus-location-sharing');setLocationSharing(false);setNotice('Konum paylaşımı kapatıldı.');return}
@@ -123,13 +175,28 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
     if(error)setErr(error.message)
   }
 
+  function focusNearestAfter(completed:Delivery,position:{lat:number|null;lng:number|null}){
+    const candidates=items.filter(item=>item.id!==completed.id&&!['delivered','cancelled','failed'].includes(item.status))
+    const from=position.lat!==null&&position.lng!==null?{lat:position.lat,lng:position.lng}:completed.latitude!==null&&completed.longitude!==null?{lat:completed.latitude,lng:completed.longitude}:null
+    candidates.sort((a,b)=>{
+      const roadA=routeRanking[a.id]?.rank??999,roadB=routeRanking[b.id]?.rank??999;if(roadA!==roadB)return roadA-roadB
+      if(from&&a.latitude!==null&&a.longitude!==null&&b.latitude!==null&&b.longitude!==null)return metersBetween(from,{lat:a.latitude,lng:a.longitude})-metersBetween(from,{lat:b.latitude,lng:b.longitude})
+      return (a.route_position??999)-(b.route_position??999)
+    })
+    const next=candidates[0]
+    if(!next){setNavigationMode(false);setSelectedTaskId(null);setNotice('Aktif teslimatların tamamlandı.');return}
+    setSelectedTaskId(next.id);setNavRouteSummary(null);setNavSheet('peek')
+    const distance=from&&next.latitude!==null&&next.longitude!==null?Math.round(metersBetween(from,{lat:next.latitude,lng:next.longitude})):null
+    setNotice(`Teslimat tamamlandı • en yakın sonraki durak ${next.customer_name}${distance!==null?` (${distanceLabel(distance)})`:''}`)
+  }
+
   async function move(d:Delivery,next:DeliveryStatus){
     setBusy(d.id);setErr('');setNotice('')
-    if(preview){setItems(prev=>prev.map(x=>x.id===d.id?{...x,status:next}:x));setBusy(null);setNotice('Önizleme: görev durumu güncellendi.');return}
+    if(preview){setItems(prev=>prev.map(x=>x.id===d.id?{...x,status:next}:x));setBusy(null);if(next==='delivered')focusNearestAfter(d,{lat:currentLocation?.lat??null,lng:currentLocation?.lng??null});else setNotice('Önizleme: görev durumu güncellendi.');return}
     const loc=await getLocationSnapshot();if(loc.lat!==null&&loc.lng!==null)setCurrentLocation({lat:loc.lat,lng:loc.lng,accuracy:loc.accuracy,heading:null,speed:null})
     if((next==='arrived'||next==='delivered')&&loc.lat!==null&&loc.lng!==null&&d.latitude!==null&&d.longitude!==null){const meters=Math.round(metersBetween({lat:loc.lat,lng:loc.lng},{lat:d.latitude,lng:d.longitude}));if(meters>500&&!window.confirm(`GPS teslimat noktasından yaklaşık ${meters} m uzakta görünüyor. Konum hatalıysa devam edebilirsin. İşleme devam edilsin mi?`)){setBusy(null);return}}
-    if(!navigator.onLine){await enqueueStatus(d.id,{status:next,lat:loc.lat,lng:loc.lng,accuracy:loc.accuracy});setItems(prev=>prev.map(x=>x.id===d.id?{...x,status:next}:x));setNotice('İşlem çevrimdışı kaydedildi; internet gelince otomatik gönderilecek.');setBusy(null);return}
-    const supabase=createClient();const {error}=await supabase.from('deliveries').update({status:next,last_event_lat:loc.lat,last_event_lng:loc.lng,last_event_accuracy_m:loc.accuracy}).eq('id',d.id);if(error)setErr(error.message);else await load();setBusy(null)
+    if(!navigator.onLine){await enqueueStatus(d.id,{status:next,lat:loc.lat,lng:loc.lng,accuracy:loc.accuracy});setItems(prev=>prev.map(x=>x.id===d.id?{...x,status:next}:x));if(next==='delivered')focusNearestAfter(d,{lat:loc.lat,lng:loc.lng});else setNotice('İşlem çevrimdışı kaydedildi; internet gelince otomatik gönderilecek.');setBusy(null);return}
+    const supabase=createClient();const {error}=await supabase.from('deliveries').update({status:next,last_event_lat:loc.lat,last_event_lng:loc.lng,last_event_accuracy_m:loc.accuracy}).eq('id',d.id);if(error)setErr(error.message);else {await load();if(next==='delivered')focusNearestAfter(d,{lat:loc.lat,lng:loc.lng})}setBusy(null)
   }
 
   async function markFailed(reason:string){
@@ -140,8 +207,14 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
     const supabase=createClient();const {error}=await supabase.from('deliveries').update({status:'failed',failure_reason:reason,last_event_lat:loc.lat,last_event_lng:loc.lng,last_event_accuracy_m:loc.accuracy}).eq('id',failure.id);if(error)setErr(error.message);else await load();setFailure(null);setBusy(null)
   }
 
-  const active=useMemo(()=>items.filter(x=>!['delivered','cancelled','failed'].includes(x.status)).sort((a,b)=>{const rp=(a.route_position??999)-(b.route_position??999);if(rp!==0)return rp;return priorityValue(a)-priorityValue(b)}),[items])
+  const active=useMemo(()=>items.filter(x=>!['delivered','cancelled','failed'].includes(x.status)).sort((a,b)=>{
+    const activeA=['accepted','en_route','arrived'].includes(a.status)?0:1,activeB=['accepted','en_route','arrived'].includes(b.status)?0:1;if(activeA!==activeB)return activeA-activeB
+    const roadA=routeRanking[a.id]?.rank??999,roadB=routeRanking[b.id]?.rank??999;if(roadA!==roadB)return roadA-roadB
+    const rp=(a.route_position??999)-(b.route_position??999);if(rp!==0)return rp
+    return priorityValue(a)-priorityValue(b)
+  }),[items,routeRanking])
   const current=active.find(x=>['accepted','en_route','arrived'].includes(x.status))||active[0]
+  const currentRoad= current?routeRanking[current.id]:null
   const selectedTask=active.find(x=>x.id===selectedTaskId)||current||null
   const origin=currentLocation?{latitude:currentLocation.lat,longitude:currentLocation.lng,heading:currentLocation.heading}:null
   const selectedDistance=currentLocation&&selectedTask?.latitude!==null&&selectedTask?.latitude!==undefined&&selectedTask?.longitude!==null&&selectedTask?.longitude!==undefined?Math.round(metersBetween({lat:currentLocation.lat,lng:currentLocation.lng},{lat:selectedTask.latitude,lng:selectedTask.longitude})):null
@@ -150,9 +223,15 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
 
   function TaskActions({d,navigation=false}:{d:Delivery;navigation?:boolean}){
     const next=NEXT_STATUS[d.status];const proofNeeded=d.status==='arrived'&&(d.requires_photo||d.requires_signature)
-    return <div className={navigation?'navSheetActions':'actionGrid modernActionGrid'}>
+    if(navigation)return <div className="navSheetActions navFocusedActions">
       <a className="btn btnSoft" href={`tel:${d.customer_phone.replace(/\D/g,'')}`}><Phone size={15}/> Müşteriyi ara</a>
-      {!navigation&&<button type="button" className="btn btnGhost" onClick={()=>showOnMap(d,true)}><MapPinned size={15}/> Navigasyon</button>}
+      {proofNeeded?(preview?<button className="btn btnPrimary wide" onClick={()=>move(d,'delivered')}>Fotoğraf / İmza Önizle →</button>:<Link className="btn btnPrimary wide" href={`/deliveries/${d.id}`}>Fotoğraf / İmza ve Teslimat →</Link>):next&&<button disabled={busy===d.id} onClick={()=>move(d,next)} className="btn btnPrimary wide">{busy===d.id?'Kaydediliyor…':NEXT_STATUS_LABEL[d.status]} →</button>}
+      <button type="button" className="btn btnGhost" onClick={()=>setNavSheet(v=>v==='expanded'?'peek':'expanded')}><ClipboardList size={15}/>{navSheet==='expanded'?'Detayları kapat':'Detaylar'}</button>
+      {navSheet==='expanded'&&<button className="btn btnDanger" onClick={()=>setFailure(d)}>Sorun bildir</button>}
+    </div>
+    return <div className="actionGrid modernActionGrid">
+      <a className="btn btnSoft" href={`tel:${d.customer_phone.replace(/\D/g,'')}`}><Phone size={15}/> Müşteriyi ara</a>
+      <button type="button" className="btn btnGhost" onClick={()=>showOnMap(d,true)}><MapPinned size={15}/> Navigasyon</button>
       {proofNeeded?(preview?<button className="btn btnPrimary wide" onClick={()=>move(d,'delivered')}>Fotoğraf / İmza Önizle →</button>:<Link className="btn btnPrimary wide" href={`/deliveries/${d.id}`}>Fotoğraf / İmza ve Teslimat →</Link>):next&&<button disabled={busy===d.id} onClick={()=>move(d,next)} className="btn btnPrimary wide">{busy===d.id?'Kaydediliyor…':NEXT_STATUS_LABEL[d.status]} →</button>}
       <button className="btn btnDanger" onClick={()=>setFailure(d)}>Sorun bildir</button>
     </div>
@@ -160,7 +239,7 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
 
   return <div className="courierShell courierShellModern fadeIn">
     <OfflineSyncStatus/>
-    <header className="courierTop courierTopModern"><div className="courierTopRow"><div className="courierIdentity">{growth?.avatarUrl?<div className="avatar avatarImage"><img src={growth.avatarUrl} alt="Kurye avatarı"/></div>:<div className="avatar">{name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div>}<div><strong>İyi çalışmalar, {name.split(' ')[0]}</strong><div className="meta">{growth?(growth.rankTitle+' • '+growth.points.toLocaleString('tr-TR')+' XP'):'Saha operasyonu'}</div></div></div><div className="courierHeaderActions">{current&&<button className="btn btnPrimary navLaunchButton" onClick={()=>showOnMap(current,true)}><Navigation size={16}/> Navigasyon</button>}{!preview&&<NotificationCenter userId={userId} compact/>}</div></div></header>
+    <header className="courierTop courierTopModern"><div className="courierTopRow"><div className="courierIdentity">{growth?.avatarUrl?<div className="avatar avatarImage"><img src={growth.avatarUrl} alt="Kurye avatarı"/></div>:<div className="avatar">{name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div>}<div><strong>İyi çalışmalar, {name.split(' ')[0]}</strong><div className="meta">{growth?(growth.rankTitle+' • '+growth.points.toLocaleString('tr-TR')+' XP'):'Saha operasyonu'}</div></div></div><div className="courierHeaderActions"><button type="button" className={`btn compact assignmentSoundButton ${assignmentSound?'btnSoft':'btnGhost'}`} onClick={toggleAssignmentSound} aria-label={assignmentSound?'Yeni iş sesi açık':'Yeni iş sesini aç'}>{assignmentSound?<Volume2 size={16}/>:<VolumeX size={16}/>}<span>İş sesi</span></button>{!preview&&<PushEnrollment orgId={orgId} userId={userId} compact/>}{current&&<button className="btn btnPrimary navLaunchButton" onClick={()=>showOnMap(current,true)}><Navigation size={16}/> Navigasyon</button>}{!preview&&<NotificationCenter userId={userId} compact/>}</div></div></header>
     <main className="courierContent courierContentModern">
       {growth&&<section className="courierGrowthStrip" style={{'--rank':growth.rankColor} as React.CSSProperties}><div className="growthStripRank"><span><Trophy size={16}/></span><div><small>RÜTBE {growth.rankNo}/60</small><strong>{growth.rankTitle}</strong></div></div><div className="growthStripPoints"><b>{growth.points.toLocaleString('tr-TR')} XP</b><span>{Array.from({length:6},(_,i)=><Star key={i} size={13} fill={i<growth.stars?'currentColor':'none'}/>)}</span></div>{growth.promotion?<div className="growthStripPromo"><Sparkles size={16}/><span><small>AKTİF HEDEF</small><strong>{growth.promotion.title}</strong></span><b>{growth.promotion.rewardLabel}</b></div>:<div className="growthStripPromo muted"><Sparkles size={16}/><span><small>HEDEFLER</small><strong>Yeni promosyon bekleniyor</strong></span></div>}<Link className="btn btnGhost compact" href="/courier/profile">Profil & ödüller →</Link></section>}
       {notice&&<div className="fieldNotice modernNotice">{notice}</div>}
@@ -173,17 +252,21 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
 
           <div className="courierStats modernCourierStats"><div><span className="statMiniIcon"><CirclePlus size={17}/></span><strong>{items.filter(x=>x.status==='new').length}</strong><span>Yeni görev</span></div><div><span className="statMiniIcon"><RouteIcon size={17}/></span><strong>{items.filter(x=>['accepted','en_route','arrived'].includes(x.status)).length}</strong><span>Sahada aktif</span></div><div><span className="statMiniIcon"><CircleCheckBig size={17}/></span><strong>{items.filter(x=>x.status==='delivered').length}</strong><span>Tamamlandı</span></div></div>
 
-          {current&&<section className="nextStopCard nextStopModern"><div className="nextStopProductRow"><ProductVisual delivery={current} size="md"/><div className="nextStopTop"><div><span className="eyebrow">SIRADAKİ DURAK</span><h1>{current.customer_name}</h1><p>{current.product_name} × {current.quantity}{current.product_model?` • ${current.product_model}`:''}</p></div><StatusPill status={current.status}/></div></div><DeliveryStatusSteps status={current.status} compact/><div className="nextStopAddress"><b>⌖</b><span>{current.customer_address}</span></div><div className="nextStopMeta"><span>{current.route_position?`Rota #${current.route_position}`:'Sıra atanmadı'}</span><span>◷ {current.time_window}</span>{current.floor_text&&<span>{current.floor_text}</span>}</div><button className="btn btnPrimary btnLarge" onClick={()=>showOnMap(current,true)}><Navigation size={17}/> Navigasyonu başlat</button></section>}
+          {current&&<section className="nextStopCard nextStopModern"><div className="nextStopProductRow"><ProductVisual delivery={current} size="md"/><div className="nextStopTop"><div><span className="eyebrow">{['accepted','en_route','arrived'].includes(current.status)?'AKTİF DURAK':'EN YAKIN SONRAKİ DURAK'}</span><h1>{current.customer_name}</h1><p>{current.product_name} × {current.quantity}{current.product_model?` • ${current.product_model}`:''}</p></div><StatusPill status={current.status}/></div></div><DeliveryStatusSteps status={current.status} compact/><div className="nextStopAddress"><b>⌖</b><span>{current.customer_address}</span></div><div className="nextStopMeta"><span>{current.route_position?`Plan #${current.route_position}`:'Sıra atanmadı'}</span>{currentRoad&&<span className="nearestRouteChip">⌁ {distanceLabel(currentRoad.distance_m)}{currentRoad.duration_s?` • ${etaLabel(currentRoad.duration_s)}`:''}</span>}<span>◷ {current.time_window}</span>{current.floor_text&&<span>{current.floor_text}</span>}</div><div className="nextStopActions"><a className="btn btnSoft btnLarge" href={`tel:${current.customer_phone.replace(/\D/g,'')}`}><Phone size={17}/> Müşteriyi ara</a><button className="btn btnPrimary btnLarge" onClick={()=>showOnMap(current,true)}><Navigation size={17}/> Navigasyonu başlat</button></div></section>}
 
           <div className="sectionHeading modernSectionHeading"><div><strong>Bugünün teslimatları</strong><span>{active.length} aktif görev</span></div></div>
-          <div className="courierTaskStack">{active.length?active.map(d=><article className={`mobileTask modernMobileTask priority-${d.priority} ${selectedTask?.id===d.id?'selected':''}`} key={d.id}>
+          <div className="courierTaskStack">{active.length?active.map(d=><article className={`mobileTask modernMobileTask priority-${d.priority} ${selectedTask?.id===d.id?'selected':''} ${expandedTaskId===d.id?'taskExpanded':''}`} key={d.id}>
             <div className="taskMediaRow"><ProductVisual delivery={d} size="md"/><div className="taskHeadline"><div><div className="tracking">{d.route_position?`DURAK ${d.route_position} • `:''}{d.tracking_no}{d.order_no?` • SİPARİŞ ${d.order_no}`:''}</div><h2>{d.customer_name}</h2><div className="meta taskProductMeta">{d.product_name} × {d.quantity}{d.product_model?` • ${d.product_model}`:''}</div></div><StatusPill status={d.status}/></div></div>
+            <div className="taskCompactAddress"><MapPinned size={14}/><span>{d.customer_address}</span></div>
+            <div className="taskQuickActions"><a href={`tel:${d.customer_phone.replace(/\D/g,'')}`}><Phone size={15}/> Ara</a><button type="button" onClick={()=>showOnMap(d,true)}><Navigation size={15}/> Git</button><button type="button" onClick={()=>setExpandedTaskId(value=>value===d.id?null:d.id)}><ClipboardList size={15}/> {expandedTaskId===d.id?'Kapat':'Detay'}</button></div>
+            <div className="mobileTaskDetails">
             <DeliveryStatusSteps status={d.status} compact/>
             <div className="taskChips modernTaskChips">{d.priority!=='normal'&&<span className="hotChip">{d.priority==='urgent'?'ACİL':'ÖNCELİKLİ'}</span>}{d.install_required&&<span>Kurulum</span>}{d.old_product_pickup&&<span>Eski ürün</span>}{d.fragile&&<span>Hassas</span>}{d.has_elevator===false&&<span>Asansör yok</span>}</div>
             <button type="button" onClick={()=>showOnMap(d,true)} className="infoBlock addressInfoButton"><span className="addressInfoIcon">⌖</span><span><strong>TESLİMAT ADRESİ</strong><p>{d.customer_address}</p><small>Uygulama içi navigasyonu aç</small></span><b>→</b></button>
             <div className="taskInfoGrid"><div className="infoBlock"><strong>TESLİMAT PLANI</strong><p>{d.scheduled_date} • {d.time_window}{d.floor_text?` • ${d.floor_text}`:''}</p></div><div className="infoBlock"><strong>MÜŞTERİ</strong><p>{d.customer_phone}</p></div></div>
             {d.notes&&<div className="infoBlock importantNote"><strong>MAĞAZA NOTU</strong><p>{d.notes}</p></div>}
             <TaskActions d={d}/>
+            </div>
           </article>):<div className="empty" style={{background:'#fff'}}><strong>Aktif görevin yok</strong>Yeni sevkiyat atandığında burada görünecek.</div>}</div>
         </div>
 
@@ -201,22 +284,25 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
       <div className="courierNavMap"><CourierNavigationMap delivery={selectedTask} currentLocation={currentLocation} onRouteSummary={setNavRouteSummary}/></div>
       <div className="courierNavTopbar premiumNavTopbar">
         <button className="navClose" onClick={()=>setNavigationMode(false)} aria-label="Navigasyonu kapat">←</button>
-        <div className="navMissionTitle"><small>{selectedTask.route_position?`DURAK ${selectedTask.route_position}`:'AKTİF TESLİMAT'}</small><strong>{selectedTask.customer_address}</strong></div>
+        <div className="navMissionTitle"><small>{selectedTask.route_position?`DURAK ${selectedTask.route_position}`:'AKTİF TESLİMAT'}</small><strong>{selectedTask.customer_name}</strong><span>{selectedTask.customer_address}</span></div>
         <button type="button" className={`navVoiceButton ${voiceGuidance?'active':''}`} onClick={()=>setVoiceGuidance(v=>!v)}>{voiceGuidance?<><Volume2 size={17}/> Ses</>:<><VolumeX size={17}/> Ses</>}</button>
         <div className="navEtaCapsule"><b>{navRouteSummary?etaLabel(navRouteSummary.duration_s):'—'}</b><span>{navRouteSummary?distanceLabel(navRouteSummary.distance_m):'Rota hazırlanıyor'}</span></div>
       </div>
-      {navRouteSummary?.instructions?.[0]&&<div className="nextInstruction premiumInstruction"><span>↗</span><div><small>SIRADAKİ MANEVRA</small><strong>{navRouteSummary.instructions[0].text||navRouteSummary.instructions[0].street_name||'Rotayı takip et'}</strong></div></div>}
+      {navRouteSummary?.instructions?.[0]&&<div className="nextInstruction premiumInstruction"><span>↗</span><div><small>{navRouteSummary.instructions[0].distance>0?`${distanceLabel(navRouteSummary.instructions[0].distance)} SONRA`:'SIRADAKİ MANEVRA'}</small><strong>{navRouteSummary.instructions[0].text||navRouteSummary.instructions[0].street_name||'Rotayı takip et'}</strong></div></div>}
       <div className="navDestinationChip"><span>⌂</span><div><small>HEDEF</small><b>{selectedTask.floor_text?`${selectedTask.floor_text} • `:''}{selectedTask.customer_address}</b></div></div>
 
       {navSheet==='hidden'&&<button type="button" className="navSheetRestore" onClick={()=>setNavSheet('peek')}><ProductVisual delivery={selectedTask} size="sm"/><span><small>GÖREV</small><b>{selectedTask.customer_name}</b></span><i><ChevronUp size={18}/></i></button>}
 
       {navSheet!=='hidden'&&<section className={`navOrderSheet premiumOrderSheet sheet-${navSheet}`}>
-        <div className="navSheetControls"><button type="button" className="navSheetHandleButton" onClick={()=>setNavSheet(v=>v==='expanded'?'peek':'expanded')} aria-label="Görev panelini büyüt veya küçült"><span className="navSheetHandle"/><em>{navSheet==='expanded'?'Küçült':'Detaylar'}</em></button><button type="button" className="navSheetHide" onClick={()=>setNavSheet('hidden')} aria-label="Görev panelini gizle"><X size={18}/></button></div>
-        <div className="navProductHeader premiumNavProduct"><ProductVisual delivery={selectedTask} size="lg"/><div className="navOrderIdentity"><div className="tracking">{selectedTask.order_no?`SİPARİŞ ${selectedTask.order_no} • `:''}{selectedTask.tracking_no}</div><h2>{selectedTask.customer_name}</h2><p>{selectedTask.product_name} × {selectedTask.quantity}{selectedTask.product_model?` • ${selectedTask.product_model}`:''}</p></div><StatusPill status={selectedTask.status}/></div>
+        <div className="navSheetControls"><button type="button" className="navSheetHandleButton" onClick={()=>setNavSheet(v=>v==='expanded'?'peek':'expanded')} aria-label="Görev panelini büyüt veya küçült"><span className="navSheetHandle"/><em>{navSheet==='expanded'?'Küçült':'Detaylar'}</em></button><button type="button" className="navSheetHide" onClick={()=>setNavSheet('hidden')} aria-label="Görev kartını aşağı indir" title="Kartı gizle"><ChevronDown size={19}/></button></div>
+        <div className="navProductHeader premiumNavProduct"><ProductVisual delivery={selectedTask} size="lg"/><div className="navOrderIdentity"><div className="tracking">{selectedTask.order_no?`SİPARİŞ ${selectedTask.order_no} • `:''}{selectedTask.tracking_no}</div><h2>{selectedTask.customer_name}</h2><p>{selectedTask.product_name} × {selectedTask.quantity}{selectedTask.product_model?` • ${selectedTask.product_model}`:''}</p></div><a className="navHeaderCall" href={`tel:${selectedTask.customer_phone.replace(/\D/g,'')}`} aria-label={`${selectedTask.customer_name} kişisini ara`}><Phone size={18}/><span>Ara</span></a></div>
         <DeliveryStatusSteps status={selectedTask.status} compact={navSheet==='peek'}/>
+        <div className="navPeekAddress"><MapPinned size={16}/><span>{selectedTask.customer_address}</span>{selectedTask.floor_text&&<b>{selectedTask.floor_text}</b>}</div>
+        <div className="navPeekFlags">{selectedTask.install_required&&<span><Wrench size={13}/> Kurulum</span>}{selectedTask.old_product_pickup&&<span>↩ Eski ürün</span>}{selectedTask.fragile&&<span>◈ Hassas</span>}{selectedTask.has_elevator===false&&<span>Asansör yok</span>}</div>
         {navSheet==='expanded'&&<>
           <div className="navAddressCard static"><span>⌖</span><div><small>TESLİMAT NOKTASI</small><strong>{selectedTask.customer_address}</strong><p>{selectedTask.floor_text||'Kat / daire bilgisi yok'}{selectedTask.has_elevator===false?' • Asansör yok':selectedTask.has_elevator===true?' • Asansör var':''}</p></div></div>
           <div className="navQuickInfo">{selectedDistance!==null&&<span className={selectedDistance<180?'nearbyChip':''}>⌖ {selectedDistance<180?'Teslimat noktasına yaklaştın':distanceLabel(selectedDistance)}</span>}<span>◷ {selectedTask.time_window}</span>{selectedTask.install_required&&<span>🔧 Kurulum</span>}{selectedTask.old_product_pickup&&<span>↩ Eski ürün</span>}{selectedTask.fragile&&<span>◈ Hassas</span>}</div>
+          {selectedTask.latitude!==null&&selectedTask.longitude!==null&&<div className="externalNavigationRow"><a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedTask.latitude},${selectedTask.longitude}&travelmode=driving&dir_action=navigate`} target="_blank" rel="noreferrer"><Navigation size={14}/> Google Maps</a><a href={`https://yandex.com/maps/?rtext=~${selectedTask.latitude},${selectedTask.longitude}&rtt=auto`} target="_blank" rel="noreferrer"><Navigation2 size={14}/> Yandex</a></div>}
           {selectedTask.notes&&<div className="navStoreNote"><b>Mağaza notu</b><span>{selectedTask.notes}</span></div>}
         </>}
         <TaskActions d={selectedTask} navigation/>
