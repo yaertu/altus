@@ -8,7 +8,7 @@ import { Building2, CheckCircle2, Copy, KeyRound, Palette, Phone, Plus, Save, Sh
 type UserRow={user_id:string;full_name:string;phone:string|null;role:string|null;is_active:boolean;store_id:string|null}
 type StoreRow={id:string;name:string}
 type Organization={name:string;brand_color:string;support_phone:string|null}
-const ROLE_OPTIONS=[['store_staff','Mağaza personeli'],['store_manager','Mağaza yöneticisi'],['courier','Sevkiyat personeli'],['admin','Yönetici']]
+const ROLE_OPTIONS=[['store_staff','Mağaza personeli'],['store_manager','Mağaza yöneticisi'],['courier','Sevkiyat personeli'],['admin','Yönetici']] as const
 const roleLabel=new Map(ROLE_OPTIONS)
 
 function initials(name:string){return name.split(' ').filter(Boolean).map(x=>x[0]).slice(0,2).join('').toUpperCase()}
