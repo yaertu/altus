@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { SUPABASE_URL } from '@/lib/supabase/config'
 export const dynamic='force-dynamic'
 export async function GET(){
   const started=Date.now(); const base=SUPABASE_URL

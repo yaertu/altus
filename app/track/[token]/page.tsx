@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { notFound } from 'next/navigation'
 import StatusPill from '@/components/status-pill'
 import type { DeliveryStatus } from '@/lib/types'
+import { SUPABASE_URL } from '@/lib/supabase/config'
 
 export const metadata:Metadata={title:'Teslimat Takibi',robots:{index:false,follow:false}}
 const labels:Record<string,string>={created:'Sevkiyat oluşturuldu',assigned:'Sevkiyat ekibine aktarıldı',new:'Planlandı',accepted:'Görev kabul edildi',en_route:'Teslimat ekibi yola çıktı',arrived:'Teslimat ekibi adreste',delivered:'Teslim edildi',failed:'Teslimat yeniden planlanıyor',cancelled:'İptal edildi'}

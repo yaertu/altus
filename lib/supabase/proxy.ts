@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config'
 
 const PUBLIC_ROUTES=['/login','/track/','/privacy','/terms','/auth/callback','/auth/confirm','/api/health','/desktop-preview']
 function isPublicPath(pathname:string){
