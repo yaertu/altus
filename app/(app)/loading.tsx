@@ -1,0 +1,1 @@
+export default function Loading(){return <div className="stack"><div className="skeleton skeletonHero"/><div className="grid4">{[1,2,3,4].map(x=><div className="skeleton skeletonStat" key={x}/>)}</div><div className="skeleton skeletonPanel"/></div>}

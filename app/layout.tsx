@@ -1,65 +1,23 @@
-import type { Metadata, Viewport } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
-import "./globals.css";
-import "./product-ui.css";
-import "./modern-ui.css";
+import type { Metadata, Viewport } from 'next'
+import { Manrope } from 'next/font/google'
+import 'leaflet/dist/leaflet.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import './globals.css'
+import ServiceWorkerRegistration from '@/components/service-worker-registration'
 
-const roboto = Roboto({
-  subsets: ["latin","latin-ext"],
-  display: "swap",
-  variable: "--font-ui"
-});
-
-const mono = Roboto_Mono({
-  subsets: ["latin","latin-ext"],
-  display: "swap",
-  variable: "--font-mono"
-});
-
-const themeBoot = `
-(function(){
-  try{
-    var key="altus-teslimat:theme:v12";
-    var saved=localStorage.getItem(key);
-    var theme="light";
-    var root=document.documentElement;
-    root.dataset.theme=theme;
-    root.classList.toggle("dark",theme==="dark");
-    root.style.colorScheme=theme;
-  }catch(e){}
-})();
-`;
+const manrope=Manrope({subsets:['latin','latin-ext'],display:'swap',variable:'--font-app'})
 
 export const metadata: Metadata = {
-  title: "ALTUS Teslimat | Mağaza & Servis",
-  description: "Mağaza ve servis personeli için müşteri, ürün, adres, teslimat ve kontrol yönetimi.",
-  applicationName: "ALTUS Teslimat",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "ALTUS Teslimat"
-  },
-  formatDetection: { telephone:false },
-  icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg"
-  }
-};
-
-export const viewport: Viewport = {
-  themeColor: "#ec008c",
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover"
-};
+  title: {default:'Altus Sevkiyat Operasyon',template:'%s • Altus Sevkiyat'},
+  description: 'Mağaza ve sevkiyat personeli için gerçek zamanlı teslimat operasyon sistemi',
+  applicationName:'Altus Sevkiyat',
+  manifest: '/manifest.webmanifest',
+  icons:{icon:[{url:'/icon-192.png',sizes:'192x192',type:'image/png'},{url:'/icon-512.png',sizes:'512x512',type:'image/png'}],apple:[{url:'/apple-touch-icon.png',sizes:'180x180',type:'image/png'}]},
+  appleWebApp:{capable:true,statusBarStyle:'default',title:'Altus Sevkiyat'},
+  formatDetection:{telephone:true,address:false,email:false},
+}
+export const viewport: Viewport = { themeColor: '#cf006f', width: 'device-width', initialScale: 1, maximumScale:1, viewportFit: 'cover' }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="tr" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
-      </head>
-      <body className={`${roboto.variable} ${mono.variable}`}>{children}</body>
-    </html>
-  );
+  return <html lang="tr" className={manrope.variable}><body>{children}<ServiceWorkerRegistration /></body></html>
 }

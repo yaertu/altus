@@ -1,0 +1,2 @@
+'use client'
+export default function ErrorPage({reset}:{error:Error&{digest?:string};reset:()=>void}){return <section className="panel errorState"><div className="eyebrow">BEKLENMEYEN HATA</div><h1>Bu ekran yüklenemedi.</h1><p>Bağlantı veya geçici bir uygulama hatası oluşmuş olabilir. İşlemi güvenle yeniden deneyebilirsin.</p><button className="btn btnPrimary" onClick={()=>reset()}>Tekrar dene</button></section>}
