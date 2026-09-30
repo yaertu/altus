@@ -15,7 +15,7 @@ import ProductVisual from './product-visual'
 import DeliveryStatusSteps from './delivery-status-steps'
 import CourierNavigationMap from './courier-navigation-map'
 import PushEnrollment from './push-enrollment'
-import { Navigation, Navigation2, Phone, MapPinned, Volume2, VolumeX, X, ChevronUp, ChevronDown, ClipboardList, History, UserRound, CirclePlus, Route as RouteIcon, CircleCheckBig, Coffee, Power, LocateFixed, MapPin, Trophy, Sparkles, Star, Wrench } from 'lucide-react'
+import { Navigation, Phone, MapPinned, Volume2, VolumeX, X, ChevronUp, ChevronDown, ClipboardList, History, UserRound, CirclePlus, Route as RouteIcon, CircleCheckBig, Coffee, Power, LocateFixed, MapPin, Trophy, Sparkles, Star, Wrench } from 'lucide-react'
 
 const FAILS=['Müşteriye ulaşılamadı','Müşteri adreste yok','Adres bulunamadı','Ürün hasarlı / eksik','Araç kaynaklı sorun','Teslimat müşteri tarafından ertelendi','Güvenli teslimat yapılamıyor']
 
@@ -302,7 +302,6 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
         {navSheet==='expanded'&&<>
           <div className="navAddressCard static"><span>⌖</span><div><small>TESLİMAT NOKTASI</small><strong>{selectedTask.customer_address}</strong><p>{selectedTask.floor_text||'Kat / daire bilgisi yok'}{selectedTask.has_elevator===false?' • Asansör yok':selectedTask.has_elevator===true?' • Asansör var':''}</p></div></div>
           <div className="navQuickInfo">{selectedDistance!==null&&<span className={selectedDistance<180?'nearbyChip':''}>⌖ {selectedDistance<180?'Teslimat noktasına yaklaştın':distanceLabel(selectedDistance)}</span>}<span>◷ {selectedTask.time_window}</span>{selectedTask.install_required&&<span>🔧 Kurulum</span>}{selectedTask.old_product_pickup&&<span>↩ Eski ürün</span>}{selectedTask.fragile&&<span>◈ Hassas</span>}</div>
-          {selectedTask.latitude!==null&&selectedTask.longitude!==null&&<div className="externalNavigationRow"><a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedTask.latitude},${selectedTask.longitude}&travelmode=driving&dir_action=navigate`} target="_blank" rel="noreferrer"><Navigation size={14}/> Google Maps</a><a href={`https://yandex.com/maps/?rtext=~${selectedTask.latitude},${selectedTask.longitude}&rtt=auto`} target="_blank" rel="noreferrer"><Navigation2 size={14}/> Yandex</a></div>}
           {selectedTask.notes&&<div className="navStoreNote"><b>Mağaza notu</b><span>{selectedTask.notes}</span></div>}
         </>}
         <TaskActions d={selectedTask} navigation/>

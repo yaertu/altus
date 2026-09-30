@@ -599,7 +599,6 @@ html,body{overflow-x:clip}
 }
 
 /* v6.3.3 map controls and vehicle visibility */
-.externalNavigationRow{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}.externalNavigationRow a{min-height:40px;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #e8dde3;border-radius:12px;background:#fff;color:#40363c;text-decoration:none;font-size:11px;font-weight:850}.externalNavigationRow a:hover{border-color:#d60072;color:#bd0064;background:#fff5fa}
 .praticoVehicleMarker{transform-origin:center;transition:filter .2s ease}.praticoVehicleMarker.moving{filter:drop-shadow(0 12px 20px rgba(31,18,26,.30))}.praticoVehicleMarker.stopped:before{animation:none;opacity:.34}.praticoVehicleMarker:after{content:"";position:absolute;right:7px;bottom:9px;width:11px;height:11px;border:3px solid #fff;border-radius:50%;background:#14a66f;box-shadow:0 3px 10px rgba(12,105,70,.32)}.praticoVehicleMarker.moving:after{animation:vehicleStatusPulse 1.25s ease-in-out infinite}
 @keyframes vehicleStatusPulse{50%{box-shadow:0 0 0 7px rgba(20,166,111,0),0 3px 10px rgba(12,105,70,.32)}}
 @media(max-width:760px){
