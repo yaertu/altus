@@ -1,7 +1,7 @@
 -- Altus Sevkiyat v6.0 - courier growth, promotions, avatar and fair discipline
 -- Safe to rerun. New public tables use RLS. Trigger helpers stay in private schema.
 
-do $
+do $$
 begin
   if to_regclass('public.profiles') is null then
     raise exception 'v6 preflight: public.profiles bulunamadı';
@@ -30,7 +30,7 @@ begin
   if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='deliveries' and column_name='status') then
     raise exception 'v6 preflight: deliveries.status bulunamadı';
   end if;
-end $;
+end $$;
 
 create schema if not exists private;
 revoke all on schema private from public, anon;
@@ -38,7 +38,7 @@ grant usage on schema private to authenticated, service_role;
 
 create or replace function private.current_role()
 returns text language sql stable security definer set search_path=''
-as $ select role::text from public.profiles where user_id=auth.uid() limit 1 $;
+as $$ select role::text from public.profiles where user_id=auth.uid() limit 1 $$;
 revoke all on function private.current_role() from public,anon;
 grant execute on function private.current_role() to authenticated,service_role;
 
@@ -165,6 +165,11 @@ using(user_id=auth.uid()) with check(user_id=auth.uid());
 drop policy if exists "courier_scores_read" on public.courier_scores;
 create policy "courier_scores_read" on public.courier_scores for select to authenticated
 using(user_id=auth.uid() or (org_id=private.current_org_id() and private.current_role() in ('admin','store_manager','store_staff','office')));
+
+drop policy if exists "courier_scores_admin_update" on public.courier_scores;
+create policy "courier_scores_admin_update" on public.courier_scores for update to authenticated
+using(org_id=private.current_org_id() and private.current_role()='admin')
+with check(org_id=private.current_org_id() and private.current_role()='admin');
 
 drop policy if exists "courier_score_events_read" on public.courier_score_events;
 create policy "courier_score_events_read" on public.courier_score_events for select to authenticated
@@ -362,7 +367,7 @@ create trigger courier_cancel_guard_v6 after insert on public.courier_cancel_eve
 
 create or replace function private.notify_courier_promotion_v6()
 returns trigger language plpgsql security definer set search_path=''
-as $
+as $$
 declare reward_text text;
 begin
   if to_regclass('public.notifications') is null then return new; end if;
@@ -374,8 +379,8 @@ begin
     case when coalesce(new.reward_amount,0)>0 then trim(to_char(new.reward_amount,'FM999999990D00'))||' ₺ ek ödül' else 'Özel ödül' end
   );
 
-  insert into public.notifications(user_id,kind,title,body)
-  select p.user_id,'system','Yeni ek kazanç hedefi',
+  insert into public.notifications(org_id,user_id,kind,title,body)
+  select new.org_id,p.user_id,'system','Yeni ek kazanç hedefi',
          concat_ws(' • ',new.title,reward_text)
   from public.profiles p
   where p.org_id=new.org_id
@@ -383,7 +388,7 @@ begin
     and p.is_active=true;
 
   return new;
-end $;
+end $$;
 revoke all on function private.notify_courier_promotion_v6() from public,anon,authenticated;
 drop trigger if exists courier_promotion_notify_v6 on public.courier_promotions;
 create trigger courier_promotion_notify_v6
@@ -392,13 +397,14 @@ for each row execute function private.notify_courier_promotion_v6();
 
 create or replace function private.notify_courier_account_state_v6()
 returns trigger language plpgsql security definer set search_path=''
-as $
+as $$
 begin
   if new.role<>'courier' or new.is_active is not distinct from old.is_active then return new; end if;
   if to_regclass('public.notifications') is null then return new; end if;
 
-  insert into public.notifications(user_id,kind,title,body)
+  insert into public.notifications(org_id,user_id,kind,title,body)
   values(
+    new.org_id,
     new.user_id,
     'system',
     case when new.is_active then 'Kurye hesabın yeniden açıldı' else 'Kurye hesabın incelemeye alındı' end,
@@ -408,7 +414,7 @@ begin
     end
   );
   return new;
-end $;
+end $$;
 revoke all on function private.notify_courier_account_state_v6() from public,anon,authenticated;
 drop trigger if exists courier_account_state_notify_v6 on public.profiles;
 create trigger courier_account_state_notify_v6
@@ -425,7 +431,7 @@ on conflict(user_id) do nothing;
 
 -- Explicit Data API grants. RLS remains the authorization boundary.
 grant select,insert,update on public.courier_profile_media to authenticated;
-grant select on public.courier_scores to authenticated;
+grant select,update on public.courier_scores to authenticated;
 grant select,insert on public.courier_score_events to authenticated;
 grant select,insert,update,delete on public.courier_promotions to authenticated;
 grant select,insert,update on public.gamification_settings to authenticated;
