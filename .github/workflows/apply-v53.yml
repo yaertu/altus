@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .release/v53-web.b64.* | tr -d '\n\r' | base64 -d > /tmp/v53-web.tar.xz
+          cp .release/v53-web.tar.xz /tmp/v53-web.tar.xz
           xz -t /tmp/v53-web.tar.xz
           rm -rf /tmp/v53-web
           mkdir -p /tmp/v53-web
