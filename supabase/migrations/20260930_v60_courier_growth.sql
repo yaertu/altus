@@ -20,10 +20,12 @@ create table if not exists public.courier_scores(
   failed_count integer not null default 0 check(failed_count>=0),
   courier_cancel_count integer not null default 0 check(courier_cancel_count>=0),
   streak_days integer not null default 0 check(streak_days>=0),
+  last_delivery_date date,
   suspended_reason text,
   updated_at timestamptz not null default now()
 );
 create index if not exists courier_scores_org_idx on public.courier_scores(org_id,points desc);
+alter table public.courier_scores add column if not exists last_delivery_date date;
 alter table public.courier_scores enable row level security;
 
 create table if not exists public.courier_score_events(
@@ -85,6 +87,7 @@ create table if not exists public.courier_cancel_events(
   created_at timestamptz not null default now()
 );
 create index if not exists courier_cancel_events_day_idx on public.courier_cancel_events(courier_id,created_at desc);
+create unique index if not exists courier_cancel_events_delivery_once_idx on public.courier_cancel_events(courier_id,delivery_id) where delivery_id is not null;
 alter table public.courier_cancel_events enable row level security;
 
 create table if not exists public.courier_penalties(
@@ -190,7 +193,9 @@ as $$
 begin
   insert into public.courier_scores(user_id,org_id,points,updated_at)
   values(new.courier_id,new.org_id,greatest(0,new.points_delta),now())
-  on conflict(user_id) do update set points=greatest(0,public.courier_scores.points+excluded.points),updated_at=now();
+  on conflict(user_id) do update
+    set points=greatest(0,public.courier_scores.points+new.points_delta),
+        updated_at=now();
   return new;
 end $$;
 revoke all on function private.apply_courier_score_event() from public,anon,authenticated;
@@ -200,27 +205,60 @@ create trigger courier_score_event_apply_v6 after insert on public.courier_score
 create or replace function private.reward_delivery_status_v6()
 returns trigger language plpgsql security definer set search_path=''
 as $$
-declare cfg public.gamification_settings%rowtype; pts integer; key text;
+declare
+  cfg public.gamification_settings%rowtype;
+  pts integer:=0;
+  key text:=null;
+  event_id uuid;
 begin
   if new.assigned_courier_id is null or new.status is not distinct from old.status then return new; end if;
+
   select * into cfg from public.gamification_settings where org_id=new.org_id;
-  if not found then cfg.accepted_points:=5;cfg.arrived_points:=10;cfg.delivered_points:=100; end if;
-  pts:=0;key:=null;
-  if new.status='accepted' then pts:=cfg.accepted_points;key:='delivery_accepted';
-  elsif new.status='arrived' then pts:=cfg.arrived_points;key:='delivery_arrived';
-  elsif new.status='delivered' then pts:=cfg.delivered_points;key:='delivery_delivered';
-  elsif new.status='failed' then
-    insert into public.courier_scores(user_id,org_id,failed_count,updated_at) values(new.assigned_courier_id,new.org_id,1,now())
-    on conflict(user_id) do update set failed_count=public.courier_scores.failed_count+1,updated_at=now();
+  if not found then
+    cfg.accepted_points:=5;
+    cfg.arrived_points:=10;
+    cfg.delivered_points:=100;
   end if;
+
+  if new.status='accepted' then
+    pts:=coalesce(cfg.accepted_points,5); key:='delivery_accepted';
+  elsif new.status='arrived' then
+    pts:=coalesce(cfg.arrived_points,10); key:='delivery_arrived';
+  elsif new.status='delivered' then
+    pts:=coalesce(cfg.delivered_points,100); key:='delivery_delivered';
+  elsif new.status='failed' then
+    pts:=0; key:='delivery_failed';
+  end if;
+
   if key is not null then
     insert into public.courier_score_events(org_id,courier_id,delivery_id,points_delta,event_key,reason,actor_id)
-    values(new.org_id,new.assigned_courier_id,new.id,pts,key,'Teslimat durum puanı',auth.uid()) on conflict(delivery_id,event_key) do nothing;
+    values(new.org_id,new.assigned_courier_id,new.id,pts,key,'Teslimat durum puanı',auth.uid())
+    on conflict(delivery_id,event_key) do nothing
+    returning id into event_id;
   end if;
-  if new.status='delivered' then
-    insert into public.courier_scores(user_id,org_id,delivered_count,updated_at) values(new.assigned_courier_id,new.org_id,1,now())
-    on conflict(user_id) do update set delivered_count=public.courier_scores.delivered_count+1,updated_at=now();
+
+  if event_id is not null and new.status='delivered' then
+    insert into public.courier_scores(
+      user_id,org_id,delivered_count,streak_days,last_delivery_date,updated_at
+    )
+    values(new.assigned_courier_id,new.org_id,1,1,current_date,now())
+    on conflict(user_id) do update set
+      delivered_count=public.courier_scores.delivered_count+1,
+      streak_days=case
+        when public.courier_scores.last_delivery_date=current_date then public.courier_scores.streak_days
+        when public.courier_scores.last_delivery_date=current_date-1 then public.courier_scores.streak_days+1
+        else 1
+      end,
+      last_delivery_date=current_date,
+      updated_at=now();
+  elsif event_id is not null and new.status='failed' then
+    insert into public.courier_scores(user_id,org_id,failed_count,updated_at)
+    values(new.assigned_courier_id,new.org_id,1,now())
+    on conflict(user_id) do update set
+      failed_count=public.courier_scores.failed_count+1,
+      updated_at=now();
   end if;
+
   return new;
 end $$;
 revoke all on function private.reward_delivery_status_v6() from public,anon,authenticated;
@@ -230,20 +268,42 @@ create trigger deliveries_growth_reward_v6 after update of status on public.deli
 create or replace function private.process_courier_cancel_v6()
 returns trigger language plpgsql security definer set search_path=''
 as $$
-declare cfg public.gamification_settings%rowtype; daily_count integer; penalty integer;
+declare
+  cfg public.gamification_settings%rowtype;
+  daily_count integer;
+  penalty integer;
+  score_event_id uuid;
 begin
   select * into cfg from public.gamification_settings where org_id=new.org_id;
   penalty:=coalesce(cfg.courier_cancel_points,-75);
+
   insert into public.courier_score_events(org_id,courier_id,delivery_id,points_delta,event_key,reason,actor_id)
   values(new.org_id,new.courier_id,new.delivery_id,penalty,'courier_cancel_confirmed',new.reason,new.confirmed_by)
-  on conflict(delivery_id,event_key) do nothing;
-  insert into public.courier_scores(user_id,org_id,courier_cancel_count,updated_at) values(new.courier_id,new.org_id,1,now())
-  on conflict(user_id) do update set courier_cancel_count=public.courier_scores.courier_cancel_count+1,updated_at=now();
-  select count(*) into daily_count from public.courier_cancel_events where courier_id=new.courier_id and created_at>=date_trunc('day',now()) and created_at<date_trunc('day',now())+interval '1 day';
+  on conflict(delivery_id,event_key) do nothing
+  returning id into score_event_id;
+
+  if score_event_id is not null then
+    insert into public.courier_scores(user_id,org_id,courier_cancel_count,updated_at)
+    values(new.courier_id,new.org_id,1,now())
+    on conflict(user_id) do update set
+      courier_cancel_count=public.courier_scores.courier_cancel_count+1,
+      updated_at=now();
+  end if;
+
+  select count(*) into daily_count
+  from public.courier_cancel_events
+  where courier_id=new.courier_id
+    and created_at>=date_trunc('day',now())
+    and created_at<date_trunc('day',now())+interval '1 day';
+
   if coalesce(cfg.auto_suspend,true) and daily_count>=coalesce(cfg.daily_cancel_limit,5) then
     update public.profiles set is_active=false where user_id=new.courier_id;
-    update public.courier_scores set suspended_reason='Günlük kurye kaynaklı iptal sınırı aşıldı. Yönetici incelemesi gerekli.',updated_at=now() where user_id=new.courier_id;
+    update public.courier_scores
+      set suspended_reason='Günlük kurye kaynaklı iptal sınırı aşıldı. Yönetici incelemesi gerekli.',
+          updated_at=now()
+      where user_id=new.courier_id;
   end if;
+
   return new;
 end $$;
 revoke all on function private.process_courier_cancel_v6() from public,anon,authenticated;
