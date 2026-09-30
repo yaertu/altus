@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { AppRole, Profile } from '@/lib/types'
 
-export async function requireProfile(allowedRoles?: AppRole[]) {
+type ProfileOptions={allowInactive?:boolean}
+
+export async function requireProfile(allowedRoles?: AppRole[],options:ProfileOptions={}) {
   const supabase = await createClient()
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
   const userId = claimsData?.claims?.sub
@@ -15,8 +17,13 @@ export async function requireProfile(allowedRoles?: AppRole[]) {
     .eq('user_id', userId)
     .single()
 
-  if (error || !profile || !profile.is_active || !profile.org_id || !profile.role) {
+  if (error || !profile || !profile.org_id || !profile.role) {
     redirect('/login?error=profile')
+  }
+
+  if (!profile.is_active && !options.allowInactive) {
+    if (profile.role === 'courier') redirect('/courier/profile?suspended=1')
+    redirect('/login?error=inactive')
   }
 
   if (allowedRoles && !allowedRoles.includes(profile.role as AppRole)) {
