@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Map as LeafletMap, LayerGroup, Polyline as LeafletPolyline } from 'leaflet'
 import type { CourierAvailability, Delivery, DeliveryStatus } from '@/lib/types'
 
 export type OperationsCourierPoint={
@@ -47,6 +46,7 @@ function heartbeatAge(value?:string|null){
   const seconds=Math.max(0,Math.floor((Date.now()-new Date(value).getTime())/1000))
   return seconds<60?`${seconds} sn önce`:`${Math.floor(seconds/60)} dk önce`
 }
+
 function gpsQuality(accuracy?:number|null){
   if(accuracy===null||accuracy===undefined)return 'GPS belirsiz'
   if(accuracy<=20)return 'GPS çok iyi'
@@ -63,139 +63,139 @@ function tooltipNode(title:string,subtitle:string,meta?:string){
   return root
 }
 
-
-function vehicleIcon(L:typeof import('leaflet'),heading=0,selected=false){
-  const size=selected?54:46
-  return L.divIcon({
-    className:'altusVehicleMarkerHost',
-    html:`<div class="altusVehicleMarker ${selected?'selected':''}" style="--heading:${Number.isFinite(heading)?heading:0}deg"><img src="/vehicle/pratico_E_rozetli_disk.svg" alt="Sevkiyat aracı"/></div>`,
-    iconSize:[size,size],iconAnchor:[size/2,size/2]
-  })
+function deliveryMarkerNode(delivery:Delivery,selected:boolean){
+  const button=document.createElement('button')
+  button.type='button'
+  button.className=`altusDesktopStopMarker ${selected?'selected':''}`
+  button.style.setProperty('--marker',statusColor[delivery.status])
+  button.setAttribute('aria-label',`${delivery.customer_name} teslimatını seç`)
+  const span=document.createElement('span');span.textContent=String(delivery.route_position??'•');button.appendChild(span)
+  return button
 }
 
-function stopIcon(L:typeof import('leaflet'),d:Delivery,selected:boolean){
-  const number=d.route_position??'•'
-  return L.divIcon({
-    className:'altusStopMarkerHost',
-    html:`<div class="altusStopMarker ${selected?'selected':''}" style="--marker:${statusColor[d.status]}"><span>${number}</span></div>`,
-    iconSize:[selected?42:36,selected?42:36],iconAnchor:[selected?21:18,selected?21:18]
-  })
+function vehicleMarkerNode(selected:boolean,moving:boolean){
+  const root=document.createElement('div')
+  root.className=`altusDesktopVehicleMarker ${selected?'selected':''} ${moving?'moving':'stopped'}`
+  const img=document.createElement('img');img.src='/vehicle/pratico_E_rozetli_disk.svg';img.alt='Altus sevkiyat aracı';root.appendChild(img)
+  return root
 }
 
 export default function OperationsMap({deliveries,routeDeliveries,couriers=[],origin=null,selectedDeliveryId,selectedCourierId,compact=false,className='',showRoute=true,onRouteSummary,onSelectDelivery,onSelectCourier}:Props){
   const nodeRef=useRef<HTMLDivElement|null>(null)
-  const mapRef=useRef<LeafletMap|null>(null)
-  const layerRef=useRef<LayerGroup|null>(null)
-  const routeRef=useRef<LeafletPolyline|null>(null)
-  const leafletRef=useRef<typeof import('leaflet')|null>(null)
+  const mapRef=useRef<any>(null)
+  const maplibreRef=useRef<any>(null)
+  const markerRefs=useRef<any[]>([])
+  const [mapReady,setMapReady]=useState(false)
   const [route,setRoute]=useState<RouteSummary|null>(null)
   const [routing,setRouting]=useState(false)
   const lastRouteFetchRef=useRef(0)
+  const onRouteSummaryRef=useRef(onRouteSummary)
   const mappedDeliveries=useMemo(()=>deliveries.filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude)),[deliveries])
   const mappedCouriers=useMemo(()=>couriers.filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude)),[couriers])
-  const activeRoute=useMemo(()=>{const source=(routeDeliveries??deliveries).filter(x=>x.latitude!==null&&x.longitude!==null);return source.filter(x=>!['cancelled','failed','delivered'].includes(x.status)).sort((a,b)=>(a.route_position??999)-(b.route_position??999))},[deliveries,routeDeliveries])
-  const tileUrl=process.env.NEXT_PUBLIC_MAP_TILE_URL||'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-  const tileAttribution=process.env.NEXT_PUBLIC_MAP_ATTRIBUTION||'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  const activeRoute=useMemo(()=>{const source=(routeDeliveries??deliveries).filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude));return source.filter(x=>!['cancelled','failed','delivered'].includes(x.status)).sort((a,b)=>(a.route_position??999)-(b.route_position??999))},[deliveries,routeDeliveries])
+  const styleUrl=process.env.NEXT_PUBLIC_MAP_STYLE_URL||'https://tiles.openfreemap.org/styles/liberty'
   const hasAny=mappedDeliveries.length+mappedCouriers.length>0
-  const pointsKey=useMemo(()=>[origin?`${origin.latitude.toFixed(5)},${origin.longitude.toFixed(5)}`:'',...activeRoute.map(x=>`${x.latitude!.toFixed(5)},${x.longitude!.toFixed(5)}`)].join('|'),[activeRoute,origin])
+  const validOrigin=origin&&Number.isFinite(origin.latitude)&&Number.isFinite(origin.longitude)?origin:null
+  const pointsKey=useMemo(()=>[validOrigin?`${validOrigin.latitude.toFixed(5)},${validOrigin.longitude.toFixed(5)}`:'',...activeRoute.map(x=>`${x.latitude!.toFixed(5)},${x.longitude!.toFixed(5)}`)].join('|'),[activeRoute,validOrigin])
+
+  useEffect(()=>{onRouteSummaryRef.current=onRouteSummary},[onRouteSummary])
 
   useEffect(()=>{
     let cancelled=false;let resizeObserver:ResizeObserver|null=null
     void(async()=>{
       if(!nodeRef.current||mapRef.current)return
-      const L=await import('leaflet');if(cancelled||!nodeRef.current)return
-      leafletRef.current=L
-      const map=L.map(nodeRef.current,{zoomControl:!compact,attributionControl:true,scrollWheelZoom:true,preferCanvas:true}).setView([41.1603,27.8027],13)
-      L.tileLayer(tileUrl,{attribution:tileAttribution,maxZoom:19}).addTo(map)
-      layerRef.current=L.layerGroup().addTo(map)
+      const maplibre=await import('maplibre-gl');if(cancelled||!nodeRef.current)return
+      maplibreRef.current=maplibre
+      maplibre.setWorkerUrl('/maplibre-gl-worker.mjs')
+      const map=new maplibre.Map({container:nodeRef.current,style:styleUrl,center:[27.8027,41.1603],zoom:13.2,pitch:compact?0:28,bearing:0,attributionControl:{compact:true},maxPitch:58})
+      map.addControl(new maplibre.NavigationControl({showCompass:true,showZoom:!compact,visualizePitch:true}),'bottom-right')
+      map.on('load',()=>{
+        if(cancelled)return
+        map.addSource('operations-route',{type:'geojson',lineMetrics:true,data:{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[]}}})
+        map.addLayer({id:'operations-route-casing',type:'line',source:'operations-route',paint:{'line-color':'rgba(255,255,255,.96)','line-width':10,'line-opacity':.94},layout:{'line-cap':'round','line-join':'round'}})
+        map.addLayer({id:'operations-route-line',type:'line',source:'operations-route',paint:{'line-color':'#d60072','line-width':6,'line-opacity':.96},layout:{'line-cap':'round','line-join':'round'}})
+        setMapReady(true)
+      })
       mapRef.current=map
-      resizeObserver=new ResizeObserver(entries=>{const rect=entries[0]?.contentRect;if(!rect)return;if(rect.width<10||rect.height<10){map.stop();return}map.invalidateSize({pan:false})})
+      resizeObserver=new ResizeObserver(entries=>{const rect=entries[0]?.contentRect;if(rect&&rect.width>10&&rect.height>10)map.resize()})
       resizeObserver.observe(nodeRef.current)
-      window.setTimeout(()=>map.invalidateSize(),50)
     })()
-    return()=>{cancelled=true;resizeObserver?.disconnect();if(mapRef.current){mapRef.current.stop();mapRef.current.remove();mapRef.current=null;layerRef.current=null;routeRef.current=null}}
-  },[compact,tileAttribution,tileUrl])
+    return()=>{cancelled=true;resizeObserver?.disconnect();setMapReady(false);markerRefs.current.forEach(marker=>marker.remove());markerRefs.current=[];mapRef.current?.remove();mapRef.current=null}
+  },[compact,styleUrl])
 
   useEffect(()=>{
-    let cancelled=false
-    let timer=0
+    let cancelled=false;let timer=0
     async function calculate(){
-      if(!showRoute){setRoute(null);onRouteSummary?.(null);return}
-      const points=[...(origin?[{lat:origin.latitude,lng:origin.longitude}]:[]),...activeRoute.map(x=>({lat:x.latitude!,lng:x.longitude!}))]
-      if(points.length<2){setRoute(null);onRouteSummary?.(null);return}
+      if(!showRoute){setRoute(null);onRouteSummaryRef.current?.(null);return}
+      const points=[...(validOrigin?[{lat:validOrigin.latitude,lng:validOrigin.longitude}]:[]),...activeRoute.map(x=>({lat:x.latitude!,lng:x.longitude!}))]
+      if(points.length<2){setRoute(null);onRouteSummaryRef.current?.(null);return}
       setRouting(true);lastRouteFetchRef.current=Date.now()
       try{
-        const res=await fetch('/api/routing/route',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({points,profile:'car'})})
-        if(!res.ok)throw new Error('route unavailable')
-        const data=await res.json() as RouteSummary
-        if(cancelled)return
-        if(Array.isArray(data.coordinates)&&data.coordinates.length>1){setRoute(data);onRouteSummary?.(data)}
-        else {setRoute(null);onRouteSummary?.(null)}
-      }catch{if(!cancelled){setRoute(null);onRouteSummary?.(null)}}finally{if(!cancelled)setRouting(false)}
+        const response=await fetch('/api/routing/route',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({points,profile:'car'})})
+        if(!response.ok)throw new Error('route unavailable')
+        const data=await response.json() as RouteSummary;if(cancelled)return
+        if(Array.isArray(data.coordinates)&&data.coordinates.length>1){setRoute(data);onRouteSummaryRef.current?.(data)}else{setRoute(null);onRouteSummaryRef.current?.(null)}
+      }catch{if(!cancelled){setRoute(null);onRouteSummaryRef.current?.(null)}}finally{if(!cancelled)setRouting(false)}
     }
     const elapsed=Date.now()-lastRouteFetchRef.current
-    const wait=lastRouteFetchRef.current===0?100:Math.max(100,15_000-elapsed)
-    timer=window.setTimeout(()=>void calculate(),wait)
+    timer=window.setTimeout(()=>void calculate(),lastRouteFetchRef.current===0?100:Math.max(100,15_000-elapsed))
     return()=>{cancelled=true;window.clearTimeout(timer)}
-  },[pointsKey,showRoute,onRouteSummary])
+  },[pointsKey,showRoute])
 
   useEffect(()=>{
-    let cancelled=false
-    void(async()=>{
-      const L=leafletRef.current||await import('leaflet');if(cancelled)return
-      leafletRef.current=L
-      const map=mapRef.current,group=layerRef.current;if(!map||!group)return
-      group.clearLayers();if(routeRef.current){routeRef.current.remove();routeRef.current=null}
+    if(!mapReady||!mapRef.current||!maplibreRef.current)return
+    const map=mapRef.current,maplibre=maplibreRef.current
+    markerRefs.current.forEach(marker=>marker.remove());markerRefs.current=[]
 
-      if(route?.coordinates?.length){
-        routeRef.current=L.polyline(route.coordinates,{color:'#cf006f',weight:6,opacity:.86,lineCap:'round',lineJoin:'round'}).addTo(map)
-      }else if(showRoute&&activeRoute.length>1){
-        routeRef.current=L.polyline(activeRoute.map(x=>[x.latitude!,x.longitude!] as [number,number]),{color:'#cf006f',weight:4,opacity:.55,dashArray:'10 9'}).addTo(map)
-      }
+    const routeCoordinates=(route?.coordinates?.length?route.coordinates:showRoute?activeRoute.map(x=>[x.latitude!,x.longitude!] as [number,number]):[]).map(([lat,lng])=>[lng,lat])
+    map.getSource('operations-route')?.setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:routeCoordinates}})
 
-      if(origin){
-        const courier=L.marker([origin.latitude,origin.longitude],{icon:vehicleIcon(L,origin.heading??0,true),keyboard:false,title:'Sevkiyat aracı'})
-        courier.bindTooltip(tooltipNode('Sevkiyat aracı','Canlı saha konumu'),{direction:'bottom',offset:[0,18],opacity:1,className:'altusMapTooltip courierTip'})
-        courier.addTo(group)
-      }
+    if(validOrigin){
+      const node=vehicleMarkerNode(true,false)
+      const marker=new maplibre.Marker({element:node,anchor:'center',rotationAlignment:'map',pitchAlignment:'map'}).setLngLat([validOrigin.longitude,validOrigin.latitude]).setRotation(validOrigin.heading??0).addTo(map)
+      markerRefs.current.push(marker)
+    }
 
-      for(const d of mappedDeliveries){
-        const selected=d.id===selectedDeliveryId
-        const marker=L.marker([d.latitude!,d.longitude!],{icon:stopIcon(L,d,selected),keyboard:true,title:`${d.customer_name} • ${d.product_name}`})
-        marker.bindTooltip(tooltipNode(`${d.route_position?`${d.route_position}. `:''}${d.customer_name}`,d.product_name,d.time_window),{direction:'top',offset:[0,-18],opacity:1,permanent:selected,className:'altusMapTooltip'})
-        marker.on('click',()=>onSelectDelivery?.(d.id));marker.addTo(group)
-      }
-      for(const c of mappedCouriers){
-        const selected=c.user_id===selectedCourierId
-        const marker=L.marker([c.latitude!,c.longitude!],{icon:vehicleIcon(L,c.heading_deg??0,selected),keyboard:true,title:`${c.full_name} • ${c.availability}`})
-        const label=c.availability==='available'?'Müsait':c.availability==='busy'?'Görevde':c.availability==='break'?'Molada':'Çevrimdışı'
-        const speed=c.speed_mps&&c.speed_mps>1?` • ${Math.round(c.speed_mps*3.6)} km/sa`:''
-        const accuracy=c.accuracy_m!==null&&c.accuracy_m!==undefined?`±${Math.round(c.accuracy_m)} m`:'konum doğruluğu yok'
-        const age=heartbeatAge(c.last_heartbeat_at)
-        marker.bindTooltip(tooltipNode(c.full_name,`${label}${speed}`,`${gpsQuality(c.accuracy_m)} • ${accuracy}${age?` • ${age}`:''}`),{direction:'bottom',offset:[0,18],opacity:1,permanent:selected,className:'altusMapTooltip courierTip'})
-        marker.on('click',()=>onSelectCourier?.(c.user_id));marker.addTo(group)
-      }
+    for(const delivery of mappedDeliveries){
+      const selected=delivery.id===selectedDeliveryId
+      const node=deliveryMarkerNode(delivery,selected)
+      node.addEventListener('click',event=>{event.stopPropagation();onSelectDelivery?.(delivery.id)})
+      const popup=new maplibre.Popup({offset:selected?28:23,closeButton:false,closeOnClick:false,className:'altusMapPopup'}).setDOMContent(tooltipNode(`${delivery.route_position?`${delivery.route_position}. `:''}${delivery.customer_name}`,delivery.product_name,delivery.time_window))
+      const marker=new maplibre.Marker({element:node,anchor:'center'}).setLngLat([delivery.longitude!,delivery.latitude!]).setPopup(popup).addTo(map)
+      if(selected)marker.togglePopup()
+      markerRefs.current.push(marker)
+    }
 
-      const selectedDelivery=mappedDeliveries.find(x=>x.id===selectedDeliveryId)
-      const selectedCourier=mappedCouriers.find(x=>x.user_id===selectedCourierId)
-      const container=map.getContainer();if(container.clientWidth<10||container.clientHeight<10){map.stop();return}
-      if(selectedDelivery){map.flyTo([selectedDelivery.latitude!,selectedDelivery.longitude!],16,{duration:.45});return}
-      if(selectedCourier){map.flyTo([selectedCourier.latitude!,selectedCourier.longitude!],15,{duration:.45});return}
-      const routeCoords=route?.coordinates||[]
-      const coords:[number,number][]=routeCoords.length>1?routeCoords:[...(origin?[[origin.latitude,origin.longitude] as [number,number]]:[]),...mappedDeliveries.map(x=>[x.latitude!,x.longitude!] as [number,number]),...mappedCouriers.map(x=>[x.latitude!,x.longitude!] as [number,number])]
-      if(coords.length===1)map.setView(coords[0],14)
-      else if(coords.length>1)map.fitBounds(L.latLngBounds(coords),{padding:[42,42],maxZoom:15})
-      map.invalidateSize()
-    })()
-    return()=>{cancelled=true}
-  },[activeRoute,mappedDeliveries,mappedCouriers,onSelectCourier,onSelectDelivery,origin,route,selectedCourierId,selectedDeliveryId,showRoute])
+    for(const courier of mappedCouriers){
+      const selected=courier.user_id===selectedCourierId
+      const node=vehicleMarkerNode(selected,Boolean(courier.speed_mps&&courier.speed_mps>.8))
+      node.style.setProperty('--presence',availabilityColor[courier.availability])
+      node.addEventListener('click',event=>{event.stopPropagation();onSelectCourier?.(courier.user_id)})
+      const label=courier.availability==='available'?'Müsait':courier.availability==='busy'?'Görevde':courier.availability==='break'?'Molada':'Çevrimdışı'
+      const speed=courier.speed_mps&&courier.speed_mps>1?` • ${Math.round(courier.speed_mps*3.6)} km/sa`:''
+      const accuracy=courier.accuracy_m!==null&&courier.accuracy_m!==undefined?`±${Math.round(courier.accuracy_m)} m`:'konum doğruluğu yok'
+      const age=heartbeatAge(courier.last_heartbeat_at)
+      const popup=new maplibre.Popup({offset:selected?38:31,closeButton:false,closeOnClick:false,className:'altusMapPopup'}).setDOMContent(tooltipNode(courier.full_name,`${label}${speed}`,`${gpsQuality(courier.accuracy_m)} • ${accuracy}${age?` • ${age}`:''}`))
+      const marker=new maplibre.Marker({element:node,anchor:'center',rotationAlignment:'map',pitchAlignment:'map'}).setLngLat([courier.longitude!,courier.latitude!]).setRotation(courier.heading_deg??0).setPopup(popup).addTo(map)
+      if(selected)marker.togglePopup()
+      markerRefs.current.push(marker)
+    }
+
+    const selectedDelivery=mappedDeliveries.find(x=>x.id===selectedDeliveryId)
+    const selectedCourier=mappedCouriers.find(x=>x.user_id===selectedCourierId)
+    if(selectedDelivery){map.easeTo({center:[selectedDelivery.longitude!,selectedDelivery.latitude!],zoom:15.7,pitch:38,duration:520});return}
+    if(selectedCourier){map.easeTo({center:[selectedCourier.longitude!,selectedCourier.latitude!],zoom:15.4,pitch:42,bearing:selectedCourier.heading_deg??0,duration:520});return}
+    const coordinates=routeCoordinates.length?routeCoordinates:[...(validOrigin?[[validOrigin.longitude,validOrigin.latitude]]:[]),...mappedDeliveries.map(x=>[x.longitude!,x.latitude!]),...mappedCouriers.map(x=>[x.longitude!,x.latitude!])]
+    if(coordinates.length===1)map.easeTo({center:coordinates[0],zoom:14.5,duration:450})
+    else if(coordinates.length>1){const bounds=coordinates.reduce((value,coordinate)=>value.extend(coordinate),new maplibre.LngLatBounds(coordinates[0],coordinates[0]));map.fitBounds(bounds,{padding:55,maxZoom:15,duration:520})}
+  },[activeRoute,mapReady,mappedCouriers,mappedDeliveries,onSelectCourier,onSelectDelivery,origin,route,selectedCourierId,selectedDeliveryId,showRoute,validOrigin])
 
   const km=route?route.distance_m/1000:0
   const min=route?Math.max(1,Math.round(route.duration_s/60)):0
-  return <div className={`internalMapShell ${compact?'compact':''} ${className}`.trim()}>
+  return <div className={`internalMapShell altusOperationsMap ${compact?'compact':''} ${className}`.trim()}>
     <div ref={nodeRef} className="internalMapCanvas"/>
-    {!hasAny&&<div className="mapEmptyState"><div className="mapEmptyIcon">⌖</div><strong>Haritada gösterilecek konum yok</strong><span>Sevkiyat oluştururken teslimat noktasını harita üzerinden işaretleyebilirsin.</span></div>}
-    <div className="mapLegend"><span><i className="legendDelivery"/>Teslimat</span><span><span className="legendVehicleIcon"><img src="/vehicle/pratico_E_rozetli_disk.svg" alt=""/></span>Araç</span><span className="mapProviderNote">{routing?'Rota hesaplanıyor…':route?`${km.toFixed(1)} km • ${min} dk`:'Uygulama içi harita'}</span></div>
-    {route&&<div className="routeProviderBadge">{route.provider==='graphhopper'?'Canlı yol rotası':'Yol rotası'} • ETA {min} dk</div>}
+    <div className="altusMapBrand"><span>A</span><div><strong>ALTUS MAPS</strong><small>Operasyon haritası</small></div></div>
+    {!hasAny?<div className="mapEmptyState customMapEmpty"><div className="mapEmptyIcon">⌖</div><strong>Konumlar burada görünecek</strong><span>Sevkiyat ve personel konumları geldikçe harita otomatik güncellenir.</span></div>:null}
+    {routing?<div className="routeProviderBadge">Rota hazırlanıyor…</div>:route?<div className="routeProviderBadge">{km.toFixed(1)} km • ETA {min} dk</div>:null}
   </div>
 }

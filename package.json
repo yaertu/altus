@@ -1,6 +1,6 @@
 {
   "name": "altus-sevkiyat-production",
-  "version": "6.3.0",
+  "version": "6.4.0",
   "private": true,
   "scripts": {
     "predev": "node scripts/copy-maplibre-worker.mjs",
