@@ -168,7 +168,7 @@ using(user_id=auth.uid() or (org_id=private.current_org_id() and private.current
 
 drop policy if exists "courier_score_events_read" on public.courier_score_events;
 create policy "courier_score_events_read" on public.courier_score_events for select to authenticated
-using(courier_id=auth.uid() or (org_id=private.current_org_id() and private.current_role() in ('admin','store_manager')));
+using(courier_id=auth.uid() or (org_id=private.current_org_id() and private.current_role() in ('admin','store_manager','store_staff','office')));
 
 drop policy if exists "courier_score_events_admin_insert" on public.courier_score_events;
 create policy "courier_score_events_admin_insert" on public.courier_score_events for insert to authenticated
@@ -334,11 +334,24 @@ begin
     and created_at<date_trunc('day',now())+interval '1 day';
 
   if coalesce(cfg.auto_suspend,true) and daily_count>=coalesce(cfg.daily_cancel_limit,5) then
-    update public.profiles set is_active=false where user_id=new.courier_id;
+    update public.profiles set is_active=false where user_id=new.courier_id and is_active=true;
     update public.courier_scores
       set suspended_reason='Günlük kurye kaynaklı iptal sınırı aşıldı. Yönetici incelemesi gerekli.',
           updated_at=now()
       where user_id=new.courier_id;
+
+    if not exists(
+      select 1 from public.courier_penalties
+      where courier_id=new.courier_id and status='active' and suspended=true
+    ) then
+      insert into public.courier_penalties(
+        org_id,courier_id,reason,points_delta,suspended,status,created_by
+      ) values(
+        new.org_id,new.courier_id,
+        'Günlük kurye kaynaklı iptal sınırı aşıldı.',
+        penalty,true,'active',new.confirmed_by
+      );
+    end if;
   end if;
 
   return new;
