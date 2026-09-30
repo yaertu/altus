@@ -4,7 +4,7 @@ import {useEffect,useRef,useState} from 'react'
 import {Camera,Check,ImageUp,RotateCcw} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 
-export default function AvatarCropper({userId,currentUrl,name}:{userId:string;currentUrl:string|null;name:string}){
+export default function AvatarCropper({userId,currentUrl,name,enabled=true}:{userId:string;currentUrl:string|null;name:string;enabled?:boolean}){
   const canvasRef=useRef<HTMLCanvasElement|null>(null)
   const imageRef=useRef<HTMLImageElement|null>(null)
   const [sourceUrl,setSourceUrl]=useState<string|null>(null)
@@ -61,7 +61,7 @@ export default function AvatarCropper({userId,currentUrl,name}:{userId:string;cu
 
   const initials=name.split(' ').filter(Boolean).map(x=>x[0]).slice(0,2).join('').toUpperCase()
   return <div className="avatarStudio">
-    <div className="avatarStudioCurrent">{avatar?<img src={avatar} alt="Kurye avatarı"/>:<span>{initials}</span>}<label title="Fotoğraf seç"><Camera size={16}/><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>choose(e.target.files?.[0]||null)}/></label></div>
+    <div className="avatarStudioCurrent">{avatar?<img src={avatar} alt="Kurye avatarı"/>:<span>{initials}</span>}{enabled&&<label title="Fotoğraf seç"><Camera size={16}/><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>choose(e.target.files?.[0]||null)}/></label>}</div>
     {sourceUrl&&<div className="avatarEditor">
       <div className="avatarCanvasWrap"><canvas ref={canvasRef}/><span className="avatarCropRing"/></div>
       <div className="avatarSliders">
@@ -71,7 +71,7 @@ export default function AvatarCropper({userId,currentUrl,name}:{userId:string;cu
       </div>
       <div className="avatarEditorActions"><button type="button" className="btn btnGhost" onClick={()=>{setZoom(1);setPanX(0);setPanY(0)}}><RotateCcw size={14}/> Sıfırla</button><button type="button" className="btn btnPrimary" disabled={saving} onClick={save}>{saving?'Yükleniyor…':<><Check size={14}/> Kırp ve kaydet</>}</button></div>
     </div>}
-    {!sourceUrl&&<label className="avatarUploadButton"><ImageUp size={15}/> Fotoğraf ekle / değiştir<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>choose(e.target.files?.[0]||null)}/></label>}
+    {!enabled?<small className="avatarMessage">Profil görseli altyapısı henüz etkin değil.</small>:!sourceUrl&&<label className="avatarUploadButton"><ImageUp size={15}/> Fotoğraf ekle / değiştir<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>choose(e.target.files?.[0]||null)}/></label>}
     {message&&<small className="avatarMessage">{message}</small>}
   </div>
 }
