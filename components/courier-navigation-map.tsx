@@ -41,7 +41,7 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
       if(!nodeRef.current||mapRef.current)return
       const maplibre=await import('maplibre-gl');if(cancelled||!nodeRef.current)return
       maplibreRef.current=maplibre
-      const center=currentLocation?[currentLocation.lng,currentLocation.lat]:destination?[destination.lng,destination.lat]:[27.8027,41.1603]
+      const center:[number,number]=currentLocation?[currentLocation.lng,currentLocation.lat]:destination?[destination.lng,destination.lat]:[27.8027,41.1603]
       const map=new maplibre.Map({
         container:nodeRef.current,
         style:styleUrl||rasterStyle(tileUrl,tileAttribution),
@@ -49,7 +49,7 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
         zoom:currentLocation?16.2:14,
         pitch:currentLocation?48:0,
         bearing:currentLocation?.heading??0,
-        attributionControl:true,
+        attributionControl:{compact:true},
         dragRotate:true,
         touchPitch:true,
         maxPitch:62,
