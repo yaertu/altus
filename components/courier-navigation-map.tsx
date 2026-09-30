@@ -32,7 +32,7 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
   const [mapReady,setMapReady]=useState(false)
   const tileUrl=process.env.NEXT_PUBLIC_MAP_TILE_URL||'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
   const tileAttribution=process.env.NEXT_PUBLIC_MAP_ATTRIBUTION||'© OpenStreetMap contributors'
-  const styleUrl=process.env.NEXT_PUBLIC_MAP_STYLE_URL||''
+  const styleUrl=process.env.NEXT_PUBLIC_MAP_STYLE_URL||'https://tiles.openfreemap.org/styles/liberty'
   const destination=delivery.latitude!==null&&delivery.longitude!==null?{lat:delivery.latitude,lng:delivery.longitude}:null
 
   useEffect(()=>{
