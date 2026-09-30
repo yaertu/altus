@@ -310,6 +310,61 @@ revoke all on function private.process_courier_cancel_v6() from public,anon,auth
 drop trigger if exists courier_cancel_guard_v6 on public.courier_cancel_events;
 create trigger courier_cancel_guard_v6 after insert on public.courier_cancel_events for each row execute function private.process_courier_cancel_v6();
 
+create or replace function private.notify_courier_promotion_v6()
+returns trigger language plpgsql security definer set search_path=''
+as $
+declare reward_text text;
+begin
+  if to_regclass('public.notifications') is null then return new; end if;
+  if new.is_active is not true then return new; end if;
+  if tg_op='UPDATE' and old.is_active is true then return new; end if;
+
+  reward_text:=coalesce(
+    nullif(new.reward_label,''),
+    case when coalesce(new.reward_amount,0)>0 then trim(to_char(new.reward_amount,'FM999999990D00'))||' ₺ ek ödül' else 'Özel ödül' end
+  );
+
+  insert into public.notifications(user_id,kind,title,body)
+  select p.user_id,'system','Yeni ek kazanç hedefi',
+         concat_ws(' • ',new.title,reward_text)
+  from public.profiles p
+  where p.org_id=new.org_id
+    and p.role='courier'
+    and p.is_active=true;
+
+  return new;
+end $;
+revoke all on function private.notify_courier_promotion_v6() from public,anon,authenticated;
+drop trigger if exists courier_promotion_notify_v6 on public.courier_promotions;
+create trigger courier_promotion_notify_v6
+after insert or update of is_active on public.courier_promotions
+for each row execute function private.notify_courier_promotion_v6();
+
+create or replace function private.notify_courier_account_state_v6()
+returns trigger language plpgsql security definer set search_path=''
+as $
+begin
+  if new.role<>'courier' or new.is_active is not distinct from old.is_active then return new; end if;
+  if to_regclass('public.notifications') is null then return new; end if;
+
+  insert into public.notifications(user_id,kind,title,body)
+  values(
+    new.user_id,
+    'system',
+    case when new.is_active then 'Kurye hesabın yeniden açıldı' else 'Kurye hesabın incelemeye alındı' end,
+    case when new.is_active
+      then 'Yönetici incelemesi tamamlandı. Görev ekranına yeniden erişebilirsin.'
+      else 'Yeni görev işlemleri durduruldu. Profil ekranından hesap durumunu ve ceza notunu görebilirsin.'
+    end
+  );
+  return new;
+end $;
+revoke all on function private.notify_courier_account_state_v6() from public,anon,authenticated;
+drop trigger if exists courier_account_state_notify_v6 on public.profiles;
+create trigger courier_account_state_notify_v6
+after update of is_active on public.profiles
+for each row execute function private.notify_courier_account_state_v6();
+
 insert into public.gamification_settings(org_id)
 select id from public.organizations on conflict(org_id) do nothing;
 
