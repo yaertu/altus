@@ -12,6 +12,12 @@ import { MapPinned, PackageOpen, CalendarClock, ShieldCheck, Wrench, RotateCcw, 
 type Courier={user_id:string;full_name:string;phone:string|null;availability:CourierAvailability}
 const availabilityLabel:Record<CourierAvailability,string>={available:'Müsait',busy:'Görevde',break:'Molada',offline:'Çevrimdışı'}
 
+const ALTUS_FREE_INSTALL_CATEGORIES=['buzdolabı','derin dondurucu','bulaşık makinesi','çamaşır makinesi','fırın','aspiratör','ocak','su sebili','klima','termosifon','davlumbaz']
+function altusInstallHint(category?:string){
+  const value=(category||'').toLocaleLowerCase('tr-TR')
+  return ALTUS_FREE_INSTALL_CATEGORIES.some(x=>value.includes(x))
+}
+
 export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,preview=false}:{orgId:string;storeId:string;userId:string;products:Product[];couriers:Courier[];preview?:boolean}){
   const router=useRouter()
   const [saving,setSaving]=useState(false)
@@ -91,6 +97,7 @@ export default function NewDeliveryForm({orgId,storeId,userId,products,couriers,
           <div className="premiumSectionHead compact"><span className="sectionIcon"><PackageOpen size={18}/></span><div><span className="eyebrow">ÜRÜN</span><h2>Taşınacak ürün</h2></div></div>
           <div className="field"><label>Ürün</label><select className="select" value={productId} onChange={e=>setProductId(e.target.value)}>{products.map(p=><option key={p.id} value={p.id}>{p.model} • {p.title}</option>)}<option value="__manual__">+ Özel ürün</option></select></div>
           {product&&<div className="selectedProductPreview compact"><ProductVisual product={product} size="md"/><div><strong>{product.title}</strong><p>{product.model}</p><div className="productSpecChips">{Object.entries(product.specs||{}).slice(0,3).map(([k,v])=><span key={k}>{String(v)}</span>)}</div></div></div>}
+          {product&&altusInstallHint(product.category)&&<div className="altusInstallHint"><div><strong>Altus servis / montaj hatırlatması</strong><span>Bu ürün grubu Altus'un ücretsiz montaja tabi ürün listesinde yer alıyor. Sipariş ve servis uygunluğunu teslimat öncesi doğrula.</span></div><div><a href="tel:+908502100888">0850 210 0 888</a><a href="https://wa.me/905444440888" target="_blank" rel="noreferrer">WhatsApp</a></div></div>}
           {productId==='__manual__'&&<div className="miniFormGrid"><div className="field"><label>Ürün adı</label><input className="input" value={manualProduct} onChange={e=>setManualProduct(e.target.value)} required placeholder="Buzdolabı"/></div><div className="field"><label>Model</label><input className="input" value={manualModel} onChange={e=>setManualModel(e.target.value)} placeholder="Model"/></div></div>}
           <div className="miniFormGrid"><div className="field"><label>Adet</label><input className="input" name="quantity" type="number" min="1" max="20" defaultValue="1"/></div><div className="field"><label>Sipariş / fiş no</label><input className="input" name="order_no" placeholder="OPS-1042"/></div><div className="field"><label>Kat / daire</label><input className="input" name="floor_text" placeholder="3. kat / D:7"/></div><div className="field"><label>Asansör</label><select className="select" name="has_elevator" defaultValue="unknown"><option value="unknown">Bilinmiyor</option><option value="yes">Var</option><option value="no">Yok</option></select></div></div>
           <div className="compactToggleGrid">
