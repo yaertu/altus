@@ -62,3 +62,5 @@ jobs:
           fi
           git commit -m "feat: [v5.3-expanded] sales-ready corlualtus map and courier UX"
           git push origin HEAD:release/corlualtus-v5.3
+
+# release archive complete: v5.3.0
