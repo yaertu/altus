@@ -30,6 +30,8 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
   const [route,setRoute]=useState<RouteSummary|null>(null)
   const [routing,setRouting]=useState(false)
   const [mapReady,setMapReady]=useState(false)
+  const [fixClock,setFixClock]=useState(Date.now())
+  const lastFixAtRef=useRef(0)
   const tileUrl=process.env.NEXT_PUBLIC_MAP_TILE_URL||'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
   const tileAttribution=process.env.NEXT_PUBLIC_MAP_ATTRIBUTION||'© OpenStreetMap contributors'
   const styleUrl=process.env.NEXT_PUBLIC_MAP_STYLE_URL||'https://tiles.openfreemap.org/styles/liberty'
@@ -58,6 +60,8 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
       map.on('load',()=>{
         if(cancelled)return
         if(!map.getSource('route'))map.addSource('route',{type:'geojson',data:{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[]}}})
+        if(!map.getSource('gps-accuracy'))map.addSource('gps-accuracy',{type:'geojson',data:{type:'FeatureCollection',features:[]}})
+        if(!map.getLayer('gps-accuracy-ring'))map.addLayer({id:'gps-accuracy-ring',type:'circle',source:'gps-accuracy',paint:{'circle-radius':0,'circle-color':'rgba(214,0,114,.10)','circle-stroke-color':'rgba(214,0,114,.36)','circle-stroke-width':1.5}})
         if(!map.getLayer('route-casing'))map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#ffffff','line-width':10,'line-opacity':.92},layout:{'line-cap':'round','line-join':'round'}})
         if(!map.getLayer('route-line'))map.addLayer({id:'route-line',type:'line',source:'route',paint:{'line-color':'#d60072','line-width':6,'line-opacity':.96},layout:{'line-cap':'round','line-join':'round'}})
         setMapReady(true)
@@ -80,6 +84,7 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
   useEffect(()=>{
     if(!mapReady||!currentLocation||!maplibreRef.current||!mapRef.current)return
     const maplibre=maplibreRef.current
+    lastFixAtRef.current=Date.now();setFixClock(Date.now())
     if(!vehicleMarkerRef.current){
       const el=document.createElement('div');el.className='praticoVehicleMarker'
       const img=document.createElement('img');img.src='/vehicle/pratico_E_rozetli_disk.svg';img.alt='Sevkiyat aracı';el.appendChild(img)
@@ -87,10 +92,20 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
         .setLngLat([currentLocation.lng,currentLocation.lat]).addTo(mapRef.current)
     }else vehicleMarkerRef.current.setLngLat([currentLocation.lng,currentLocation.lat])
     vehicleMarkerRef.current.setRotation(Number.isFinite(currentLocation.heading)?currentLocation.heading:0)
+
+    const accuracySource=mapRef.current.getSource('gps-accuracy')
+    if(accuracySource?.setData){
+      accuracySource.setData({type:'FeatureCollection',features:[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:[currentLocation.lng,currentLocation.lat]}}]})
+      const meters=Math.max(4,currentLocation.accuracy||0)
+      const metersPerPixel=156543.03392*Math.cos(currentLocation.lat*Math.PI/180)/Math.pow(2,mapRef.current.getZoom())
+      mapRef.current.setPaintProperty('gps-accuracy-ring','circle-radius',Math.min(120,Math.max(5,meters/Math.max(.01,metersPerPixel))))
+    }
     if(follow){
       mapRef.current.easeTo({center:[currentLocation.lng,currentLocation.lat],zoom:16.7,pitch:50,bearing:Number.isFinite(currentLocation.heading)?currentLocation.heading:mapRef.current.getBearing(),duration:650,easing:(t:number)=>t*(2-t)})
     }
-  },[currentLocation?.lat,currentLocation?.lng,currentLocation?.heading,follow,mapReady])
+  },[currentLocation?.lat,currentLocation?.lng,currentLocation?.heading,currentLocation?.accuracy,follow,mapReady])
+
+  useEffect(()=>{const t=window.setInterval(()=>setFixClock(Date.now()),1000);return()=>window.clearInterval(t)},[])
 
   const routeKey=useMemo(()=>{
     if(!currentLocation||!destination)return ''
@@ -123,10 +138,22 @@ export default function CourierNavigationMap({delivery,currentLocation,onRouteSu
   },[mapReady,route])
 
   function recenter(){setFollow(true);if(currentLocation&&mapRef.current)mapRef.current.easeTo({center:[currentLocation.lng,currentLocation.lat],zoom:16.7,pitch:50,bearing:currentLocation.heading??0,duration:450})}
+  const accuracy=currentLocation?.accuracy??null
+  const gpsQuality=accuracy===null?'Konum bekleniyor':accuracy<=20?'GPS çok iyi':accuracy<=50?'GPS iyi':accuracy<=100?'GPS orta':'GPS zayıf'
+  const speedKmh=currentLocation?.speed&&currentLocation.speed>0.5?Math.round(currentLocation.speed*3.6):0
+  const heading=currentLocation?.heading
+  const fixAge=lastFixAtRef.current?Math.max(0,Math.floor((fixClock-lastFixAtRef.current)/1000)):null
 
   return <div className="courierNavigationMapShell">
     <div ref={nodeRef} className="courierNavigationMapCanvas"/>
     <button type="button" className={`navFollowButton ${follow?'active':''}`} onClick={recenter} aria-label="Aracı ortala">{follow?'◎':'⌖'}<span>{follow?'Takip':'Aracı bul'}</span></button>
+    <div className={"navGpsTelemetry "+(accuracy!==null&&accuracy>100?'weak':'')}>
+      <span className="gpsTelemetrySignal"><i/><b>{gpsQuality}</b></span>
+      {accuracy!==null&&<span>±{Math.round(accuracy)} m</span>}
+      <span>{speedKmh} km/sa</span>
+      {heading!==null&&Number.isFinite(heading)&&<span>{Math.round(heading!)}°</span>}
+      {fixAge!==null&&<span>{fixAge<2?'şimdi':fixAge+' sn'}</span>}
+    </div>
     {routing&&<div className="navRoutingPulse"><i/> Rota güncelleniyor</div>}
   </div>
 }
