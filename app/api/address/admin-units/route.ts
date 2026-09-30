@@ -7,12 +7,44 @@ const PROVINCE_FALLBACK=[
 ].map(([id,name])=>({id:Number(id),name:String(name)}))
 
 function parseJsonl(text:string){return text.split('\n').map(x=>x.trim()).filter(Boolean).map(x=>JSON.parse(x))}
-async function read(url:string){const r=await fetch(url,{next:{revalidate:60*60*24*14},headers:{'user-agent':'Altus-Sevkiyat/6.0'}});if(!r.ok)throw new Error(`address source ${r.status}`);return parseJsonl(await r.text())}
+async function read(url:string){
+  const r=await fetch(url,{next:{revalidate:60*60*24*14},headers:{'user-agent':'Altus-Sevkiyat/6.0'}})
+  if(!r.ok)throw new Error(`address source ${r.status}`)
+  return parseJsonl(await r.text())
+}
+async function readMatching(url:string,predicate:(row:any)=>boolean,limit=80){
+  const r=await fetch(url,{cache:'no-store',headers:{'user-agent':'Altus-Sevkiyat/6.0'}})
+  if(!r.ok)throw new Error(`address source ${r.status}`)
+  if(!r.body)return []
+  const reader=r.body.getReader(),decoder=new TextDecoder()
+  const out:any[]=[]
+  let buffer=''
+  while(true){
+    const {done,value}=await reader.read()
+    buffer+=decoder.decode(value||new Uint8Array(),{stream:!done})
+    const lines=buffer.split('\n');buffer=lines.pop()||''
+    for(const line of lines){
+      if(!line.trim())continue
+      try{
+        const row=JSON.parse(line)
+        if(predicate(row)){out.push(row);if(out.length>=limit){await reader.cancel();return out}}
+      }catch{}
+    }
+    if(done)break
+  }
+  if(buffer.trim()&&out.length<limit){
+    try{const row=JSON.parse(buffer);if(predicate(row))out.push(row)}catch{}
+  }
+  return out
+}
+function normalize(value:string){return value.toLocaleLowerCase('tr-TR').replace(/\s+/g,' ').trim()}
 
 export async function GET(req:NextRequest){
   const level=req.nextUrl.searchParams.get('level')||'provinces'
   const provinceId=Number(req.nextUrl.searchParams.get('provinceId')||0)
   const districtId=Number(req.nextUrl.searchParams.get('districtId')||0)
+  const neighborhoodId=Number(req.nextUrl.searchParams.get('neighborhoodId')||0)
+  const q=normalize(req.nextUrl.searchParams.get('q')||'')
   try{
     if(level==='provinces'){
       const rows=await read(`${ROOT}/provinces.jsonl`)
@@ -26,7 +58,17 @@ export async function GET(req:NextRequest){
     if(level==='neighborhoods'){
       if(!districtId)return NextResponse.json({error:'İlçe seç.'},{status:400})
       const rows=await read(`${ROOT}/province-${provinceId}/neighborhoods.jsonl`)
-      return NextResponse.json({items:rows.filter((x:any)=>Number(x.district_id)===districtId).map((x:any)=>({id:x.id,name:x.name,officialName:x.full_official_name})) ,source:'turkey-geo-api'})
+      return NextResponse.json({items:rows.filter((x:any)=>Number(x.district_id)===districtId).map((x:any)=>({id:x.id,name:x.name,officialName:x.full_official_name})),source:'turkey-geo-api'})
+    }
+    if(level==='streets'){
+      if(!neighborhoodId)return NextResponse.json({error:'Mahalle seç.'},{status:400})
+      if(q.length<2)return NextResponse.json({items:[],source:'turkey-geo-api',hint:'En az 2 harf yaz.'})
+      const rows=await readMatching(
+        `${ROOT}/province-${provinceId}/streets.jsonl`,
+        (x:any)=>Number(x.neighborhood_id)===neighborhoodId&&normalize(String(x.name||x.full_official_name||'')).includes(q),
+        80
+      )
+      return NextResponse.json({items:rows.map((x:any)=>({id:x.id,name:x.name||x.full_official_name,officialName:x.full_official_name})),source:'turkey-geo-api'})
     }
     return NextResponse.json({error:'Bilinmeyen seviye.'},{status:400})
   }catch(error){
