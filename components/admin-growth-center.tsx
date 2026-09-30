@@ -86,7 +86,13 @@ export default function AdminGrowthCenter({orgId,adminUserId,users,scores,promot
     const profileRes=await supabase.from('profiles').update({is_active:active}).eq('user_id',selectedCourier)
     if(profileRes.error){setMessage(profileRes.error.message);setBusy(false);return}
     if(schemaReady){
-      if(!active)await supabase.from('courier_penalties').insert({org_id:orgId,courier_id:selectedCourier,reason,points_delta:0,suspended:true,created_by:adminUserId})
+      if(!active){
+        await supabase.from('courier_penalties').insert({org_id:orgId,courier_id:selectedCourier,reason,points_delta:0,suspended:true,created_by:adminUserId})
+      }else{
+        await supabase.from('courier_penalties').update({
+          status:'lifted',lifted_by:adminUserId,lift_note:reason,lifted_at:new Date().toISOString()
+        }).eq('courier_id',selectedCourier).eq('status','active')
+      }
       await supabase.from('courier_scores').update({suspended_reason:active?null:reason,updated_at:new Date().toISOString()}).eq('user_id',selectedCourier)
       if(active&&withPenalty)await supabase.from('courier_score_events').insert({org_id:orgId,courier_id:selectedCourier,points_delta:-100,event_key:'reactivation_penalty',reason,actor_id:adminUserId})
     }
