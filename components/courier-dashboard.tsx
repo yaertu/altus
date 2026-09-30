@@ -96,7 +96,7 @@ export default function CourierDashboard({initial,userId,orgId,name,preview=fals
       }catch{}
       const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
       if(!mobile||!('speechSynthesis' in window)||cancelled)return
-      const voices=window.speechSynthesis.getVoices();const voice=voices.find(v=>v.lang.toLowerCase().startsWith('tr')&&/(google|yandex)/i.test(v.name))
+      const voices=window.speechSynthesis.getVoices();const turkish=voices.filter(v=>v.lang.toLowerCase().startsWith('tr'));const voice=turkish.find(v=>/(google|yandex)/i.test(v.name))||turkish[0]
       if(!voice)return
       window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(instruction);u.lang='tr-TR';u.voice=voice;u.rate=.96;window.speechSynthesis.speak(u)
     })()
