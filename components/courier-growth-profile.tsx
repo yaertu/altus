@@ -1,7 +1,7 @@
 import type {CSSProperties,ReactNode} from 'react'
 import {Award,Flame,Medal,ShieldAlert,Sparkles,Star,Trophy,Zap} from 'lucide-react'
 import AvatarCropper from './avatar-cropper'
-import {getRankProgress,performanceStars,type CourierPromotion,type CourierScore,type CourierScoreEvent,promotionProgress} from '@/lib/courier-growth'
+import {COURIER_RANKS,getRankProgress,performanceStars,type CourierPromotion,type CourierScore,type CourierScoreEvent,promotionProgress} from '@/lib/courier-growth'
 
 type DeliveredLite={product_id:string|null;delivered_at:string|null}
 type Props={
@@ -22,6 +22,7 @@ function rewardText(p:CourierPromotion){return p.reward_label||((p.reward_amount
 export default function CourierGrowthProfile({userId,name,phone,avatarUrl,score,promotions,deliveries,events,active,children}:Props){
   const rp=getRankProgress(score.points)
   const stars=performanceStars(rp.current.rankNo)
+  const roadmap=COURIER_RANKS.slice(Math.max(0,rp.current.rankNo-2),Math.min(COURIER_RANKS.length,rp.current.rankNo+5))
   const style={'--rank':rp.current.accent,'--rank-glow':rp.current.glow} as CSSProperties
   return <div className="growthProfile">
     <section className={`courierProfileHero rankAnim-${rp.current.animationKey} rankFrame-${rp.current.frameStyle}`} style={style}>
@@ -42,6 +43,11 @@ export default function CourierGrowthProfile({userId,name,phone,avatarUrl,score,
       <div><span><Star size={18}/></span><strong>{stars}/6</strong><small>Performans yıldızı</small></div>
       <div><span><Award size={18}/></span><strong>{score.delivered_count}</strong><small>Başarılı teslimat</small></div>
       <div><span><Flame size={18}/></span><strong>{score.streak_days}</strong><small>Günlük seri</small></div>
+    </section>
+
+    <section className="panel growthSection careerRoadmapSection">
+      <div className="panelHead"><div><span className="eyebrow">KARİYER YOLU</span><h2>Sonraki rütbeler</h2><p>Her kademe yeni unvan, renk ve profil çerçevesi açar.</p></div><Trophy size={20}/></div>
+      <div className="careerRoadmap">${roadmap.map(rank=><div key={rank.rankNo} className={`careerRankCard ${rank.rankNo===rp.current.rankNo?'current':''} ${rank.rankNo<rp.current.rankNo?'done':''}`} style={{'--rank':rank.accent,'--rank-glow':rank.glow} as CSSProperties}><span>{rank.rankNo}</span><div><strong>{rank.title}</strong><small>{rank.minPoints.toLocaleString('tr-TR')} XP</small></div><i>{rank.rankNo<rp.current.rankNo?'✓':rank.rankNo===rp.current.rankNo?'Şimdi':'Kilitli'}</i></div>)}</div>
     </section>
 
     <section className="panel growthSection promotionSection">
