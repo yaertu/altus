@@ -47,7 +47,7 @@ export default function CourierGrowthProfile({userId,name,phone,avatarUrl,score,
 
     <section className="panel growthSection careerRoadmapSection">
       <div className="panelHead"><div><span className="eyebrow">KARİYER YOLU</span><h2>Sonraki rütbeler</h2><p>Her kademe yeni unvan, renk ve profil çerçevesi açar.</p></div><Trophy size={20}/></div>
-      <div className="careerRoadmap">${roadmap.map(rank=><div key={rank.rankNo} className={`careerRankCard ${rank.rankNo===rp.current.rankNo?'current':''} ${rank.rankNo<rp.current.rankNo?'done':''}`} style={{'--rank':rank.accent,'--rank-glow':rank.glow} as CSSProperties}><span>{rank.rankNo}</span><div><strong>{rank.title}</strong><small>{rank.minPoints.toLocaleString('tr-TR')} XP</small></div><i>{rank.rankNo<rp.current.rankNo?'✓':rank.rankNo===rp.current.rankNo?'Şimdi':'Kilitli'}</i></div>)}</div>
+      <div className="careerRoadmap">{roadmap.map(rank=><div key={rank.rankNo} className={`careerRankCard ${rank.rankNo===rp.current.rankNo?'current':''} ${rank.rankNo<rp.current.rankNo?'done':''}`} style={{'--rank':rank.accent,'--rank-glow':rank.glow} as CSSProperties}><span>{rank.rankNo}</span><div><strong>{rank.title}</strong><small>{rank.minPoints.toLocaleString('tr-TR')} XP</small></div><i>{rank.rankNo<rp.current.rankNo?'✓':rank.rankNo===rp.current.rankNo?'Şimdi':'Kilitli'}</i></div>)}</div>
     </section>
 
     <section className="panel growthSection promotionSection">
