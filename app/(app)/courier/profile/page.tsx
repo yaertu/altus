@@ -9,7 +9,7 @@ import CourierGrowthProfile from '@/components/courier-growth-profile'
 import {fallbackScore,type CourierPromotion,type CourierScore,type CourierScoreEvent} from '@/lib/courier-growth'
 
 export default async function CourierProfilePage(){
-  const {supabase,profile,userId}=await requireProfile(['courier'])
+  const {supabase,profile,userId}=await requireProfile(['courier'],{allowInactive:true})
   const now=new Date().toISOString()
   const [historyRes,scoreRes,mediaRes,promoRes,eventRes]=await Promise.all([
     supabase.from('deliveries').select('status,product_id,delivered_at').eq('assigned_courier_id',userId).order('updated_at',{ascending:false}).limit(1000),
